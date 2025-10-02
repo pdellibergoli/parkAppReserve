@@ -356,13 +356,20 @@ function ProfileModal({ user, onSave, onClose }) {
     };
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (formData.newPassword && formData.newPassword !== formData.confirmPassword) { alert("Le password non coincidono."); return; }
-        
-        const userDataToSave = { ...formData };
-        if (!formData.newPassword) {
-            delete userDataToSave.newPassword;
+        if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
+            alert("Le password non coincidono.");
+            return;
         }
-        delete userDataToSave.confirmPassword;
+        
+        const userDataToSave = {
+            id: formData.id,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            avatarUrl: formData.avatarUrl,
+            // Includi newPassword solo se è stata effettivamente inserita
+            ...(formData.newPassword && { newPassword: formData.newPassword })
+        };
         
         onSave(userDataToSave);
         onClose();
