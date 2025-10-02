@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// --- INCOLLA QUI IL TUO URL DI GOOGLE APPS SCRIPT ---
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPSH9c6_WK2GU9ugAPZNygJxsBN4UWsW22969fDOgl5G2_4Bq1joPotNla_R8W0uc/exec'; 
-// Esempio: 'https://script.google.com/macros/s/ABCD-1234/exec'
+// --- L'URL VIENE ORA LETTO DALLE VARIABILI D'AMBIENTE ---
+const SCRIPT_URL = import.meta.env.VITE_SCRIPT_URL;
 
 // --- ICONE SVG (invariate) ---
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg>;
@@ -18,157 +17,186 @@ const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>;
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>;
-const LoaderIcon = () => <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>;
+const LoaderIcon = ({ color = 'text-white' }) => <svg className={`animate-spin ${color}`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>;
 
-// --- FUNZIONI API ---
-async function fetchData(sheetName) {
-    const res = await fetch(`${SCRIPT_URL}?sheet=${sheetName}`);
-    const result = await res.json();
-    return result.data;
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+  componentDidCatch(error, errorInfo) { console.error("Uncaught error:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center min-h-screen text-center p-4">
+          <div>
+            <h1 className="text-2xl font-bold text-red-600">Qualcosa è andato storto.</h1>
+            <p className="mt-2 text-gray-700">Si è verificato un errore che impedisce all'app di funzionare.</p>
+            <pre className="mt-4 p-2 bg-gray-100 text-left text-sm text-red-700 rounded overflow-x-auto">{this.state.error && this.state.error.toString()}</pre>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
-async function postData(action, data) {
-    const res = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action, data })
-    });
-    return await res.json();
-}
+async function fetchData(sheetName) { const res = await fetch(`${SCRIPT_URL}?sheet=${sheetName}`); const result = await res.json(); if(result.error) throw new Error(result.error); return result.data; }
+async function postData(action, data) { const res = await fetch(SCRIPT_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, data }) }); const result = await res.json(); if(result.error) throw new Error(result.error); return result; }
 
-// --- COMPONENTE PRINCIPALE ---
-export default function App() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [user, setUser] = useState(null);
+export default function App() { return <ErrorBoundary><ParkingApp /></ErrorBoundary>; }
+
+function ParkingApp() {
+    const [appState, setAppState] = useState('auth');
+    const [isOperating, setIsOperating] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
     const [allUsers, setAllUsers] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [parkingSpaces, setParkingSpaces] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const loadInitialData = async () => {
-        try {
-            if(SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbxPSH9c6_WK2GU9ugAPZNygJxsBN4UWsW22969fDOgl5G2_4Bq1joPotNla_R8W0uc/exec') {
-                setError('Per favore, imposta il tuo URL di Google Apps Script nella costante SCRIPT_URL.');
-                setIsLoading(false);
-                return;
-            }
-            setIsLoading(true);
-            const [usersData, bookingsData, spacesData] = await Promise.all([
-                fetchData('Users'),
-                fetchData('Bookings'),
-                fetchData('ParkingSpaces')
-            ]);
-            
-            const enrichedBookings = bookingsData.map(booking => {
-                const bookingUser = usersData.find(u => u.id === booking.userId);
-                return { ...booking, user: bookingUser || { firstName: 'Utente', lastName: 'Sconosciuto' } };
-            });
-
-            setAllUsers(usersData);
-            setBookings(enrichedBookings);
-            setParkingSpaces(spacesData);
-            setUser(usersData[0] || null); // Imposta il primo utente come quello loggato
-            setIsLoggedIn(!!usersData[0]);
-
-        } catch (e) {
-            setError("Impossibile caricare i dati. Controlla la console e l'URL dello script.");
-            console.error(e);
-        } finally {
-            setIsLoading(false);
-        }
+    const withOperation = async (operation) => {
+        setIsOperating(true); setError(null);
+        try { await operation(); } 
+        catch (e) { setError(e.message); console.error(e); throw e; } 
+        finally { setIsOperating(false); }
     };
     
-    const handleLogin = () => {
-        loadInitialData();
-    };
+    const handleLogin = (user) => withOperation(async () => {
+        const [allUsersData, bookingsData, spacesData] = await Promise.all([fetchData('Users'), fetchData('Bookings'), fetchData('ParkingSpaces')]);
+        const enrichedBookings = bookingsData.map(booking => ({ ...booking, user: allUsersData.find(u => u.id === booking.userId) || { firstName: 'Sconosciuto' } }));
+        setAllUsers(allUsersData);
+        setBookings(enrichedBookings);
+        setParkingSpaces(spacesData);
+        setCurrentUser(user);
+        setAppState('logged_in');
+    });
 
-    if (isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-                <LoaderIcon />
-                <p className="mt-4 text-gray-600">Caricamento dati...</p>
-                {error && <p className="mt-2 text-red-500 text-center max-w-md">{error}</p>}
-            </div>
+    const handleLogout = () => { setCurrentUser(null); setAllUsers([]); setBookings([]); setParkingSpaces([]); setAppState('auth'); };
+
+    const handleUpdateUser = (updatedUserData) => withOperation(async () => {
+        const result = await postData('updateUser', updatedUserData);
+        setCurrentUser(result.data);
+        setAllUsers(prev => prev.map(u => u.id === result.data.id ? result.data : u));
+        setBookings(current => current.map(b => b.user && b.user.id === result.data.id ? { ...b, user: result.data } : b));
+    });
+    
+    const handleAddBooking = (bookingData) => withOperation(async () => { 
+        const result = await postData('addBooking', bookingData); 
+        setBookings(prev => [...prev, { ...result.data, user: currentUser }]);
+    });
+
+    const handleDeleteBooking = (bookingId) => withOperation(async () => { 
+        await postData('deleteBooking', { id: bookingId }); 
+        setBookings(prev => prev.filter(b => b.id !== bookingId));
+    });
+
+    const handleAddParkingSpace = (spaceData) => withOperation(async () => { 
+        const result = await postData('addParkingSpace', spaceData);
+        setParkingSpaces(prev => [...prev, result.data]);
+    });
+    
+    const handleDeleteParkingSpace = (spaceId) => withOperation(async () => {
+        await postData('deleteParkingSpace', { id: spaceId });
+        setParkingSpaces(prev => prev.filter(p => p.id !== spaceId));
+    });
+
+    if (appState === 'auth') {
+        return <AuthScreen onLogin={handleLogin} error={error} setError={setError} />;
+    }
+    
+    if (appState === 'logged_in') {
+        return ( 
+            <>
+                <LoadingOverlay isLoading={isOperating} />
+                <div className="bg-gray-100 min-h-screen font-sans">
+                    <MainApp user={currentUser} allUsers={allUsers} bookings={bookings} parkingSpaces={parkingSpaces} onLogout={handleLogout} onUpdateUser={handleUpdateUser}
+                        onAddBooking={handleAddBooking} onDeleteBooking={handleDeleteBooking} onAddParkingSpace={handleAddParkingSpace} onDeleteParkingSpace={handleDeleteParkingSpace} /> 
+                </div> 
+            </>
         );
     }
+    return <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100"><LoaderIcon color="text-gray-500" /><p className="mt-4 text-gray-600">Avvio...</p></div>;
+}
+
+function AuthScreen({ onLogin, error, setError }) {
+    const [authMode, setAuthMode] = useState('login');
+    const [isOperating, setIsOperating] = useState(false);
+
+    const handleAuthOperation = async (operation) => {
+        setIsOperating(true); setError(null);
+        try {
+            const result = await operation();
+            if (result && result.success) {
+                onLogin(result.data);
+            }
+        } catch (e) {
+            setError(e.message);
+            console.error(e);
+        } finally {
+            setIsOperating(false);
+        }
+    };
     
-    if (!isLoggedIn) {
-        return <LoginScreen onLogin={handleLogin} error={error} />;
-    }
+    const onSignup = (data) => handleAuthOperation(() => postData('signup', data));
+    const onLoginSubmit = (data) => handleAuthOperation(() => postData('login', data));
 
-    const handleLogout = () => { setIsLoggedIn(false); setUser(null); };
-
-    const handleUpdateUser = async (updatedUserData) => {
-        const result = await postData('updateUser', updatedUserData);
-        if(result.success) {
-            setUser(result.data);
-            setAllUsers(prev => prev.map(u => u.id === result.data.id ? result.data : u));
-            setBookings(currentBookings => 
-                currentBookings.map(b => b.user.id === result.data.id ? { ...b, user: result.data } : b)
-            );
-        }
-    };
-
-    const handleAddBooking = async (bookingData) => {
-        const result = await postData('addBooking', bookingData);
-        if(result.success) {
-             setBookings(prev => [...prev, { ...result.data, user: user }]);
-        }
-    };
-    const handleUpdateBooking = async (bookingId, updatedData) => {
-        // L'API di Sheets non supporta l'update, quindi simuliamo delete + add
-        await postData('deleteBooking', { id: bookingId });
-        const { id, ...newBookingData } = updatedData;
-        const result = await postData('addBooking', newBookingData);
-        if(result.success){
-            setBookings(prev => [...prev.filter(b => b.id !== bookingId), { ...result.data, user: user }]);
-        }
-    };
-    const handleDeleteBooking = async (bookingId) => {
-        const result = await postData('deleteBooking', { id: bookingId });
-        if(result.success) {
-             setBookings(prev => prev.filter(b => b.id !== bookingId));
-        }
-    };
-    const handleAddParkingSpace = async (spaceData) => {
-        const result = await postData('addParkingSpace', spaceData);
-        if(result.success){
-            setParkingSpaces(prev => [...prev, result.data]);
-        }
-    };
-    const handleDeleteParkingSpace = async (spaceId) => {
-        const result = await postData('deleteParkingSpace', { id: spaceId });
-        if(result.success) {
-             setParkingSpaces(prev => prev.filter(p => p.id !== spaceId));
-        }
-    };
-
-    return ( 
-        <div className="bg-gray-100 min-h-screen font-sans">
-            <MainApp {...{ user, allUsers, bookings, parkingSpaces, onLogout, onUpdateUser, handleAddBooking, handleUpdateBooking, handleDeleteBooking, handleAddParkingSpace, handleDeleteParkingSpace }} /> 
-        </div> 
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+            <div className="p-8 bg-white rounded-lg shadow-md w-full max-w-md relative">
+                {isOperating && <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg"><LoaderIcon color="text-blue-600" /></div>}
+                <h1 className="text-2xl font-bold mb-6 text-center">{authMode === 'login' ? 'Accedi' : 'Registrati'}</h1>
+                {error && <p className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">{error}</p>}
+                {authMode === 'login' ? <LoginForm onSubmit={onLoginSubmit} onSwitchToSignup={() => { setAuthMode('signup'); setError(null); }} /> : <SignupForm onSubmit={onSignup} onSwitchToLogin={() => { setAuthMode('login'); setError(null); }} />}
+            </div>
+        </div>
     );
 }
 
-function LoginScreen({ onLogin, error }) { 
-    return ( 
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-            <div className="p-8 bg-white rounded-lg shadow-md text-center">
-                <h1 className="text-2xl font-bold mb-4">App Prenotazione Parcheggi</h1>
-                <p className="text-gray-600 mb-6">Clicca per accedere e caricare i dati da Google Sheets.</p>
-                <button onClick={onLogin} className="w-full px-6 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Accedi</button>
-                {error && <p className="mt-4 text-red-500 text-center max-w-md">{error}</p>}
-            </div>
-        </div> 
-    ); 
+function LoginForm({ onSubmit, onSwitchToSignup }) {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const handleSubmit = (e) => { e.preventDefault(); onSubmit({ email, password }); };
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div><label className="block text-sm font-medium">Email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-lg mt-1" required /></div>
+            <div><label className="block text-sm font-medium">Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2 border rounded-lg mt-1" required /></div>
+            <button type="submit" className="w-full px-6 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Accedi</button>
+            <p className="text-center text-sm">Non hai un account? <button type="button" onClick={onSwitchToSignup} className="text-blue-600 hover:underline">Registrati</button></p>
+        </form>
+    );
 }
 
+function SignupForm({ onSubmit, onSwitchToLogin }) {
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const handleSubmit = (e) => { e.preventDefault(); onSubmit({ firstName, lastName, email, password }); };
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium">Nome</label><input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full p-2 border rounded-lg mt-1" required /></div>
+                <div><label className="block text-sm font-medium">Cognome</label><input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full p-2 border rounded-lg mt-1" required /></div>
+            </div>
+            <div><label className="block text-sm font-medium">Email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border rounded-lg mt-1" required /></div>
+            <div><label className="block text-sm font-medium">Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2 border rounded-lg mt-1" required /></div>
+            <button type="submit" className="w-full px-6 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Registrati</button>
+            <p className="text-center text-sm">Hai già un account? <button type="button" onClick={onSwitchToLogin} className="text-blue-600 hover:underline">Accedi</button></p>
+        </form>
+    );
+}
+
+const LoadingOverlay = ({ isLoading }) => {
+    if (!isLoading) return null;
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
+            <div className="text-white"><LoaderIcon /></div>
+        </div>
+    );
+};
 function MainApp({ user, allUsers, bookings, parkingSpaces, onLogout, onUpdateUser, onAddBooking, onUpdateBooking, onDeleteBooking, onAddParkingSpace, onDeleteParkingSpace }) {
     const [activeTab, setActiveTab] = useState('calendario');
     const [bookingModalInfo, setBookingModalInfo] = useState({ isOpen: false, date: null, booking: null });
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
     return (
         <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
             <header className="flex justify-between items-center mb-6 pb-4 border-b">
@@ -193,7 +221,6 @@ function MainApp({ user, allUsers, bookings, parkingSpaces, onLogout, onUpdateUs
         </div>
     );
 }
-
 function HamburgerMenu({ onLogout, onProfileClick, user }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef(null);
@@ -215,9 +242,7 @@ function HamburgerMenu({ onLogout, onProfileClick, user }) {
         </div>
     );
 }
-
 const TabButton = ({ id, activeTab, setActiveTab, children, icon }) => { const isActive = activeTab === id; return ( <button onClick={() => setActiveTab(id)} className={`flex items-center px-4 py-2 text-sm font-medium transition-colors rounded-t-lg ${isActive ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}> {icon} <span className={isActive ? 'ml-2' : 'hidden'}>{children}</span> </button> );};
-
 const Avatar = ({ user, size = 'default' }) => {
     if (!user) return null;
     const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
@@ -230,7 +255,7 @@ const Avatar = ({ user, size = 'default' }) => {
     }
     return <div className={`${baseClasses} ${sizeClasses[size]} ${color}`}>{initials}</div>;
 };
-
+const formatDateToYYYYMMDD = (date) => { const d = new Date(date); const pad = (num) => num.toString().padStart(2, '0'); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 function CalendarView({ user, bookings, setModalInfo }) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const changeMonth = (offset) => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
@@ -265,19 +290,15 @@ function CalendarView({ user, bookings, setModalInfo }) {
 
     return (<div className="bg-white p-4 sm:p-6 rounded-lg shadow-md"><div className="flex justify-between items-center mb-4"><button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-200"><ChevronLeftIcon /></button><h2 className="text-xl font-bold">{currentDate.toLocaleString('it-IT', { month: 'long', year: 'numeric' })}</h2><button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-200"><ChevronRightIcon /></button></div><div className="grid grid-cols-7 text-center font-semibold text-gray-600">{dayLabels.map(l => <div key={l} className="py-2 border-b-2">{l}</div>)}</div><div className="grid grid-cols-7 border-l border-t">{calendarDays}</div></div>);
 }
-
 function MyBookingsView({ user, bookings, onDeleteBooking }) {
     const myBookings = bookings.filter(b => b.user && b.user.id === user.id).sort((a, b) => new Date(b.date) - new Date(a.date));
     if (!myBookings.length) return <div className="text-center p-8 bg-white rounded-lg shadow-md"><p>Non hai prenotazioni attive.</p></div>;
     return (<div className="bg-white p-6 rounded-lg shadow-md"><h2 className="text-xl font-bold mb-4">Le tue prenotazioni</h2><div className="space-y-4">{myBookings.map(b => (<div key={b.id} className="flex justify-between items-center p-4 border rounded-lg"><div><p className="font-semibold">Parcheggio: <span className="text-blue-600">{b.parkingSpaceNumber}</span></p><p className="text-sm text-gray-600">Data: {new Date(b.date+'T12:00:00Z').toLocaleDateString('it-IT', {dateStyle: 'full'})}</p></div><button onClick={() => onDeleteBooking(b.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon /></button></div>))}</div></div>);
 }
-
 function StatisticsView({ bookings, allUsers }) { 
     const stats = allUsers.map(u => { 
         const userBookings = bookings.filter(b => b.user && b.user.id === u.id); 
-        const spotCounts = userBookings.reduce((acc,b) => {
-            acc[b.parkingSpaceNumber] = (acc[b.parkingSpaceNumber] || 0) + 1; return acc;
-        }, {}); 
+        const spotCounts = userBookings.reduce((acc,b) => { acc[b.parkingSpaceNumber] = (acc[b.parkingSpaceNumber] || 0) + 1; return acc; }, {}); 
         return { user: u, totalBookings: userBookings.length, spotCounts: Object.entries(spotCounts) }; 
     }); 
     return ( 
@@ -288,93 +309,43 @@ function StatisticsView({ bookings, allUsers }) {
                     <div key={user.id} className="p-4 border rounded-lg"> 
                         <h3 className="font-bold text-lg text-gray-800">{user.firstName} {user.lastName}</h3> 
                         <p className="text-sm text-gray-600 mt-1">Prenotazioni totali: <span className="font-semibold text-blue-600">{totalBookings}</span></p> 
-                        {totalBookings > 0 && ( 
-                            <div className="mt-3"> 
-                                <h4 className="font-semibold text-sm">Parcheggi utilizzati:</h4> 
-                                <ul className="list-disc list-inside mt-2 space-y-1 text-sm"> 
-                                    {spotCounts.map(([spot, count]) => ( <li key={spot}>{spot}: <span className="font-semibold">{count}</span> volta/e</li> ))} 
-                                </ul> 
-                            </div> 
-                        )} 
+                        {totalBookings > 0 && ( <div className="mt-3"> <h4 className="font-semibold text-sm">Parcheggi utilizzati:</h4> <ul className="list-disc list-inside mt-2 space-y-1 text-sm"> {spotCounts.map(([spot, count]) => ( <li key={spot}>{spot}: <span className="font-semibold">{count}</span> volta/e</li> ))} </ul> </div> )} 
                     </div> 
                 ))} 
             </div> 
         </div> 
     ); 
 }
-
 function ManageParkingView({ parkingSpaces, onAddParkingSpace, onDeleteParkingSpace }) { 
     const [newSpace, setNewSpace] = useState(''); 
-    const handleAdd = (e) => { 
-        e.preventDefault(); 
-        if (newSpace.trim()) { 
-            onAddParkingSpace({ number: newSpace.trim() }); 
-            setNewSpace(''); 
-        } 
-    }; 
-    return (
-        <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4">Gestisci Parcheggi</h2>
-            <form onSubmit={handleAdd} className="flex space-x-2 mb-6">
-                <input type="text" value={newSpace} onChange={e => setNewSpace(e.target.value)} placeholder="Es. 13A" className="flex-grow p-2 border rounded-lg" />
-                <button type="submit" className="px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg">Aggiungi</button>
-            </form>
-            <div className="space-y-2">
-                {parkingSpaces.map(s => (
-                    <div key={s.id} className="flex justify-between items-center p-3 border rounded-lg">
-                        <span className="font-medium">{s.number}</span>
-                        <button onClick={() => onDeleteParkingSpace(s.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon /></button>
-                    </div>
-                ))}
-                {!parkingSpaces.length && <p className="text-center text-gray-500 py-4">Nessun parcheggio configurato.</p>}
-            </div>
-        </div>
-    ); 
+    const handleAdd = (e) => { e.preventDefault(); if (newSpace.trim()) { onAddParkingSpace({ number: newSpace.trim() }); setNewSpace(''); } }; 
+    return (<div className="bg-white p-6 rounded-lg shadow-md"><h2 className="text-xl font-bold mb-4">Gestisci Parcheggi</h2><form onSubmit={handleAdd} className="flex space-x-2 mb-6"><input type="text" value={newSpace} onChange={e => setNewSpace(e.target.value)} placeholder="Es. 13A" className="flex-grow p-2 border rounded-lg" /><button type="submit" className="px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg">Aggiungi</button></form><div className="space-y-2">{parkingSpaces.map(s => (<div key={s.id} className="flex justify-between items-center p-3 border rounded-lg"><span className="font-medium">{s.number}</span><button onClick={() => onDeleteParkingSpace(s.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon /></button></div>))}{!parkingSpaces.length && <p className="text-center text-gray-500 py-4">Nessun parcheggio configurato.</p>}</div></div>); 
 }
-
 function BookingModal({ isOpen, onClose, date, booking, user, bookings, parkingSpaces, onAddBooking, onUpdateBooking, onDeleteBooking }) {
     const isEditing = !!booking;
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedSpace, setSelectedSpace] = useState('');
     useEffect(() => { const initialDate = booking ? booking.date : formatDateToYYYYMMDD(date || new Date()); setSelectedDate(initialDate); setSelectedSpace(booking ? booking.parkingSpaceId : ''); }, [isOpen, date, booking]);
     const availableSpaces = parkingSpaces.filter(p => !bookings.some(b => b.date === selectedDate && b.parkingSpaceId === p.id) || (isEditing && p.id === booking.parkingSpaceId));
-    const handleSubmit = (e) => { 
-        e.preventDefault(); 
-        const spaceDetails = parkingSpaces.find(p => p.id === selectedSpace); 
-        if(!spaceDetails) return; 
-        const data = { userId: user.id, date: selectedDate, parkingSpaceId: selectedSpace, parkingSpaceNumber: spaceDetails.number }; 
-        if (isEditing) { 
-            onUpdateBooking(booking.id, { id: booking.id, ...data }); 
-        } else { 
-            onAddBooking(data); 
-        } 
-        onClose(); 
-    };
+    const handleSubmit = (e) => { e.preventDefault(); const spaceDetails = parkingSpaces.find(p => p.id === selectedSpace); if(!spaceDetails) return; const data = { userId: user.id, date: selectedDate, parkingSpaceId: selectedSpace, parkingSpaceNumber: spaceDetails.number }; if (isEditing) { onUpdateBooking(booking.id, { id: booking.id, ...data }); } else { onAddBooking(data); } onClose(); };
     const handleDelete = () => { onDeleteBooking(booking.id); onClose(); };
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-                <div className="flex justify-between items-center p-4 border-b">
-                    <h3 className="text-xl font-bold">{isEditing ? 'Dettagli Prenotazione' : 'Nuova Prenotazione'}</h3>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-200"><CloseIcon /></button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50"><div className="bg-white rounded-xl shadow-2xl w-full max-w-md"><div className="flex justify-between items-center p-4 border-b"><h3 className="text-xl font-bold">{isEditing ? 'Dettagli Prenotazione' : 'Nuova Prenotazione'}</h3><button onClick={onClose} className="p-2 rounded-full hover:bg-gray-200"><CloseIcon /></button></div>
+        <div className="p-6">
+            {isEditing && booking.user && ( <div className="mb-4 flex items-center space-x-3"> <Avatar user={booking.user} /> <div> <label className="block text-sm font-medium text-gray-500">Prenotato da</label> <p className="text-lg font-semibold text-gray-800">{booking.user.firstName} {booking.user.lastName}</p> </div> </div> )}
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div><label htmlFor="date" className="block text-sm font-medium mb-1">Data</label><input id="date" type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full p-2 border rounded-lg" required/></div>
+                {(!isEditing || (booking.user && booking.user.id === user.id)) && ( <div><label htmlFor="parkingSpace" className="block text-sm font-medium mb-1">Parcheggio</label><select id="parkingSpace" value={selectedSpace} onChange={e => setSelectedSpace(e.target.value)} className="w-full p-2 border rounded-lg" required><option value="">-- Seleziona --</option>{availableSpaces.map(s => <option key={s.id} value={s.id}>{s.number}</option>)}</select>{availableSpaces.length === 0 && !isEditing && <p className="text-xs text-yellow-600 mt-1">Nessun parcheggio disponibile.</p>}</div> )}
+                <div className="flex justify-end items-center pt-4 space-x-3">
+                    {isEditing && booking.user && booking.user.id === user.id && <button type="button" onClick={handleDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Elimina</button>}
+                    {(!isEditing || (booking.user && booking.user.id === user.id)) && <button type="submit" disabled={!selectedSpace} className="px-6 py-2 font-semibold text-white bg-blue-600 rounded-lg disabled:bg-gray-400 hover:bg-blue-700">{isEditing ? 'Salva Modifiche' : 'Prenota'}</button>}
                 </div>
-                <div className="p-6">
-                    {isEditing && booking.user && ( <div className="mb-4 flex items-center space-x-3"> <Avatar user={booking.user} /> <div> <label className="block text-sm font-medium text-gray-500">Prenotato da</label> <p className="text-lg font-semibold text-gray-800">{booking.user.firstName} {booking.user.lastName}</p> </div> </div> )}
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div><label htmlFor="date" className="block text-sm font-medium mb-1">Data</label><input id="date" type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full p-2 border rounded-lg" required/></div>
-                        {(!isEditing || (booking.user && booking.user.id === user.id)) && ( <div><label htmlFor="parkingSpace" className="block text-sm font-medium mb-1">Parcheggio</label><select id="parkingSpace" value={selectedSpace} onChange={e => setSelectedSpace(e.target.value)} className="w-full p-2 border rounded-lg" required><option value="">-- Seleziona --</option>{availableSpaces.map(s => <option key={s.id} value={s.id}>{s.number}</option>)}</select>{availableSpaces.length === 0 && !isEditing && <p className="text-xs text-yellow-600 mt-1">Nessun parcheggio disponibile.</p>}</div> )}
-                        <div className="flex justify-end items-center pt-4 space-x-3">
-                            {isEditing && booking.user && booking.user.id === user.id && <button type="button" onClick={handleDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Elimina</button>}
-                            {(!isEditing || (booking.user && booking.user.id === user.id)) && <button type="submit" disabled={!selectedSpace} className="px-6 py-2 font-semibold text-white bg-blue-600 rounded-lg disabled:bg-gray-400 hover:bg-blue-700">{isEditing ? 'Salva Modifiche' : 'Prenota'}</button>}
-                        </div>
-                    </form>
-                </div>
-            </div>
+            </form>
         </div>
+        </div></div>
     );
 }
-
 function ProfileModal({ user, onSave, onClose }) {
     const [formData, setFormData] = useState({ ...user, newPassword: '', confirmPassword: '' });
     const fileInputRef = useRef(null);
@@ -386,7 +357,13 @@ function ProfileModal({ user, onSave, onClose }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (formData.newPassword && formData.newPassword !== formData.confirmPassword) { alert("Le password non coincidono."); return; }
-        const { newPassword, confirmPassword, ...userDataToSave } = formData;
+        
+        const userDataToSave = { ...formData };
+        if (!formData.newPassword) {
+            delete userDataToSave.newPassword;
+        }
+        delete userDataToSave.confirmPassword;
+        
         onSave(userDataToSave);
         onClose();
     };
