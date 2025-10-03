@@ -13,21 +13,21 @@
 
 .form-group label {
   margin-bottom: 0.5rem;
-  color: #c0c0c0;
+  color: #333; /* Cambiato da #c0c0c0 (chiaro) a scuro per il tema chiaro della modale */
 }
 
 .form-group input,
 .form-group select {
   padding: 0.8rem;
-  border: 1px solid #555;
-  background-color: #3b3b3b;
+  border: 1px solid #ccc; /* Cambiato da #555 a #ccc */
+  background-color: #ffffff; /* Cambiato da #3b3b3b a bianco */
   border-radius: 4px;
-  color: white;
+  color: #213547; /* Cambiato da white a colore scuro */
   font-size: 1rem;
 }
 
 .form-group select:disabled {
-  background-color: #444;
+  background-color: #f0f0f0; /* Adattato al tema chiaro */
   cursor: not-allowed;
 }
 
@@ -56,14 +56,14 @@
 }
 
 .submit-btn {
-  background-color: #4a9d4a;
+  background-color: #DE1F3C; /* Cambiato da #4a9d4a (verde) a rosso tema */
 }
 .submit-btn:hover {
-  background-color: #5cb85c;
+  background-color: #B81A33; /* Cambiato da #5cb85c a rosso tema scuro */
 }
 
 .submit-btn:disabled {
-    background-color: #444 !important;
+    background-color: #d1d1d1 !important; /* Manteniamo il grigio di base */
 }
 
 .warning-message {

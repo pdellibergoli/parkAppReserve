@@ -22,7 +22,7 @@ const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales
 
 const HomePage = () => {
   const [events, setEvents] = useState([]);
-  const [allBookings, setAllBookings] = useState([]); // Aggiunto per passare al BookingDetailsModal
+  const [allBookings, setAllBookings] = useState([]); // Usato per la logica di conflitto nella modifica
   const [users, setUsers] = useState([]);
   const [parkingSpaces, setParkingSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +49,7 @@ const HomePage = () => {
 
       setUsers(usersData);
       setParkingSpaces(spacesData);
-      setAllBookings(bookingsData); // Salva tutte le prenotazioni
+      setAllBookings(bookingsData);
 
       const calendarEvents = bookingsData.map(booking => {
         const bookingUser = usersData.find(u => u.id === booking.userId);
@@ -87,24 +87,30 @@ const HomePage = () => {
     };
   };
 
-  const handleSelectEvent = (event) => {
+  // NUOVA FUNZIONE: Apre il modale e imposta l'evento
+  const handleOpenDetailsModal = (event) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
+  };
+  
+  // NUOVA FUNZIONE: Chiude il modale e pulisce lo stato dell'evento
+  const handleCloseDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedEvent(null); // Pulisce lo stato al momento della chiusura
   };
 
   const handleDeleteBooking = async (bookingId) => {
     try {
       await callApi('deleteBookings', { bookingIds: [bookingId] });
       fetchData(); // Ricarica i dati
-      setIsDetailsModalOpen(false);
+      handleCloseDetailsModal(); // Usa la funzione di chiusura per resettare gli stati
     } catch (err) {
       alert(`Errore: ${err.message}`);
     }
   };
-  
-  // Funzione per ricaricare i dati dopo l'aggiunta o la MODIFICA
+
   const handleBookingAddedOrUpdated = () => {
-    fetchData(); 
+    fetchData(); // Ricarica i dati
   };
 
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
@@ -122,7 +128,7 @@ const HomePage = () => {
           culture='it'
           messages={{ next: "Succ", previous: "Prec", today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
           eventPropGetter={eventStyleGetter}
-          onSelectEvent={handleSelectEvent}
+          onSelectEvent={handleOpenDetailsModal} // Usa la nuova funzione
           
           // Props per la navigazione
           date={date}
@@ -135,19 +141,19 @@ const HomePage = () => {
 
       <BookingDetailsModal
         isOpen={isDetailsModalOpen}
-        onClose={() => setIsDetailsModalOpen(false)}
+        onClose={handleCloseDetailsModal} // Usa la nuova funzione
         event={selectedEvent}
         users={users}
         parkingSpaces={parkingSpaces}
-        allBookings={allBookings} // PASSATO per la logica di modifica
+        allBookings={allBookings} 
         onDelete={handleDeleteBooking}
-        onBookingUpdated={handleBookingAddedOrUpdated} // PASSATO per il refresh dopo modifica
+        onBookingUpdated={handleBookingAddedOrUpdated} 
       />
 
       <AddBookingModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onBookingAdded={handleBookingAddedOrUpdated} // Aggiornato per coerenza
+        onBookingAdded={handleBookingAddedOrUpdated} 
         parkingSpaces={parkingSpaces}
         allBookings={allBookings}
       />
