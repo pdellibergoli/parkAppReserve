@@ -22,7 +22,7 @@ const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales
 
 const HomePage = () => {
   const [events, setEvents] = useState([]);
-  const [allBookings, setAllBookings] = useState([]);
+  const [allBookings, setAllBookings] = useState([]); // Aggiunto per passare al BookingDetailsModal
   const [users, setUsers] = useState([]);
   const [parkingSpaces, setParkingSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +49,7 @@ const HomePage = () => {
 
       setUsers(usersData);
       setParkingSpaces(spacesData);
-      setAllBookings(bookingsData);
+      setAllBookings(bookingsData); // Salva tutte le prenotazioni
 
       const calendarEvents = bookingsData.map(booking => {
         const bookingUser = usersData.find(u => u.id === booking.userId);
@@ -62,7 +62,7 @@ const HomePage = () => {
         };
       });
       setEvents(calendarEvents);
-    } catch (err) { // <-- ECCO LA CORREZIONE
+    } catch (err) {
       setError('Impossibile caricare i dati delle prenotazioni. Riprova più tardi.');
     } finally {
       setLoading(false);
@@ -77,7 +77,7 @@ const HomePage = () => {
     const isMyBooking = event.resource.userId === user.id;
     return {
       style: {
-        backgroundColor: isMyBooking ? '#DE1F3C' : '#3174ad', // Changed from '#535bf2'
+        backgroundColor: isMyBooking ? '#DE1F3C' : '#3174ad',
         borderRadius: '5px',
         opacity: 0.8,
         color: 'white',
@@ -101,9 +101,10 @@ const HomePage = () => {
       alert(`Errore: ${err.message}`);
     }
   };
-
-  const handleBookingAdded = () => {
-    fetchData(); // Ricarica i dati
+  
+  // Funzione per ricaricare i dati dopo l'aggiunta o la MODIFICA
+  const handleBookingAddedOrUpdated = () => {
+    fetchData(); 
   };
 
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
@@ -138,13 +139,15 @@ const HomePage = () => {
         event={selectedEvent}
         users={users}
         parkingSpaces={parkingSpaces}
+        allBookings={allBookings} // PASSATO per la logica di modifica
         onDelete={handleDeleteBooking}
+        onBookingUpdated={handleBookingAddedOrUpdated} // PASSATO per il refresh dopo modifica
       />
 
       <AddBookingModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onBookingAdded={handleBookingAdded}
+        onBookingAdded={handleBookingAddedOrUpdated} // Aggiornato per coerenza
         parkingSpaces={parkingSpaces}
         allBookings={allBookings}
       />
