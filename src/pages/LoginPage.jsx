@@ -13,18 +13,22 @@ const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = (e) => { // ⬅️ RIMUOVI 'async' qui
+    e.preventDefault(); 
+
     setError('');
     setLoading(true);
-    try {
-      await login(mail, password);
-      navigate('/'); // Reindirizza alla home page dopo il login
-    } catch (err) {
-      setError(err.message || 'Credenziali non valide. Riprova.');
-    } finally {
-      setLoading(false);
-    }
+    
+    login(mail, password)
+      .then(() => {
+        navigate('/'); 
+      })
+      .catch((err) => {
+        setError(err.message || 'Credenziali non valide. Riprova.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
