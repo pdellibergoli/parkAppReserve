@@ -7,34 +7,36 @@ import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import it from 'date-fns/locale/it';
+
+// Assicurati che questo import sia presente!
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './HomePage.css';
 
 import { callApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import BookingDetailsModal from '../components/BookingDetailsModal';
-import AddBookingModal from '../components/AddBookingModal'; // <-- IMPORTIAMO LA NUOVA MODALE
+import AddBookingModal from '../components/AddBookingModal';
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
 const HomePage = () => {
   const [events, setEvents] = useState([]);
-  const [allBookings, setAllBookings] = useState([]); // Stato per le prenotazioni grezze
+  const [allBookings, setAllBookings] = useState([]);
   const [users, setUsers] = useState([]);
   const [parkingSpaces, setParkingSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Stati per le modali
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // <-- STATO PER LA NUOVA MODALE
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
-    try {
+    // ... (il resto della funzione fetchData rimane invariato)
+     try {
       setLoading(true);
       const [bookingsData, usersData, spacesData] = await Promise.all([
         callApi('getBookings'),
@@ -44,7 +46,7 @@ const HomePage = () => {
 
       setUsers(usersData);
       setParkingSpaces(spacesData);
-      setAllBookings(bookingsData); // <-- SALVIAMO I DATI GREZZI
+      setAllBookings(bookingsData);
 
       const calendarEvents = bookingsData.map(booking => {
         const bookingUser = usersData.find(u => u.id === booking.userId);
@@ -68,6 +70,21 @@ const HomePage = () => {
     fetchData();
   }, [fetchData]);
 
+  // ... (tutte le altre funzioni di gestione rimangono invariate)
+    const eventStyleGetter = (event) => {
+    const isMyBooking = event.resource.userId === user.id;
+    return {
+      style: {
+        backgroundColor: isMyBooking ? '#535bf2' : '#3174ad',
+        borderRadius: '5px',
+        opacity: 0.8,
+        color: 'white',
+        border: '0px',
+        display: 'block',
+      },
+    };
+  };
+
   const handleSelectEvent = (event) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
@@ -76,7 +93,6 @@ const HomePage = () => {
   const handleDeleteBooking = async (bookingId) => {
     try {
       await callApi('deleteBookings', { bookingIds: [bookingId] });
-      // Aggiorniamo entrambi gli stati per mantenere la consistenza
       setEvents(prev => prev.filter(event => event.resource.id !== bookingId));
       setAllBookings(prev => prev.filter(booking => booking.id !== bookingId));
       setIsDetailsModalOpen(false);
@@ -86,7 +102,6 @@ const HomePage = () => {
   };
 
   const handleBookingAdded = (newBooking) => {
-    // Aggiorniamo gli stati per riflettere la nuova prenotazione senza ricaricare la pagina
     const bookingUser = users.find(u => u.id === newBooking.userId);
     const parkingSpot = parkingSpaces.find(p => p.id === newBooking.parkingSpaceId);
 
@@ -101,7 +116,6 @@ const HomePage = () => {
     setAllBookings(prev => [...prev, { ...newBooking, parkingSpaceNumber: parkingSpot.number }]);
   };
 
-
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
 
@@ -111,11 +125,14 @@ const HomePage = () => {
         <Calendar
           localizer={localizer}
           events={events}
-          // ... altre props del calendario ...
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: '75vh' }}
+          culture='it'
+          messages={{ next: "Succ", previous: "Prec", today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
+          eventPropGetter={eventStyleGetter}
           onSelectEvent={handleSelectEvent}
-          // ... etc ...
         />
-        {/* Il pulsante ora apre la modale di aggiunta */}
         <button className="add-booking-btn" onClick={() => setIsAddModalOpen(true)}>+</button>
       </div>
 
@@ -128,7 +145,6 @@ const HomePage = () => {
         onDelete={handleDeleteBooking}
       />
 
-      {/* RENDERIZZIAMO LA NUOVA MODALE */}
       <AddBookingModal 
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

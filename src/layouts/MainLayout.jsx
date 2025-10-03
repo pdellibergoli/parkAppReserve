@@ -3,9 +3,10 @@
 import React from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import './MainLayout.css';
-// Importiamo le icone che ci servono
 import { FaCalendarAlt, FaListUl, FaParking, FaChartBar } from 'react-icons/fa';
+
+// Assicurati che questo import sia presente!
+import './MainLayout.css'; 
 
 const UserAvatar = ({ user }) => {
   const getInitials = () => {
@@ -34,22 +35,10 @@ const MainLayout = () => {
       </header>
       
       <nav className="main-nav">
-        <NavLink to="/" end>
-          <FaCalendarAlt /> 
-          <span>Calendario</span>
-        </NavLink>
-        <NavLink to="/my-bookings">
-          <FaListUl />
-          <span>Le mie prenotazioni</span>
-        </NavLink>
-        <NavLink to="/parking-spaces">
-          <FaParking />
-          <span>Parcheggi</span>
-        </NavLink>
-        <NavLink to="/stats">
-          <FaChartBar />
-          <span>Statistiche</span>
-        </NavLink>
+        <NavLink to="/" end><FaCalendarAlt /> <span>Calendario</span></NavLink>
+        <NavLink to="/my-bookings"><FaListUl /><span>Le mie prenotazioni</span></NavLink>
+        <NavLink to="/parking-spaces"><FaParking /><span>Parcheggi</span></NavLink>
+        <NavLink to="/stats"><FaChartBar /><span>Statistiche</span></NavLink>
       </nav>
 
       <main className="main-content">

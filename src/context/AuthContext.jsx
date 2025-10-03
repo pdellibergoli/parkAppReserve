@@ -41,11 +41,17 @@ export const AuthProvider = ({ children }) => {
   const signup = async (firstName, lastName, mail, password) => {
     setLoading(true);
     try {
+      // 1. Chiamiamo lo script per registrare l'utente.
       const newUser = await callApi('signup', { firstName, lastName, mail, password });
-      // Dopo la registrazione, effettuiamo direttamente il login
-      await login(mail, password);
+      
+      // 2. Usiamo i dati che lo script ci ha già restituito per effettuare l'accesso!
+      // Non serve una seconda chiamata.
+      setUser(newUser);
+      localStorage.setItem('parkingAppUser', JSON.stringify(newUser));
+      
       return newUser;
     } catch (error) {
+      // Se c'è un errore qui, significa che la registrazione è fallita davvero.
       throw error;
     } finally {
       setLoading(false);

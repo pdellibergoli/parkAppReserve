@@ -1,26 +1,13 @@
-// src/services/api.js
+const SCRIPT_URL = import.meta.env.VITE_SCRIPT_URL;
 
-// IMPORTANTE: Sostituisci questa URL con quella della TUA applicazione web Google Apps Script!
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCpm_k3mW7UnrNs1kf28UXOZvDx4XfCBH0DFctLauA3AsNXqyJp0AjRVLBy3pDRvI/exec";
-
-/**
- * Funzione generica per chiamare la nostra API su Google Apps Script.
- * @param {string} action L'azione da eseguire (es. 'login', 'getBookings').
- * @param {object} payload I dati da inviare.
- * @returns {Promise<any>} La risposta dal server.
- */
 export const callApi = async (action, payload = {}) => {
   try {
     const response = await fetch(SCRIPT_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8', // Apps Script richiede questo header specifico
-      },
       body: JSON.stringify({ action, payload }),
-      // Aggiungi mode: 'no-cors' se incontri problemi di CORS, ma gestisce gli errori in modo diverso
     });
 
-    // Apps Script avvolge la risposta, quindi dobbiamo analizzarla
+    // Tentiamo di leggere la risposta come JSON
     const result = await response.json();
 
     if (result.status === 'error') {
@@ -30,8 +17,34 @@ export const callApi = async (action, payload = {}) => {
     return result.data;
 
   } catch (error) {
-    console.error(`Errore durante la chiamata API per l'azione '${action}':`, error);
-    // Rilancia l'errore per poterlo gestire nel componente che ha chiamato l'API
+    // --- BLOCCO DIAGNOSTICO ---
+    // Se il "catch" viene attivato, significa che response.json() è fallito.
+    // Questo è il momento perfetto per leggere la risposta come testo e vedere cosa contiene.
+    
+    console.error(`ERRORE DURANTE LA CHIAMATA API per l'azione '${action}':`, error);
+
+    // Ora proviamo a recuperare la risposta come testo grezzo
+    try {
+      // Per fare questo, dobbiamo rieseguire la chiamata fetch, perché il corpo
+      // di una risposta può essere letto una sola volta.
+      const rawResponse = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action, payload }),
+      });
+      const responseText = await rawResponse.text();
+      
+      console.log('--- INIZIO RISPOSTA GREZZA DAL SERVER GOOGLE ---');
+      console.log(responseText);
+      console.log('--- FINE RISPOSTA GREZZA DAL SERVER GOOGLE ---');
+      
+      // Mostriamo un errore più specifico all'utente
+      alert("Errore di comunicazione con il server. Controlla la console per i dettagli (premi F12).");
+
+    } catch (e) {
+      console.error("Impossibile anche recuperare la risposta come testo.", e);
+    }
+    
+    // Rilanciamo l'errore originale per non interrompere il flusso
     throw error;
   }
 };
