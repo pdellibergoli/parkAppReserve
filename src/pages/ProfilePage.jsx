@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { callApi } from '../services/api';
-import AvatarColorModal from '../components/AvatarColorModal'; // NUOVO COMPONENTE
+import AvatarColorModal from '../components/AvatarColorModal';
 import './ProfilePage.css';
 
 /**
@@ -38,7 +38,7 @@ const AvatarDisplay = ({ user }) => {
   };
   
   const backgroundColor = user.avatarColor || '#DE1F3C'; 
-  const textColor = getTextColor(backgroundColor); // Applica la funzione di contrasto
+  const textColor = getTextColor(backgroundColor); 
 
   return <div className="profile-avatar" style={{ backgroundColor: backgroundColor, color: textColor }}>{getInitials()}</div>;
 };
@@ -79,9 +79,18 @@ const ProfilePage = () => {
     setLoading(true);
     setMessage('');
     setError('');
+    
+    // SICUREZZA: Pulizia dell'ID prima di inviare l'API
+    const cleanId = user.id ? user.id.toString().trim() : null;
+    if (!cleanId) {
+        setError("ID utente non valido.");
+        setLoading(false);
+        return;
+    }
+    
     try {
       const updatedUser = await callApi('updateUserProfile', { 
-        id: user.id, 
+        id: cleanId, 
         ...formData,
       }); 
       updateUserContext(updatedUser); 
@@ -106,8 +115,17 @@ const ProfilePage = () => {
     setLoading(true);
     setMessage('');
     setError('');
+    
+    // SICUREZZA: Pulizia dell'ID prima di inviare l'API
+    const cleanId = user.id ? user.id.toString().trim() : null;
+    if (!cleanId) {
+        setError("ID utente non valido.");
+        setLoading(false);
+        return;
+    }
+
     try {
-        await callApi('updateUserProfile', { id: user.id, password: passwordData.newPassword });
+        await callApi('updateUserProfile', { id: cleanId, password: passwordData.newPassword });
         setMessage('Password modificata con successo!');
         setPasswordData({ newPassword: '', confirmPassword: ''}); // Pulisce i campi
     } catch (err) {
@@ -122,10 +140,19 @@ const ProfilePage = () => {
       setLoading(true);
       setMessage('');
       setError('');
+      
+      // SICUREZZA: Pulizia dell'ID prima di inviare l'API
+      const cleanId = user.id ? user.id.toString().trim() : null;
+      if (!cleanId) {
+          setError("ID utente non valido.");
+          setLoading(false);
+          return;
+      }
+
       try {
           // Chiama l'API per aggiornare solo avatarColor
           const updatedUser = await callApi('updateUserProfile', { 
-              id: user.id, 
+              id: cleanId, 
               avatarColor: newColor 
           }); 
           // Aggiorna il contesto
