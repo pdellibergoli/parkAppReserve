@@ -2,17 +2,16 @@
 
 .profile-container h1 {
   margin-bottom: 2rem;
-  text-align: left; /* Allineiamo il titolo a sinistra come le card */
+  text-align: left;
 }
 
-/* Stile per le card/tabelle */
 .profile-card {
-  background-color: #f9f9f9; /* Grigio chiaro, quasi bianco */
-  border: 1px solid #e0e0e0; /* Bordo sottile per definirle */
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
   padding: 2rem;
   border-radius: 8px;
   margin-bottom: 2rem;
-  text-align: left; /* Allineiamo il contenuto a sinistra */
+  text-align: left;
 }
 .profile-card h2 {
   margin-top: 0;
@@ -33,10 +32,9 @@
 }
 
 .profile-avatar {
-  width: 70px; /* Un po' più grande dell'avatar nella navbar */
+  width: 70px; 
   height: 70px;
-  border-radius: 50%;
-  background-color: #DE1F3C; /* Colore tema per l'avatar */
+  border-radius: 50%; 
   color: white;
   display: flex;
   justify-content: center;
@@ -45,18 +43,23 @@
   font-size: 1.8rem;
   text-transform: uppercase;
   flex-shrink: 0;
+  /* Rimosso border: 3px solid #DE1F3C; per evitare conflitto con l'immagine */
 }
 
 .info-group-details p {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 1rem 0;
     color: #555;
     font-size: 0.9rem;
 }
 
 .change-avatar-btn {
-    padding: 0.5rem 1rem !important;
-    font-size: 0.9rem;
-    background-color: #4a4a4a; /* Grigio per un'azione secondaria */
+    background-color: #4a4a4a; /* Grigio scuro per il pulsante */
+    color: white;
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 .change-avatar-btn:hover {
     background-color: #5a5a5a;
@@ -84,16 +87,15 @@
   width: 100%;
   padding: 0.8rem;
   border: 1px solid #ccc;
-  background-color: #ffffff; /* Sfondo bianco per gli input */
+  background-color: #ffffff;
   border-radius: 4px;
   color: #213547;
   font-size: 1rem;
   box-sizing: border-box;
 }
 
-/* Allineiamo i bottoni a sinistra */
 .profile-card button {
-  display: flex; /* Manteniamo flex per lo spinner */
+  display: flex;
   justify-content: center;
   align-items: center;
   min-height: 42px;
@@ -107,4 +109,14 @@
   border-radius: 4px;
   text-align: center;
   margin-top: 1rem;
+}
+.error-message {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 1rem;
+    border-radius: 4px;
+    text-align: center;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
 }

@@ -1,0 +1,46 @@
+/* src/components/AvatarColorModal.css */
+
+.avatar-color-selection {
+    text-align: center;
+}
+
+.avatar-color-selection p {
+    margin-bottom: 1.5rem;
+    color: #555;
+}
+
+.color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 2rem;
+}
+
+.color-option {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s, border 0.1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 3px solid transparent;
+}
+
+.color-option:hover {
+    transform: scale(1.05);
+}
+
+.color-option.selected {
+    border-color: #333; /* Bordo più scuro quando selezionato */
+}
+
+.check-mark {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}

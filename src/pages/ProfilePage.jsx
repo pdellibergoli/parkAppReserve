@@ -3,16 +3,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { callApi } from '../services/api';
+import AvatarColorModal from '../components/AvatarColorModal'; // Corretto: Importa il nuovo componente
 import './ProfilePage.css';
 
-// Componente per l'avatar dell'utente, basato su MainLayout.jsx
+// Componente per l'avatar dell'utente
 const AvatarDisplay = ({ user }) => {
   const getInitials = () => {
     if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`;
     return user.firstName ? user.firstName[0] : 'U';
   };
-  return <div className="profile-avatar">{getInitials()}</div>;
+  
+  const color = user.avatarColor || '#DE1F3C'; 
+
+  return <div className="profile-avatar" style={{ backgroundColor: color }}>{getInitials()}</div>;
 };
+
 
 const ProfilePage = () => {
   const { user, updateUserContext } = useAuth();
@@ -30,6 +35,9 @@ const ProfilePage = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // STATO PER LA MODALE COLORE
+  const [isColorModalVisible, setIsColorModalVisible] = useState(false); 
 
   const handleInfoChange = (e) => {
     const { name, value } = e.target;
@@ -47,9 +55,12 @@ const ProfilePage = () => {
     setMessage('');
     setError('');
     try {
-      const updatedUser = await callApi('updateUserProfile', { id: user.id, ...formData });
-      updateUserContext(updatedUser); // Aggiorna il contesto e localStorage
-      setMessage('Profilo aggiornato con successo!');
+      const updatedUser = await callApi('updateUserProfile', { 
+        id: user.id, 
+        ...formData,
+      }); 
+      updateUserContext(updatedUser); 
+      setMessage('Informazioni personali aggiornate con successo!');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -81,20 +92,48 @@ const ProfilePage = () => {
     }
   };
 
+  // FUNZIONE PER CAMBIARE IL COLORE
+  const handleColorSelected = async (newColor) => {
+      setLoading(true);
+      setMessage('');
+      setError('');
+      try {
+          // Chiama l'API per aggiornare solo avatarColor
+          const updatedUser = await callApi('updateUserProfile', { 
+              id: user.id, 
+              avatarColor: newColor 
+          }); 
+          // Aggiorna il contesto
+          updateUserContext(updatedUser); 
+          setMessage('Stile avatar aggiornato con successo!');
+      } catch (err) {
+          setError(err.message);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+
   return (
     <div className="profile-container">
       <h1>Il mio profilo</h1>
       
       <div className="profile-card">
-        <h2>Informazioni e Avatar</h2> {/* TITOLO AGGIORNATO */}
+        <h2>Informazioni e Avatar</h2>
         
         <div className="avatar-info-group">
-            <AvatarDisplay user={user} />
+            <AvatarDisplay user={user} /> 
+            
             <div className="info-group-details">
-              <p>Il tuo avatar attuale è basato sulle tue iniziali.</p>
-              {/* Pulsante Placeholder per la funzionalità richiesta */}
-              <button className="change-avatar-btn" onClick={() => alert('Funzionalità di personalizzazione Avatar da implementare.')}>
-                Cambia Stile Avatar
+              <p>Personalizza l'aspetto del tuo avatar iniziale.</p>
+              
+              <button 
+                  type="button" 
+                  className="change-avatar-btn" 
+                  onClick={() => setIsColorModalVisible(true)} // APRE LA MODALE
+                  disabled={loading}
+              >
+                  Cambia stile avatar
               </button>
             </div>
         </div>
@@ -115,7 +154,7 @@ const ProfilePage = () => {
             <input type="email" id="mail" name="mail" value={formData.mail} onChange={handleInfoChange} required />
           </div>
           <button type="submit" disabled={loading}>
-            {loading ? <div className="spinner-small"></div> : 'Salva Modifiche'}
+            {loading ? <div className="spinner-small"></div> : 'Salva Informazioni'}
           </button>
         </form>
       </div>
@@ -139,6 +178,14 @@ const ProfilePage = () => {
 
       {message && <p className="success-message">{message}</p>}
       {error && <p className="error-message">{error}</p>}
+      
+      {/* MODALE PER IL CAMBIO COLORE AVATAR */}
+      <AvatarColorModal
+          isOpen={isColorModalVisible}
+          onClose={() => setIsColorModalVisible(false)}
+          currentColor={user.avatarColor || '#DE1F3C'}
+          onColorSelected={handleColorSelected}
+      />
     </div>
   );
 };

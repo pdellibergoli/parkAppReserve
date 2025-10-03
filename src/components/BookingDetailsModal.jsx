@@ -16,7 +16,9 @@ const Avatar = ({ user }) => {
     if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`;
     return user.firstName ? user.firstName[0] : 'U';
   };
+  
   const color = user.avatarColor || '#DE1F3C'; 
+
   return <div className="detail-avatar" style={{ backgroundColor: color }}>{getInitials()}</div>;
 };
 

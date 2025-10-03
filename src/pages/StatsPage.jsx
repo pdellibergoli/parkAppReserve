@@ -10,9 +10,11 @@ const UserAvatar = ({ user }) => {
     if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`;
     return user.firstName ? user.firstName[0] : 'U';
   };
-  return <div className="stat-avatar">{getInitials()}</div>;
-};
+  
+  const color = user.avatarColor || '#DE1F3C'; 
 
+  return <div className="stat-avatar" style={{ backgroundColor: color }}>{getInitials()}</div>;
+};
 
 const StatsPage = () => {
   const [statsData, setStatsData] = useState([]);
