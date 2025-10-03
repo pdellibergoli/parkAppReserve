@@ -1,0 +1,63 @@
+/* src/pages/ProfilePage.css */
+
+.profile-container h1 {
+  margin-bottom: 2rem;
+}
+
+.profile-card {
+  background-color: #2f2f2f;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+.profile-card h2 {
+  margin-top: 0;
+  border-bottom: 1px solid #444;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1.5rem;
+}
+.form-row .form-group {
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.form-group input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #555;
+  background-color: #3b3b3b;
+  border-radius: 4px;
+  color: white;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.profile-card button {
+  width: auto !important;
+  padding: 0.7rem 1.5rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+}
+
+.success-message {
+  color: #5cb85c;
+  background-color: rgba(92, 184, 92, 0.1);
+  border: 1px solid #5cb85c;
+  padding: 1rem;
+  border-radius: 4px;
+  text-align: center;
+  margin-top: 1rem;
+}

@@ -1,0 +1,99 @@
+/* src/pages/StatsPage.css */
+
+.stats-container h1 {
+  margin-bottom: 0.5rem;
+}
+.stats-container p {
+  margin-bottom: 2.5rem;
+  color: #a0a0a0;
+  font-size: 1.1rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.user-stat-card {
+  background-color: #2f2f2f;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #444;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.user-stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: #3a3a3a;
+}
+
+.stat-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #646cff;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.card-header .user-info {
+  display: flex;
+  flex-direction: column;
+}
+.card-header .user-name {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+.card-header .total-bookings {
+  color: #a0a0a0;
+  font-size: 0.9rem;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.parking-counts-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.parking-counts-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.count-badge {
+  background-color: #535bf2;
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.no-bookings-message {
+  color: #888;
+  text-align: center;
+  margin: 1rem 0;
+}

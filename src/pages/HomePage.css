@@ -1,0 +1,60 @@
+/* src/pages/HomePage.css */
+
+.calendar-container {
+  position: relative;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+/* Stili per personalizzare react-big-calendar */
+.rbc-calendar {
+  background-color: #2f2f2f;
+  color: #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid #444;
+}
+
+.rbc-toolbar button {
+  color: #ddd;
+  background: #3a3a3a;
+  border: 1px solid #555;
+  height: auto !important; /* Override per i bottoni del calendario */
+  width: auto !important;
+  padding: 0.5rem 1rem !important;
+}
+.rbc-toolbar button:hover, .rbc-toolbar button:focus {
+  background-color: #4a4a4a;
+  color: white;
+}
+.rbc-toolbar button.rbc-active {
+  background-color: #646cff;
+  border-color: #646cff;
+}
+
+.rbc-header {
+  border-bottom: 1px solid #444;
+  padding: 0.5rem 0;
+}
+.rbc-day-bg, .rbc-month-row {
+  border-color: #444 !important;
+}
+
+/* Pulsante "+" flottante */
+.add-booking-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 50%;
+  font-size: 2rem;
+  line-height: 1;
+  padding: 0 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}

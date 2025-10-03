@@ -1,0 +1,36 @@
+/* Aggiungi queste regole in fondo a src/layouts/MainLayout.css */
+
+.main-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1.2rem; /* Aumentiamo un po' il padding */
+  border-radius: 8px;
+  border-bottom: none; /* Rimuoviamo il vecchio bordo inferiore */
+}
+
+/* Nascondiamo il testo (span) di default */
+.main-nav a span {
+  display: none;
+}
+
+/* Mostriamo il testo e cambiamo lo sfondo solo per il link attivo */
+.main-nav a.active {
+  color: white;
+  background-color: #3a3a3a;
+}
+
+.main-nav a.active span {
+  display: inline;
+}
+
+/* Stile per i dettagli utente nel dropdown */
+.dropdown-item.user-details {
+  font-weight: bold;
+  color: white;
+  cursor: default;
+}
+
+.dropdown-item.user-details:hover {
+  background-color: transparent;
+}
