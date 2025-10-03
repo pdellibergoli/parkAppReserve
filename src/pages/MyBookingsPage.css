@@ -16,12 +16,12 @@
 }
 
 .delete-selected-btn {
-  background-color: #d93025; /* Rosso */
+  background-color: #DE1F3C; /* Changed from #d93025 */
   color: white;
 }
 
 .delete-selected-btn:hover {
-  background-color: #b82d2d;
+  background-color: #B81A33; /* Changed from #b82d2d to darker red */
 }
 
 .delete-selected-btn:disabled {
@@ -48,7 +48,7 @@
   border: 1px solid #e0e0e0; /* Bordo sottile */
   padding: 1.5rem;
   border-radius: 8px;
-  border-left: 5px solid #646cff;
+  border-left: 5px solid #DE1F3C; /* Changed from #646cff */
   transition: background-color 0.2s, border-color 0.2s;
 }
 

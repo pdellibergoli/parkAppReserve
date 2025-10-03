@@ -18,7 +18,7 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background-color: #646cff;
+  background-color: #DE1F3C; /* Changed from #646cff */
   color: white;
   display: flex;
   justify-content: center;
@@ -65,8 +65,8 @@
 }
 
 .delete-btn {
-  background-color: #b82d2d;
+  background-color: #DE1F3C; /* Changed from #b82d2d for consistency with new accent/delete color */
 }
 .delete-btn:hover {
-  background-color: #d94848;
+  background-color: #B81A33; /* Changed from #d94848 for consistency */
 }

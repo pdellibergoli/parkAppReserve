@@ -101,6 +101,6 @@
 }
 
 .delete-space-btn:hover {
-  color: #d93025;
+  color: #DE1F3C; /* Changed from #d93025 */
   background-color: #fce8e6;
 }

@@ -77,7 +77,7 @@ const HomePage = () => {
     const isMyBooking = event.resource.userId === user.id;
     return {
       style: {
-        backgroundColor: isMyBooking ? '#535bf2' : '#3174ad',
+        backgroundColor: isMyBooking ? '#DE1F3C' : '#3174ad', // Changed from '#535bf2'
         borderRadius: '5px',
         opacity: 0.8,
         color: 'white',

@@ -8,29 +8,40 @@ const LoginPage = () => {
   const [mail, setMail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // ⬅️ Stato di loading locale per lo spinner
   
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => { // ⬅️ RIMUOVI 'async' qui
+  const handleSubmit = (e) => {
     e.preventDefault(); 
-
     setError('');
-    setLoading(true);
+    setLoading(true); // ⬅️ Iniziamo il loading locale e mostriamo lo spinner
     
+    // Gestione della Promise di login (che ora ha un ritardo minimo)
     login(mail, password)
       .then(() => {
+        // La navigazione avviene dopo che l'API call (con ritardo) è terminata
         navigate('/'); 
       })
       .catch((err) => {
         setError(err.message || 'Credenziali non valide. Riprova.');
       })
       .finally(() => {
-        setLoading(false);
+        setLoading(false); // ⬅️ Terminiamo il loading locale
       });
   };
 
+  // Se loading è true, mostra solo lo spinner centrato.
+  if (loading) {
+      return (
+        <div className="auth-container">
+          <div className="spinner"></div>
+        </div>
+      );
+  }
+
+  // Altrimenti, mostra il form di login.
   return (
     <div className="auth-container">
       <div className="auth-form">
@@ -59,7 +70,7 @@ const LoginPage = () => {
           </div>
           {error && <p className="error-message">{error}</p>}
           <button type="submit" disabled={loading}>
-            {loading ? <div className="spinner"></div> : 'Accedi'}
+            Accedi
           </button>
         </form>
         <p className="redirect-link">

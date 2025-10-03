@@ -3,6 +3,10 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { callApi } from '../services/api';
 
+// Funzione per creare un ritardo minimo
+const MIN_LOAD_TIME = 500; // 500 millisecondi
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 // 1. Creiamo il contesto
 const AuthContext = createContext(null);
 
@@ -15,8 +19,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('parkingAppUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      
+      // Controllo robusto per l'errore JSON.parse "undefined"
+      if (storedUser && storedUser !== 'undefined') {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Errore di parsing in localStorage, elemento rimosso.", e);
+          localStorage.removeItem('parkingAppUser');
+        }
       }
     } finally {
       setLoading(false);
@@ -24,25 +35,31 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (mail, password) => {
-    setLoading(true);
+    // Rimosso setLoading da qui, ora gestito dal componente LoginPage
     try {
-      const loggedInUser = await callApi('login', { mail, password });
+      // Eseguiamo la chiamata API e il ritardo minimo in parallelo
+      const [loggedInUser] = await Promise.all([
+        callApi('login', { mail, password }),
+        delay(MIN_LOAD_TIME) // Ritardo minimo forzato
+      ]);
+      
       setUser(loggedInUser);
       localStorage.setItem('parkingAppUser', JSON.stringify(loggedInUser)); // Salviamo l'utente nel browser
       return loggedInUser;
     } catch (error) {
-      // Se c'è un errore, lo rilanciamo per mostrarlo nel form di login
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
   
   const signup = async (firstName, lastName, mail, password) => {
-    setLoading(true);
+    // Rimosso setLoading da qui, ora gestito dal componente SignupPage
     try {
       // 1. Chiamiamo lo script per registrare l'utente.
-      const newUser = await callApi('signup', { firstName, lastName, mail, password });
+      // 2. Eseguiamo la chiamata API e il ritardo minimo in parallelo
+      const [newUser] = await Promise.all([
+        callApi('signup', { firstName, lastName, mail, password }),
+        delay(MIN_LOAD_TIME) // Ritardo minimo forzato
+      ]);
       
       // 2. Usiamo i dati che lo script ci ha già restituito per effettuare l'accesso!
       // Non serve una seconda chiamata.
@@ -53,8 +70,6 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       // Se c'è un errore qui, significa che la registrazione è fallita davvero.
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
