@@ -1,0 +1,72 @@
+/* src/components/BookingDetailsModal.css */
+
+.booking-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #444;
+}
+
+.detail-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #646cff;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+}
+
+.user-name {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.detail-row strong {
+  color: #a0a0a0;
+}
+
+.modal-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  padding: 0.6rem 1.2rem !important;
+  font-weight: 500;
+  width: auto !important; /* Override */
+}
+
+.edit-btn {
+  background-color: #4a4a4a;
+}
+.edit-btn:hover {
+  background-color: #5a5a5a;
+}
+
+.delete-btn {
+  background-color: #b82d2d;
+}
+.delete-btn:hover {
+  background-color: #d94848;
+}

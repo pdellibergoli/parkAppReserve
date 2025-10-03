@@ -1,3 +1,149 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* src/index.css */
+
+/* Reset e Stili Globali per TEMA CHIARO */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Impostazioni per il tema chiaro */
+  color-scheme: light;
+  color: #213547; /* Testo scuro di default */
+  background-color: #ffffff; /* Sfondo bianco */
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  width: 100%;
+}
+
+/* Stili per il contenitore di autenticazione */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+}
+
+.auth-form {
+  background-color: #f9f9f9; /* Grigio molto chiaro */
+  padding: 2.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
+}
+
+.auth-form h2 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.auth-form p {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #666;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  border-radius: 4px;
+  color: #213547;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+button, .btn {
+  padding: .6rem 1.2rem;
+  border: none;
+  background-color: #646cff;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color .2s;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 42px;
+  text-decoration: none;
+  width: auto;
+}
+
+button:hover, .btn:hover {
+  background-color: #535bf2;
+}
+
+button:disabled, .btn:disabled {
+  background-color: #d1d1d1;
+  color: #777;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #d93025;
+  background-color: #fce8e6;
+  border: 1px solid #f9bdbb;
+  padding: 0.8rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.redirect-link {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.redirect-link a {
+  color: #646cff;
+  text-decoration: none;
+}
+.redirect-link a:hover {
+  text-decoration: underline;
+}
+
+/* Spinner di caricamento */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  border-top-color: #213547;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

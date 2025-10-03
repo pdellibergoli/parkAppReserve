@@ -1,0 +1,123 @@
+/* src/pages/MyBookingsPage.css */
+
+.my-bookings-container {
+  text-align: left;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.delete-selected-btn {
+  background-color: #d93025; /* Rosso */
+  color: white;
+}
+
+.delete-selected-btn:hover {
+  background-color: #b82d2d;
+}
+
+.delete-selected-btn:disabled {
+  background-color: #d1d1d1;
+  color: #777;
+  cursor: not-allowed;
+}
+
+.bookings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Stile per la singola scheda di prenotazione */
+.bookings-list li {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background-color: #f9f9f9; /* <-- SFONDO GRIGIO CHIARO */
+  border: 1px solid #e0e0e0; /* Bordo sottile */
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 5px solid #646cff;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* Stile per la scheda selezionata */
+.bookings-list li.selected {
+  background-color: #f0f0f0; /* Grigio leggermente più scuro per selezione */
+  border-left-color: #DE1F3C; /* Bordo rosso quando selezionato */
+}
+
+.booking-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.booking-date {
+  font-size: 1.2rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  color: #213547; /* Testo scuro */
+}
+
+.booking-space {
+  color: #555; /* Testo secondario grigio scuro */
+}
+
+/* Stile per checkbox personalizzate (TEMA CHIARO) */
+.checkbox-container {
+  position: relative;
+}
+
+.checkbox-container input[type="checkbox"] {
+  opacity: 0;
+  width: 25px;
+  height: 25px;
+  cursor: pointer;
+}
+
+.checkbox-container label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 25px;
+  height: 25px;
+  background-color: #ffffff;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  pointer-events: none;
+  transition: all 0.2s;
+}
+
+.checkbox-container input[type="checkbox"]:checked + label {
+  background-color: #DE1F3C;
+  border-color: #DE1F3C;
+}
+
+.checkbox-container label:after {
+  content: '';
+  position: absolute;
+  display: none;
+  left: 7px;
+  top: 3px;
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-container input[type="checkbox"]:checked + label:after {
+  display: block;
+}

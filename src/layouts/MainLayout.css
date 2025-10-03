@@ -1,0 +1,122 @@
+/* src/layouts/MainLayout.css */
+
+/* Stili per l'header principale */
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+}
+
+/* Stili per il contenitore del logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem; /* Spazio tra immagine e testo */
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-decoration: none; /* Rimuove sottolineatura se il logo fosse un link */
+  color: inherit; /* Eredita il colore del testo */
+}
+
+/* Stile per l'immagine del logo */
+.logo-img {
+  height: 35px; /* Altezza del logo */
+  width: auto;  /* Larghezza si adatta in proporzione */
+}
+
+/* Stili per la navigazione principale */
+.main-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  padding: 0.5rem;
+  background-color: #f0f0f0; /* Sfondo grigio chiaro per la barra */
+  border-radius: 12px;
+}
+.main-nav a {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: .8rem 1.2rem;
+  border-radius: 8px;
+  color: #555; /* Icone grigio scuro */
+  background-color: transparent;
+  transition: background-color .2s, color .2s;
+}
+.main-nav a span {
+  display: none;
+  white-space: nowrap;
+}
+.main-nav a:hover {
+  background-color: #e0e0e0;
+  color: #000;
+}
+.main-nav a:hover span {
+  display: inline;
+}
+/* MODIFICA COLORE TAB ATTIVO */
+.main-nav a.active {
+  background-color: #DE1F3C; /* <-- NUOVO COLORE */
+  color: #fff;
+}
+.main-nav a.active span {
+  display: inline;
+}
+
+/* STILI PER AVATAR E HAMBURGER MENU */
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 1rem;
+  cursor: default;
+}
+
+.user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+.hamburger-btn:hover {
+  color: #000;
+  background-color: #e0e0e0;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  width: max-content;
+  min-width: 200px;
+  z-index: 100;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-item{padding:.8rem 1.2rem;color:#333;text-decoration:none;display:block;background:0 0;border:none;width:100%;text-align:left;cursor:pointer}.dropdown-item:hover{background-color:#f0f0f0}.logout-btn{color:#d93025}.logout-btn:hover{background-color:#d93025;color:#fff}.user-details{padding:.8rem 1.2rem;cursor:default}.user-details p{margin:0;line-height:1.4}.user-details .user-email{font-size:.85rem;color:#666}.user-details:hover{background-color:transparent!important}.dropdown hr{border:none;border-top:1px solid #e0e0e0;margin:.5rem 0}

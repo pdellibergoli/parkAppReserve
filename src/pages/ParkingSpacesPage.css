@@ -1,0 +1,106 @@
+/* src/pages/ParkingSpacesPage.css */
+
+.parking-spaces-container {
+  text-align: left;
+}
+
+.parking-spaces-container h1 {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 1rem;
+}
+
+/* Stile per le schede/contenitori */
+.add-space-form-container,
+.spaces-list-container {
+  background-color: #f9f9f9; /* <-- SFONDO GRIGIO CHIARO */
+  border: 1px solid #e0e0e0; /* Bordo sottile */
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.add-space-form-container h2,
+.spaces-list-container h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #213547;
+}
+
+.add-space-form {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Stile input per tema chiaro */
+.space-input {
+  flex-grow: 1;
+  padding: 0.8rem;
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  border-radius: 4px;
+  color: #213547;
+  font-size: 1rem;
+}
+
+/* Stile bottone "Aggiungi" */
+.add-space-btn {
+  background-color: #4a9d4a; /* Verde */
+  color: white;
+}
+.add-space-btn:hover {
+  background-color: #3e8e41;
+}
+
+.add-space-btn:disabled {
+  background-color: #d1d1d1;
+  color: #777;
+}
+
+
+.spaces-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Stile per la riga di un parcheggio */
+.space-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.spaces-list li:last-child {
+  border-bottom: none;
+}
+
+.space-number {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Stile bottone "Elimina" */
+.delete-space-btn {
+  background: none;
+  border: none;
+  color: #777; /* Grigio scuro per l'icona */
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.delete-space-btn:hover {
+  color: #d93025;
+  background-color: #fce8e6;
+}
