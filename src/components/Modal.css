@@ -1,12 +1,10 @@
-/* src/components/Modal.css */
-
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(255, 255, 255, 0.3); /* Cambiato a grigio chiaro (bianco) con 30% di opacità, come richiesto */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -20,12 +18,13 @@
 }
 
 .modal-content {
-  background-color: #2f2f2f;
+  background-color: #f9f9f9; /* Cambiato da scuro (#2f2f2f) a grigio chiaro per coerenza con il tema */
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
   width: 90%;
   max-width: 500px;
+  color: #213547; /* Testo scuro per il corpo */
   text-align: left;
   animation: slideIn 0.3s ease-out;
 }
@@ -39,7 +38,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #e0e0e0; /* Adattato al tema chiaro (era #444) */
   padding-bottom: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -47,6 +46,7 @@
 .modal-title {
   margin: 0;
   font-size: 1.5rem;
+  color: #213547; /* Titolo scuro */
 }
 
 .modal-close-btn {
@@ -57,10 +57,9 @@
   cursor: pointer;
   padding: 0;
   line-height: 1;
-  /* Rimuoviamo width e height auto !important */
 }
 .modal-close-btn:hover {
-  color: white;
+  color: #DE1F3C; /* Colore tema */
 }
 
 .modal-body {

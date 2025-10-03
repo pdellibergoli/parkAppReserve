@@ -11,14 +11,14 @@
   align-items: center;
   gap: 1rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #e0e0e0; /* Adattato al tema chiaro (era #444) */
 }
 
 .detail-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background-color: #DE1F3C; /* Changed from #646cff */
+  /* Il background-color è impostato inline */
   color: white;
   display: flex;
   justify-content: center;
@@ -31,6 +31,7 @@
 .user-name {
   font-size: 1.2rem;
   font-weight: 500;
+  color: #213547; /* Assicuriamo che il nome utente sia scuro */
 }
 
 .detail-row {
@@ -38,10 +39,11 @@
   justify-content: space-between;
   align-items: center;
   font-size: 1.1rem;
+  color: #333; /* Assicuriamo che il dettaglio sia scuro */
 }
 
 .detail-row strong {
-  color: #a0a0a0;
+  color: #666; /* Scelto un grigio scuro per l'etichetta (era #a0a0a0, troppo chiaro su sfondo chiaro) */
 }
 
 .modal-actions {
@@ -65,8 +67,8 @@
 }
 
 .delete-btn {
-  background-color: #DE1F3C; /* Changed from #b82d2d for consistency with new accent/delete color */
+  background-color: #DE1F3C;
 }
 .delete-btn:hover {
-  background-color: #B81A33; /* Changed from #d94848 for consistency */
+  background-color: #B81A33;
 }

@@ -5,6 +5,15 @@ import { useAuth } from '../context/AuthContext';
 import { callApi } from '../services/api';
 import './ProfilePage.css';
 
+// Componente per l'avatar dell'utente, basato su MainLayout.jsx
+const AvatarDisplay = ({ user }) => {
+  const getInitials = () => {
+    if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`;
+    return user.firstName ? user.firstName[0] : 'U';
+  };
+  return <div className="profile-avatar">{getInitials()}</div>;
+};
+
 const ProfilePage = () => {
   const { user, updateUserContext } = useAuth();
   
@@ -77,7 +86,19 @@ const ProfilePage = () => {
       <h1>Il mio profilo</h1>
       
       <div className="profile-card">
-        <h2>Informazioni Personali</h2>
+        <h2>Informazioni e Avatar</h2> {/* TITOLO AGGIORNATO */}
+        
+        <div className="avatar-info-group">
+            <AvatarDisplay user={user} />
+            <div className="info-group-details">
+              <p>Il tuo avatar attuale è basato sulle tue iniziali.</p>
+              {/* Pulsante Placeholder per la funzionalità richiesta */}
+              <button className="change-avatar-btn" onClick={() => alert('Funzionalità di personalizzazione Avatar da implementare.')}>
+                Cambia Stile Avatar
+              </button>
+            </div>
+        </div>
+
         <form onSubmit={handleInfoSubmit}>
           <div className="form-row">
             <div className="form-group">

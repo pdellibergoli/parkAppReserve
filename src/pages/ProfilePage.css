@@ -22,6 +22,48 @@
   color: #213547;
 }
 
+/* --- STILI AVATAR --- */
+.avatar-info-group {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.profile-avatar {
+  width: 70px; /* Un po' più grande dell'avatar nella navbar */
+  height: 70px;
+  border-radius: 50%;
+  background-color: #DE1F3C; /* Colore tema per l'avatar */
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.8rem;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.info-group-details p {
+    margin: 0 0 0.5rem 0;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.change-avatar-btn {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.9rem;
+    background-color: #4a4a4a; /* Grigio per un'azione secondaria */
+}
+.change-avatar-btn:hover {
+    background-color: #5a5a5a;
+}
+/* --- FINE STILI AVATAR --- */
+
+
 .form-row {
   display: flex;
   gap: 1.5rem;
