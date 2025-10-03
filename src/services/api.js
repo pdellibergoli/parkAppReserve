@@ -1,4 +1,4 @@
-const SCRIPT_URL = import.meta.env.VITE_SCRIPT_URL;
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0J3MT6JDcKbvkA6leT5i6ve6EX-AFwz0iMFcJQIybQLNkyIl1jX4lARiGQVCiHHE/exec";
 
 export const callApi = async (action, payload = {}) => {
   try {
