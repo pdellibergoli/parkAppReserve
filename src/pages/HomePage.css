@@ -11,50 +11,88 @@
   height: 50vh;
 }
 
-/* Stili per personalizzare react-big-calendar */
+/* STILI PER TEMA CHIARO REACT-BIG-CALENDAR */
 .rbc-calendar {
-  background-color: #2f2f2f;
-  color: #ddd;
+  background-color: #ffffff;
   border-radius: 8px;
   padding: 1rem;
-  border: 1px solid #444;
+  border: 1px solid #e0e0e0;
 }
 
 .rbc-toolbar button {
-  color: #ddd;
-  background: #3a3a3a;
-  border: 1px solid #555;
-  height: auto !important; /* Override per i bottoni del calendario */
-  width: auto !important;
-  padding: 0.5rem 1rem !important;
+  color: #333;
+  background: transparent;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
 }
+
 .rbc-toolbar button:hover, .rbc-toolbar button:focus {
-  background-color: #4a4a4a;
-  color: white;
+  background-color: #f0f0f0;
+  color: #000;
 }
+
 .rbc-toolbar button.rbc-active {
   background-color: #646cff;
-  border-color: #646cff;
+  color: #ffffff;
+}
+
+.rbc-toolbar-label {
+  color: #213547;
+  font-weight: bold;
+  font-size: 1.5rem;
 }
 
 .rbc-header {
-  border-bottom: 1px solid #444;
-  padding: 0.5rem 0;
-}
-.rbc-day-bg, .rbc-month-row {
-  border-color: #444 !important;
+  color: #666;
+  text-transform: capitalize;
+  font-weight: 500;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0.8rem 0;
 }
 
-/* Pulsante "+" flottante */
+.rbc-day-bg, .rbc-month-row {
+  border-color: #e0e0e0;
+}
+
+.rbc-day-bg.rbc-today {
+  background-color: #f0f0f0;
+}
+
+.rbc-date-cell {
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.rbc-date-cell.rbc-now {
+  color: #213547;
+  font-weight: bold;
+}
+
+.rbc-off-range .rbc-date-cell {
+  color: #ccc;
+}
+
+.rbc-event {
+  color: #ffffff !important;
+  padding: 4px 8px;
+}
+
 .add-booking-btn {
   position: fixed;
   bottom: 30px;
   right: 30px;
-  width: 60px !important;
-  height: 60px !important;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   font-size: 2rem;
   line-height: 1;
-  padding: 0 !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  background-color: #646cff;
+  color: white;
+}
+.add-booking-btn:hover {
+    background-color: #535bf2;
 }

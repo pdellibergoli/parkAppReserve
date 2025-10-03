@@ -1,7 +1,7 @@
 /* src/pages/MyBookingsPage.css */
 
 .my-bookings-container {
-  /* Stile contenitore */
+  text-align: left;
 }
 
 .page-header {
@@ -16,20 +16,17 @@
 }
 
 .delete-selected-btn {
-  background-color: #b82d2d;
+  background-color: #d93025; /* Rosso */
   color: white;
-  padding: 0.6rem 1.2rem !important;
-  border-radius: 6px;
-  font-weight: 500;
-  width: auto !important;
 }
 
 .delete-selected-btn:hover {
-  background-color: #d94848;
+  background-color: #b82d2d;
 }
 
 .delete-selected-btn:disabled {
-  background-color: #444;
+  background-color: #d1d1d1;
+  color: #777;
   cursor: not-allowed;
 }
 
@@ -42,20 +39,23 @@
   gap: 1rem;
 }
 
+/* Stile per la singola scheda di prenotazione */
 .bookings-list li {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  background-color: #2f2f2f;
+  background-color: #f9f9f9; /* <-- SFONDO GRIGIO CHIARO */
+  border: 1px solid #e0e0e0; /* Bordo sottile */
   padding: 1.5rem;
   border-radius: 8px;
   border-left: 5px solid #646cff;
   transition: background-color 0.2s, border-color 0.2s;
 }
 
+/* Stile per la scheda selezionata */
 .bookings-list li.selected {
-  background-color: #3a3a3a;
-  border-left-color: #ff6b6b;
+  background-color: #f0f0f0; /* Grigio leggermente più scuro per selezione */
+  border-left-color: #DE1F3C; /* Bordo rosso quando selezionato */
 }
 
 .booking-info {
@@ -68,13 +68,14 @@
   font-size: 1.2rem;
   font-weight: 500;
   text-transform: capitalize;
+  color: #213547; /* Testo scuro */
 }
 
 .booking-space {
-  color: #a0a0a0;
+  color: #555; /* Testo secondario grigio scuro */
 }
 
-/* Stile per checkbox personalizzate */
+/* Stile per checkbox personalizzate (TEMA CHIARO) */
 .checkbox-container {
   position: relative;
 }
@@ -92,16 +93,16 @@
   left: 0;
   width: 25px;
   height: 25px;
-  background-color: #444;
-  border: 2px solid #666;
+  background-color: #ffffff;
+  border: 2px solid #ccc;
   border-radius: 4px;
   pointer-events: none;
   transition: all 0.2s;
 }
 
 .checkbox-container input[type="checkbox"]:checked + label {
-  background-color: #ff6b6b;
-  border-color: #ff6b6b;
+  background-color: #DE1F3C;
+  border-color: #DE1F3C;
 }
 
 .checkbox-container label:after {

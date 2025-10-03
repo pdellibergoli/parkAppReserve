@@ -57,8 +57,7 @@
   cursor: pointer;
   padding: 0;
   line-height: 1;
-  width: auto !important; /* Override generico */
-  height: auto !important;
+  /* Rimuoviamo width e height auto !important */
 }
 .modal-close-btn:hover {
   color: white;

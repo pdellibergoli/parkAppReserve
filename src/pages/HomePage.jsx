@@ -27,16 +27,19 @@ const HomePage = () => {
   const [parkingSpaces, setParkingSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  // Stati per la navigazione del calendario
+  const [date, setDate] = useState(new Date());
+  const [view, setView] = useState('month');
+
   const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
-    // ... (il resto della funzione fetchData rimane invariato)
-     try {
+    try {
       setLoading(true);
       const [bookingsData, usersData, spacesData] = await Promise.all([
         callApi('getBookings'),
@@ -59,7 +62,7 @@ const HomePage = () => {
         };
       });
       setEvents(calendarEvents);
-    } catch (err) {
+    } catch (err) { // <-- ECCO LA CORREZIONE
       setError('Impossibile caricare i dati delle prenotazioni. Riprova più tardi.');
     } finally {
       setLoading(false);
@@ -70,8 +73,7 @@ const HomePage = () => {
     fetchData();
   }, [fetchData]);
 
-  // ... (tutte le altre funzioni di gestione rimangono invariate)
-    const eventStyleGetter = (event) => {
+  const eventStyleGetter = (event) => {
     const isMyBooking = event.resource.userId === user.id;
     return {
       style: {
@@ -89,31 +91,19 @@ const HomePage = () => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
   };
-  
+
   const handleDeleteBooking = async (bookingId) => {
     try {
       await callApi('deleteBookings', { bookingIds: [bookingId] });
-      setEvents(prev => prev.filter(event => event.resource.id !== bookingId));
-      setAllBookings(prev => prev.filter(booking => booking.id !== bookingId));
+      fetchData(); // Ricarica i dati
       setIsDetailsModalOpen(false);
     } catch (err) {
       alert(`Errore: ${err.message}`);
     }
   };
 
-  const handleBookingAdded = (newBooking) => {
-    const bookingUser = users.find(u => u.id === newBooking.userId);
-    const parkingSpot = parkingSpaces.find(p => p.id === newBooking.parkingSpaceId);
-
-    const newCalendarEvent = {
-        title: `${parkingSpot?.number || 'N/A'} - ${bookingUser?.firstName || 'Utente'}`,
-        start: new Date(newBooking.date),
-        end: new Date(newBooking.date),
-        resource: { ...newBooking, parkingSpaceNumber: parkingSpot.number },
-    };
-
-    setEvents(prev => [...prev, newCalendarEvent]);
-    setAllBookings(prev => [...prev, { ...newBooking, parkingSpaceNumber: parkingSpot.number }]);
+  const handleBookingAdded = () => {
+    fetchData(); // Ricarica i dati
   };
 
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
@@ -132,6 +122,12 @@ const HomePage = () => {
           messages={{ next: "Succ", previous: "Prec", today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
           eventPropGetter={eventStyleGetter}
           onSelectEvent={handleSelectEvent}
+          
+          // Props per la navigazione
+          date={date}
+          view={view}
+          onNavigate={newDate => setDate(newDate)}
+          onView={newView => setView(newView)}
         />
         <button className="add-booking-btn" onClick={() => setIsAddModalOpen(true)}>+</button>
       </div>
@@ -145,7 +141,7 @@ const HomePage = () => {
         onDelete={handleDeleteBooking}
       />
 
-      <AddBookingModal 
+      <AddBookingModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onBookingAdded={handleBookingAdded}

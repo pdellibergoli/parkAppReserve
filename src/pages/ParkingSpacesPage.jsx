@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { callApi } from '../services/api';
 import { FaTrashAlt } from 'react-icons/fa';
-import './ParkingSpacesPage.css';
+import './ParkingSpacesPage.css'; // Assicurati che il file CSS sia importato
 
 const ParkingSpacesPage = () => {
   const [parkingSpaces, setParkingSpaces] = useState([]);
@@ -16,8 +16,16 @@ const ParkingSpacesPage = () => {
     try {
       setLoading(true);
       const spaces = await callApi('getParkingSpaces');
-      // Ordiniamo i parcheggi per nome/numero
-      spaces.sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }));
+      
+      // --- CORREZIONE DELLA LOGICA DI ORDINAMENTO ---
+      // Convertiamo esplicitamente i numeri in stringhe prima di confrontarli
+      // per evitare errori se l'API restituisce un tipo numerico.
+      spaces.sort((a, b) => {
+        const numA = String(a.number || '');
+        const numB = String(b.number || '');
+        return numA.localeCompare(numB, undefined, { numeric: true });
+      });
+
       setParkingSpaces(spaces);
     } catch (err) {
       setError("Impossibile caricare l'elenco dei parcheggi.");

@@ -2,19 +2,24 @@
 
 .profile-container h1 {
   margin-bottom: 2rem;
+  text-align: left; /* Allineiamo il titolo a sinistra come le card */
 }
 
+/* Stile per le card/tabelle */
 .profile-card {
-  background-color: #2f2f2f;
+  background-color: #f9f9f9; /* Grigio chiaro, quasi bianco */
+  border: 1px solid #e0e0e0; /* Bordo sottile per definirle */
   padding: 2rem;
   border-radius: 8px;
   margin-bottom: 2rem;
+  text-align: left; /* Allineiamo il contenuto a sinistra */
 }
 .profile-card h2 {
   margin-top: 0;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #e0e0e0;
   padding-bottom: 1rem;
   margin-bottom: 1.5rem;
+  color: #213547;
 }
 
 .form-row {
@@ -31,31 +36,31 @@
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
+  color: #333;
 }
 .form-group input {
   width: 100%;
   padding: 0.8rem;
-  border: 1px solid #555;
-  background-color: #3b3b3b;
+  border: 1px solid #ccc;
+  background-color: #ffffff; /* Sfondo bianco per gli input */
   border-radius: 4px;
-  color: white;
+  color: #213547;
   font-size: 1rem;
   box-sizing: border-box;
 }
 
+/* Allineiamo i bottoni a sinistra */
 .profile-card button {
-  width: auto !important;
-  padding: 0.7rem 1.5rem !important;
-  display: flex;
-  align-items: center;
+  display: flex; /* Manteniamo flex per lo spinner */
   justify-content: center;
+  align-items: center;
   min-height: 42px;
 }
 
 .success-message {
-  color: #5cb85c;
-  background-color: rgba(92, 184, 92, 0.1);
-  border: 1px solid #5cb85c;
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
   padding: 1rem;
   border-radius: 4px;
   text-align: center;

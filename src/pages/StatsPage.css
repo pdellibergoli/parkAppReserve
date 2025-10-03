@@ -1,11 +1,15 @@
 /* src/pages/StatsPage.css */
 
+.stats-container {
+  text-align: left;
+}
+
 .stats-container h1 {
   margin-bottom: 0.5rem;
 }
 .stats-container p {
   margin-bottom: 2.5rem;
-  color: #a0a0a0;
+  color: #666; /* Testo secondario più scuro */
   font-size: 1.1rem;
 }
 
@@ -15,25 +19,28 @@
   gap: 1.5rem;
 }
 
+/* Stile per la singola scheda statistica */
 .user-stat-card {
-  background-color: #2f2f2f;
+  background-color: #f9f9f9; /* <-- SFONDO GRIGIO CHIARO */
+  border: 1px solid #e0e0e0; /* Bordo sottile */
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #444;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .user-stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
 }
 
+/* Header della scheda */
 .card-header {
   display: flex;
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  background-color: #3a3a3a;
+  background-color: #f0f0f0; /* Sfondo leggermente più scuro per l'header */
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .stat-avatar {
@@ -58,9 +65,10 @@
 .card-header .user-name {
   font-size: 1.2rem;
   font-weight: 500;
+  color: #213547; /* Testo scuro primario */
 }
 .card-header .total-bookings {
-  color: #a0a0a0;
+  color: #555; /* Testo secondario */
   font-size: 0.9rem;
 }
 
@@ -81,6 +89,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: #333;
 }
 
 .count-badge {
@@ -93,7 +102,7 @@
 }
 
 .no-bookings-message {
-  color: #888;
+  color: #777;
   text-align: center;
   margin: 1rem 0;
 }
