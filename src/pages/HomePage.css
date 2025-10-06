@@ -1,5 +1,3 @@
-/* src/pages/HomePage.css */
-
 .calendar-container {
   position: relative;
 }
@@ -29,12 +27,12 @@
 
 .rbc-toolbar button:hover, 
 .rbc-toolbar button:focus {
-  background-color: #fce8e6; /* Sfondo molto chiaro del colore del tema */
-  color: #DE1F3C; /* Colore del testo al passaggio del mouse */
+  background-color: #fce8e6; 
+  color: #DE1F3C; 
 }
 
 .rbc-toolbar button.rbc-active {
-  background-color: #DE1F3C; /* Colore di sfondo del pulsante attivo (es. Mese/Settimana/Giorno) */
+  background-color: #DE1F3C; 
   color: #ffffff;
 }
 
@@ -90,9 +88,9 @@
   line-height: 1;
   padding: 0;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  background-color: #DE1F3C; /* Changed from #646cff */
+  background-color: #DE1F3C; 
   color: white;
 }
 .add-booking-btn:hover {
-    background-color: #B81A33; /* Changed from #535bf2 to darker red */
+    background-color: #B81A33;
 }

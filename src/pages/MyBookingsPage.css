@@ -1,5 +1,3 @@
-/* src/pages/MyBookingsPage.css */
-
 .my-bookings-container {
   text-align: left;
 }
@@ -16,12 +14,12 @@
 }
 
 .delete-selected-btn {
-  background-color: #DE1F3C; /* Colore tema */
+  background-color: #DE1F3C; 
   color: white;
 }
 
 .delete-selected-btn:hover {
-  background-color: #B81A33; /* Hover colore tema */
+  background-color: #B81A33; 
 }
 
 .delete-selected-btn:disabled {
@@ -44,18 +42,18 @@
   display: flex;
   align-items: center;
   gap: 1.5rem; 
-  background-color: #f9f9f9; /* <-- SFONDO GRIGIO CHIARO */
-  border: 1px solid #e0e0e0; /* Bordo sottile */
+  background-color: #f9f9f9; 
+  border: 1px solid #e0e0e0; 
   padding: 1.5rem;
   border-radius: 8px;
-  border-left: 5px solid #DE1F3C; /* Colore tema */
+  border-left: 5px solid #DE1F3C; 
   transition: background-color 0.2s, border-color 0.2s;
 }
 
 /* Stile per la scheda selezionata */
 .bookings-list li.selected {
-  background-color: #f0f0f0; /* Grigio leggermente più scuro per selezione */
-  border-left-color: #DE1F3C; /* Bordo rosso quando selezionato */
+  background-color: #f0f0f0; 
+  border-left-color: #DE1F3C; 
 }
 
 .booking-info {
@@ -68,25 +66,24 @@
   font-size: 1.2rem;
   font-weight: 500;
   text-transform: capitalize;
-  color: #213547; /* Testo scuro */
+  color: #213547;
 }
 
 .booking-space {
-  color: #555; /* Testo secondario grigio scuro */
+  color: #555; 
 }
 
 /* NUOVI STILI PER I PULSANTI AZIONE */
 .bookings-list li .booking-actions {
-    /* Sposta i pulsanti all'estrema destra */
     margin-left: auto; 
     display: flex;
-    gap: 0.8rem; /* Spazio tra i pulsanti */
+    gap: 0.8rem; 
 }
 
 .bookings-list li .edit-button {
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
-    background-color: #4a4a4a; /* Grigio scuro per Modifica */
+    background-color: #4a4a4a; 
     color: white;
 }
 .bookings-list li .edit-button:hover {
@@ -95,15 +92,13 @@
 .bookings-list li .delete-button {
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
-    background-color: #DE1F3C; /* Colore tema per Cancella */
+    background-color: #DE1F3C; 
     color: white;
 }
 .bookings-list li .delete-button:hover {
     background-color: #B81A33;
 }
-/* FINE NUOVI STILI */
 
-/* Stile per checkbox personalizzate (TEMA CHIARO) */
 .checkbox-container {
   position: relative;
 }

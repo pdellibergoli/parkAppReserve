@@ -1,5 +1,3 @@
-// src/components/AvatarColorModal.jsx
-
 import React, { useState } from 'react';
 import Modal from './Modal';
 import './AvatarColorModal.css'; 

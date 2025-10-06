@@ -1,5 +1,3 @@
-// src/layouts/MainLayout.jsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';

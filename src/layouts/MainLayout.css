@@ -1,6 +1,3 @@
-/* src/layouts/MainLayout.css */
-
-/* Stili per l'header principale */
 .main-header {
   display: flex;
   justify-content: space-between;
@@ -13,17 +10,17 @@
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.8rem; /* Spazio tra immagine e testo */
+  gap: 0.8rem; 
   font-size: 1.5rem;
   font-weight: bold;
-  text-decoration: none; /* Rimuove sottolineatura se il logo fosse un link */
-  color: inherit; /* Eredita il colore del testo */
+  text-decoration: none; 
+  color: inherit;
 }
 
 /* Stile per l'immagine del logo */
 .logo-img {
-  height: 35px; /* Altezza del logo */
-  width: auto;  /* Larghezza si adatta in proporzione */
+  height: 35px; 
+  width: auto; 
 }
 
 /* Stili per la navigazione principale */
@@ -33,7 +30,7 @@
   gap: 0.5rem;
   margin-bottom: 2rem;
   padding: 0.5rem;
-  background-color: #f0f0f0; /* Sfondo grigio chiaro per la barra */
+  background-color: #f0f0f0; 
   border-radius: 12px;
 }
 .main-nav a {
@@ -42,9 +39,9 @@
   gap: .8rem;
   padding: .8rem 1.2rem;
   border-radius: 8px;
-  color: #555; /* Icone grigio scuro */
+  color: #555; 
   background-color: transparent;
-  transition: background-color 0.8s ease, color 0.8s ease; /* Transizione lenta e morbida (0.8s) */
+  transition: background-color 0.8s ease, color 0.8s ease; 
 }
 .main-nav a span {
   display: none;
@@ -59,7 +56,7 @@
 }
 /* MODIFICA COLORE TAB ATTIVO */
 .main-nav a.active {
-  background-color: #DE1F3C; /* <-- NUOVO COLORE */
+  background-color: #DE1F3C; 
   color: #fff;
 }
 .main-nav a.active span {
@@ -71,7 +68,6 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  /* Rimosso background-color e color per permettere lo stile inline dinamico */
   display: flex;
   justify-content: center;
   align-items: center;

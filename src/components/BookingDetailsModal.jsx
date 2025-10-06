@@ -1,13 +1,11 @@
-// src/components/BookingDetailsModal.jsx
-
-import React, { useState, useMemo } from 'react'; // Aggiornato: aggiunto useMemo e useState
+import React, { useState, useMemo } from 'react'; 
 import Modal from './Modal';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import it from 'date-fns/locale/it';
-import { callApi } from '../services/api'; // Aggiunto: import di callApi
+import { callApi } from '../services/api'; 
 import './BookingDetailsModal.css';
-import '../components/AddBookingModal.css'; // Aggiunto: Import di stili per gli elementi del form
+import '../components/AddBookingModal.css'; 
 
 // Componente per l'avatar dell'utente, ora accetta e usa un colore personalizzato
 const Avatar = ({ user }) => {
@@ -22,9 +20,6 @@ const Avatar = ({ user }) => {
   return <div className="detail-avatar" style={{ backgroundColor: color }}>{getInitials()}</div>;
 };
 
-// ====================================================================
-// NUOVO COMPONENTE: MODAL DI MODIFICA (Contenuto del Form)
-// ====================================================================
 const EditBookingModalContent = ({ bookingData, parkingSpaces, allBookings, users, onClose, onBookingUpdated }) => {
   const { user: loggedInUser } = useAuth();
 
@@ -173,11 +168,6 @@ const EditBookingModalContent = ({ bookingData, parkingSpaces, allBookings, user
   );
 };
 
-
-// ====================================================================
-// COMPONENTE PRINCIPALE: BookingDetailsModal
-// Modificato per gestire lo stato di modifica
-// ====================================================================
 const BookingDetailsModal = ({ isOpen, onClose, event, users, parkingSpaces, allBookings, onDelete, onBookingUpdated }) => {
   const { user: loggedInUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false); 

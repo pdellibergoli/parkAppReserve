@@ -1,4 +1,12 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0J3MT6JDcKbvkA6leT5i6ve6EX-AFwz0iMFcJQIybQLNkyIl1jX4lARiGQVCiHHE/exec";
+import dotenv from 'dotenv';
+
+dotenv.config();
+const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+
+if (!SCRIPT_URL) {
+  // Se la variabile non è definita, blocchiamo l'app con un errore chiaro.
+  throw new Error("La variabile d'ambiente VITE_GOOGLE_SCRIPT_URL non è stata impostata o è vuota.");
+}
 
 export const callApi = async (action, payload = {}) => {
   try {

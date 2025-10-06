@@ -1,5 +1,3 @@
-/* src/components/AvatarColorModal.css */
-
 .avatar-color-selection {
     text-align: center;
 }
@@ -35,11 +33,10 @@
 }
 
 .color-option.selected {
-    border-color: #333; /* Bordo più scuro quando selezionato */
+    border-color: #333; 
 }
 
 .check-mark {
-    /* Il colore è impostato inline per il contrasto */
     font-size: 1.5rem;
     font-weight: bold;
     text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);

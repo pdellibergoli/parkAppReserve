@@ -1,5 +1,3 @@
-// src/pages/HomePage.jsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
@@ -22,7 +20,7 @@ const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales
 
 const HomePage = () => {
   const [events, setEvents] = useState([]);
-  const [allBookings, setAllBookings] = useState([]); // Usato per la logica di conflitto nella modifica
+  const [allBookings, setAllBookings] = useState([]); 
   const [users, setUsers] = useState([]);
   const [parkingSpaces, setParkingSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +126,7 @@ const HomePage = () => {
           culture='it'
           messages={{ next: "Succ", previous: "Prec", today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
           eventPropGetter={eventStyleGetter}
-          onSelectEvent={handleOpenDetailsModal} // Usa la nuova funzione
+          onSelectEvent={handleOpenDetailsModal} 
           
           // Props per la navigazione
           date={date}
@@ -141,7 +139,7 @@ const HomePage = () => {
 
       <BookingDetailsModal
         isOpen={isDetailsModalOpen}
-        onClose={handleCloseDetailsModal} // Usa la nuova funzione
+        onClose={handleCloseDetailsModal} 
         event={selectedEvent}
         users={users}
         parkingSpaces={parkingSpaces}

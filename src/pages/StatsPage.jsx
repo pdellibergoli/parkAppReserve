@@ -1,5 +1,3 @@
-// src/pages/StatsPage.jsx
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { callApi } from '../services/api';
 import './StatsPage.css';

@@ -1,5 +1,3 @@
-// src/pages/ParkingSpacesPage.jsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { callApi } from '../services/api';
 import { FaTrashAlt } from 'react-icons/fa';
