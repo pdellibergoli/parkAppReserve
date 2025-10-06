@@ -151,7 +151,7 @@ const MyBookingsPage = () => {
                       {!isPast && (
                           <button 
                               onClick={() => handleEdit(booking)} 
-                              className="edit-button" 
+                              className="cancel-btn" 
                               disabled={loading}
                           >
                               Modifica
