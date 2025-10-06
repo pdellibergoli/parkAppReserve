@@ -16,6 +16,7 @@ import MyBookingsPage from './pages/MyBookingsPage';
 import ParkingSpacesPage from './pages/ParkingSpacesPage';
 import StatsPage from './pages/StatsPage';
 import ProfilePage from './pages/ProfilePage';
+import FulfillRequestPage from './pages/FulfillRequestPage';
 
 // Componente per proteggere le rotte
 function ProtectedRoute() {
@@ -50,6 +51,7 @@ function App() {
             <Route path="parking-spaces" element={<ParkingSpacesPage />} />
             <Route path="stats" element={<StatsPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="/fulfill-request" element={<FulfillRequestPage />} />
           </Route>
 
         </Routes>
