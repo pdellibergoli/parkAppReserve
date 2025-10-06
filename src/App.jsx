@@ -8,6 +8,9 @@ import MainLayout from './layouts/MainLayout';
 // Pagine
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import HomePage from './pages/HomePage';
 import MyBookingsPage from './pages/MyBookingsPage';
 import ParkingSpacesPage from './pages/ParkingSpacesPage';
@@ -37,7 +40,9 @@ function App() {
           {/* Rotte Pubbliche */}
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-          
+          <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
+          <Route path="/request-reset" element={<PublicRoute><RequestPasswordResetPage /></PublicRoute>} />
+          <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
           {/* Rotte Protette */}
           <Route path="/" element={<ProtectedRoute />}>
             <Route index element={<HomePage />} />

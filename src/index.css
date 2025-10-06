@@ -12,6 +12,12 @@
   background-color: #ffffff; /* Sfondo bianco */
 }
 
+.forgot-password-link {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
 body {
   margin: 0;
   display: flex;
@@ -140,6 +146,64 @@ button:disabled, .btn:disabled {
   border-radius: 50%;
   border-top-color: #213547;
   animation: spin 1s ease-in-out infinite;
+}
+
+.resend-container {
+  text-align: center;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: rgba(240, 173, 78, 0.1);
+  border: 1px solid #f0ad4e;
+  border-radius: 4px;
+}
+.resend-container p {
+  margin: 0 0 1rem 0;
+  color: #f0ad4e;
+  text-align: center;
+}
+.secondary-btn {
+  background-color: transparent !important;
+  border: 1px solid #c0c0c0 !important;
+  color: #c0c0c0 !important;
+}
+.secondary-btn:hover {
+  background-color: #444 !important;
+  color: white !important;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  padding-right: 3rem; /* Aggiunge spazio a destra per l'icona */
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #a0a0a0;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  padding: 0.5rem !important; /* Resetta il padding */
+  width: auto !important;
+  height: auto !important;
+}
+
+.password-toggle-btn:hover {
+  color: white;
+  background: none !important; /* Assicura che non ci sia sfondo al passaggio del mouse */
 }
 
 @keyframes spin {
