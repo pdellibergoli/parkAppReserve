@@ -1,3 +1,5 @@
+// src/context/AuthContext.jsx
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { callApi } from '../services/api';
 
@@ -21,23 +23,18 @@ export const AuthProvider = ({ children }) => {
   const login = async (mail, password) => {
     const loggedInUser = await callApi('login', { mail, password });
     
-    // Se il backend richiede la verifica, passiamo il messaggio
     if (loggedInUser && loggedInUser.verificationNeeded) {
         return loggedInUser;
     }
     
-    // Altrimenti, login riuscito: impostiamo l'utente
     setUser(loggedInUser);
     localStorage.setItem('parkingAppUser', JSON.stringify(loggedInUser));
     return loggedInUser;
   };
   
-  // --- MODIFICA CHIAVE QUI ---
   const signup = async (firstName, lastName, mail, password) => {
-    // La registrazione ora chiama solo l'API. NON fa il login.
     await callApi('signup', { firstName, lastName, mail, password });
   };
-  // --- FINE MODIFICA ---
 
   const logout = () => {
     setUser(null);
@@ -51,15 +48,17 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('parkingAppUser', JSON.stringify(updatedUser));
   };
 
+  // --- MODIFICA CHIAVE QUI ---
   const value = {
     user,
     loading,
     isAuthenticated: !!user,
     login,
     signup,
-    logout,
+    logout, // <-- LA FUNZIONE MANCANTE È STATA AGGIUNTA QUI
     updateUserContext,
   };
+  // --- FINE MODIFICA ---
 
   return (
     <AuthContext.Provider value={value}>
