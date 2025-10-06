@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-
-dotenv.config();
 const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
 if (!SCRIPT_URL) {
