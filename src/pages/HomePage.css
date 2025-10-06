@@ -94,3 +94,20 @@
 .add-booking-btn:hover {
     background-color: #B81A33;
 }
+
+@media (max-width: 768px) {
+  .rbc-calendar {
+    padding: 0.5rem;
+  }
+  
+  /* Riduce la dimensione del testo e dei pulsanti */
+  .rbc-toolbar button, .rbc-header, .rbc-event {
+    font-size: 0.8rem !important;
+  }
+
+  /* Migliora la disposizione della barra degli strumenti su mobile */
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
