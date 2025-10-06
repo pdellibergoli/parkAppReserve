@@ -1,5 +1,8 @@
+// src/layouts/MainLayout.jsx
+
 import React, { useState } from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
+// --- MODIFICA 1: Importa useNavigate ---
+import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './MainLayout.css';
 import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
@@ -19,6 +22,13 @@ const UserAvatar = ({ user }) => {
 const MainLayout = () => {
     const { user, logout } = useAuth();
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const navigate = useNavigate(); // --- MODIFICA 2: Inizializza il navigatore ---
+
+    // --- MODIFICA 3: Crea una funzione per gestire il logout ---
+    const handleLogout = () => {
+      logout(); // Pulisce i dati dell'utente
+      navigate('/login'); // Naviga alla pagina di login
+    };
 
     return (
         <div className="main-layout">
@@ -37,17 +47,17 @@ const MainLayout = () => {
                             </div>
                             <hr />
                             <Link to="/profile" className="dropdown-item">Profilo</Link>
-                            <button onClick={logout} className="dropdown-item logout-btn">Logout</button>
+                            {/* --- MODIFICA 4: Chiama la nuova funzione --- */}
+                            <button onClick={handleLogout} className="dropdown-item logout-btn">Logout</button>
                         </div>
                     </div>
-                    {/* Pulsante Hamburger che appare solo su mobile */}
                     <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}>
                         {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
                     </button>
                 </div>
             </header>
-
-            {/* Aggiungiamo la classe 'mobile-active' quando il menu è aperto */}
+            
+            {/* Il resto del file rimane invariato */}
             <nav className={`main-nav ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
                 <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><FaCalendarAlt /> <span>Calendario</span></NavLink>
                 <NavLink to="/my-bookings" onClick={() => setMobileMenuOpen(false)}><FaListUl /><span>Le mie prenotazioni</span></NavLink>

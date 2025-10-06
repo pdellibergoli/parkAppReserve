@@ -36,11 +36,13 @@ export const AuthProvider = ({ children }) => {
     await callApi('signup', { firstName, lastName, mail, password });
   };
 
+  // --- MODIFICA CHIAVE QUI ---
   const logout = () => {
+    // Ora la funzione pulisce solo lo stato e localStorage
     setUser(null);
     localStorage.removeItem('parkingAppUser');
-    window.location.href = '/login';
   };
+  // --- FINE MODIFICA ---
   
   const updateUserContext = (newUserData) => {
     const updatedUser = { ...user, ...newUserData };
@@ -48,17 +50,15 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('parkingAppUser', JSON.stringify(updatedUser));
   };
 
-  // --- MODIFICA CHIAVE QUI ---
   const value = {
     user,
     loading,
     isAuthenticated: !!user,
     login,
     signup,
-    logout, // <-- LA FUNZIONE MANCANTE È STATA AGGIUNTA QUI
+    logout,
     updateUserContext,
   };
-  // --- FINE MODIFICA ---
 
   return (
     <AuthContext.Provider value={value}>
