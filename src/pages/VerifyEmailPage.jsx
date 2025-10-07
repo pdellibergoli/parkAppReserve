@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react'; // 1. Importa useRef
 import { useSearchParams, Link } from 'react-router-dom';
 import { callApi } from '../services/api';
 
@@ -7,9 +7,19 @@ const VerifyEmailPage = () => {
   const [message, setMessage] = useState('Verifica in corso...');
   const [error, setError] = useState('');
 
+  // 2. Crea una "ref" per tenere traccia se la verifica è già stata tentata
+  const hasVerified = useRef(false);
+
   useEffect(() => {
+    // 3. Se abbiamo già eseguito la verifica, non fare nulla
+    if (hasVerified.current) {
+      return;
+    }
+
     const verifyToken = async () => {
-      // Prende il token dall'URL (es. ?token=xxxxx)
+      // 4. Imposta il flag a true PRIMA di inviare la chiamata API
+      hasVerified.current = true;
+
       const token = searchParams.get('token');
       if (!token) {
         setError("Token di verifica non trovato nell'URL.");
@@ -25,7 +35,7 @@ const VerifyEmailPage = () => {
     };
 
     verifyToken();
-  }, [searchParams]); // L'effetto si attiva quando i parametri dell'URL sono disponibili
+  }, [searchParams]);
 
   return (
     <div className="auth-container">
