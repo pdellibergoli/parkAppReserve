@@ -101,3 +101,27 @@
   color: #DE1F3C; 
   background-color: #fce8e6;
 }
+
+.space-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.fixed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fixed-toggle label {
+  font-size: 0.9rem;
+  color: #666;
+  cursor: pointer;
+}
+
+.fixed-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}

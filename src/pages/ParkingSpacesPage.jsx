@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { callApi } from '../services/api';
 import { FaTrashAlt } from 'react-icons/fa';
-import './ParkingSpacesPage.css'; // Assicurati che il file CSS sia importato
+import './ParkingSpacesPage.css';
 
 const ParkingSpacesPage = () => {
   const [parkingSpaces, setParkingSpaces] = useState([]);
@@ -13,19 +13,22 @@ const ParkingSpacesPage = () => {
   const fetchParkingSpaces = useCallback(async () => {
     try {
       setLoading(true);
-      const spaces = await callApi('getParkingSpaces');
-      
-      // --- CORREZIONE DELLA LOGICA DI ORDINAMENTO ---
-      // Convertiamo esplicitamente i numeri in stringhe prima di confrontarli
-      // per evitare errori se l'API restituisce un tipo numerico.
-      spaces.sort((a, b) => {
-        const numA = String(a.number || '');
-        const numB = String(b.number || '');
-        return numA.localeCompare(numB, undefined, { numeric: true });
-      });
+      setError('');
+      let spaces = await callApi('getParkingSpaces');
+
+      spaces = spaces.filter(space => space && space.id && space.number);
+
+      // --- MODIFICA CHIAVE QUI ---
+      // Convertiamo 'number' in una stringa prima di ordinarlo.
+      // Questo gestisce correttamente sia i numeri (es. 13) che il testo (es. "Posto Sud").
+      spaces.sort((a, b) => 
+        String(a.number).localeCompare(String(b.number), undefined, { numeric: true })
+      );
+      // --- FINE MODIFICA ---
 
       setParkingSpaces(spaces);
     } catch (err) {
+      console.error("Errore dettagliato:", err);
       setError("Impossibile caricare l'elenco dei parcheggi.");
     } finally {
       setLoading(false);
@@ -39,12 +42,11 @@ const ParkingSpacesPage = () => {
   const handleAddSpace = async (e) => {
     e.preventDefault();
     if (!newSpaceName.trim()) return;
-
     setIsAdding(true);
     try {
       await callApi('addParkingSpace', { number: newSpaceName.trim() });
-      setNewSpaceName(''); // Pulisce l'input
-      fetchParkingSpaces(); // Ricarica la lista aggiornata
+      setNewSpaceName('');
+      fetchParkingSpaces();
     } catch (err) {
       alert(`Errore: ${err.message}`);
     } finally {
@@ -53,13 +55,34 @@ const ParkingSpacesPage = () => {
   };
 
   const handleDeleteSpace = async (spaceId, spaceNumber) => {
-    if (window.confirm(`Sei sicuro di voler eliminare il parcheggio "${spaceNumber}"? Questa azione potrebbe invalidare prenotazioni esistenti.`)) {
+    if (window.confirm(`Sei sicuro di voler eliminare il parcheggio "${spaceNumber}"?`)) {
       try {
         await callApi('deleteParkingSpace', { spaceId });
-        fetchParkingSpaces(); // Ricarica la lista
+        fetchParkingSpaces();
       } catch (err) {
         alert(`Errore: ${err.message}`);
       }
+    }
+  };
+
+  const handleFixedChange = async (spaceId, currentFixedStatus) => {
+    const isCurrentlyFixed = currentFixedStatus === true;
+    const newFixedStatus = !isCurrentlyFixed;
+
+    setParkingSpaces(currentSpaces =>
+      currentSpaces.map(space =>
+        space.id === spaceId ? { ...space, isFixed: newFixedStatus } : space
+      )
+    );
+    try {
+      await callApi('updateParkingSpaceFixedStatus', { spaceId, isFixed: newFixedStatus });
+    } catch (err) {
+      alert(`Errore nell'aggiornamento: ${err.message}`);
+      setParkingSpaces(currentSpaces =>
+        currentSpaces.map(space =>
+          space.id === spaceId ? { ...space, isFixed: isCurrentlyFixed } : space
+        )
+      );
     }
   };
 
@@ -70,7 +93,6 @@ const ParkingSpacesPage = () => {
     <div className="parking-spaces-container">
       <h1>Gestione Parcheggi</h1>
       
-      {/* Form per aggiungere un nuovo parcheggio */}
       <div className="add-space-form-container">
         <h2>Aggiungi un nuovo parcheggio</h2>
         <form onSubmit={handleAddSpace} className="add-space-form">
@@ -78,25 +100,31 @@ const ParkingSpacesPage = () => {
             type="text" 
             value={newSpaceName}
             onChange={(e) => setNewSpaceName(e.target.value)}
-            placeholder="Es. 'Posto 15' o 'Parcheggio Sud'"
+            placeholder="Es. 'Posto 15'"
             className="space-input"
           />
-          <button type="submit" className="add-space-btn" disabled={isAdding || !newSpaceName.trim()}>
+          <button type="submit" className="primary-submit-btn" disabled={isAdding || !newSpaceName.trim()}>
             {isAdding ? <div className="spinner-small"></div> : 'Aggiungi'}
           </button>
         </form>
       </div>
 
-      {/* Elenco dei parcheggi esistenti */}
       <div className="spaces-list-container">
         <h2>Parcheggi Esistenti ({parkingSpaces.length})</h2>
-        {parkingSpaces.length === 0 ? (
-          <p>Nessun parcheggio configurato.</p>
-        ) : (
-          <ul className="spaces-list">
-            {parkingSpaces.map(space => (
-              <li key={space.id} className="space-item">
-                <span className="space-number">{space.number}</span>
+        <ul className="spaces-list">
+          {parkingSpaces.map(space => (
+            <li key={space.id} className="space-item">
+              <span className="space-number">{space.number}</span>
+              <div className="space-actions">
+                <div className="fixed-toggle">
+                  <label htmlFor={`fixed-${space.id}`}>Fisso</label>
+                  <input
+                    type="checkbox"
+                    id={`fixed-${space.id}`}
+                    checked={space.isFixed === true}
+                    onChange={() => handleFixedChange(space.id, space.isFixed)}
+                  />
+                </div>
                 <button 
                   className="delete-space-btn"
                   onClick={() => handleDeleteSpace(space.id, space.number)}
@@ -104,10 +132,10 @@ const ParkingSpacesPage = () => {
                 >
                   <FaTrashAlt />
                 </button>
-              </li>
-            ))}
-          </ul>
-        )}
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
