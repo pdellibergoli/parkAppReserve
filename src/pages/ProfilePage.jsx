@@ -2,31 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { callApi } from '../services/api';
 import AvatarColorModal from '../components/AvatarColorModal';
+import { getTextColor } from '../utils/colors';
 import './ProfilePage.css';
-
-/**
- * Determina il colore del testo (bianco o scuro) per un contrasto ottimale.
- * @param {string} hexColor - Codice colore HEX (#RRGGBB).
- * @returns {string} Il colore del testo da usare ('white' o '#213547').
- */
-const getTextColor = (hexColor) => {
-    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-    const cleanHex = hexColor.replace('#', '').replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
-    const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(cleanHex);
-    if (!result) return 'white'; 
-
-    const r = parseInt(result[1], 16);
-    const g = parseInt(result[2], 16);
-    const b = parseInt(result[3], 16);
-
-    const rs = r / 255;
-    const gs = g / 255;
-    const bs = b / 255;
-
-    const luminance = 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-    
-    return luminance > 0.5 ? '#213547' : 'white'; 
-};
 
 // Componente per l'avatar dell'utente
 const AvatarDisplay = ({ user }) => {

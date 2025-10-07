@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { callApi } from '../services/api';
 import { subDays, subMonths, startOfDay, endOfDay, addDays, format } from 'date-fns';
+import { getTextColor } from '../utils/colors';
 import './StatsPage.css';
 
 const UserAvatar = ({ user }) => {
@@ -10,9 +11,10 @@ const UserAvatar = ({ user }) => {
     return user.firstName ? user.firstName[0] : 'U';
   };
   
-  const color = user.avatarColor || '#DE1F3C'; 
+  const backgroundColor = user.avatarColor || '#DE1F3C';
+  const textColor = getTextColor(backgroundColor);
 
-  return <div className="stat-avatar" style={{ backgroundColor: color }}>{getInitials()}</div>;
+  return <div className="stat-avatar" style={{ backgroundColor, color: textColor }}>{getInitials()}</div>;
 };
 
 
@@ -47,8 +49,7 @@ const StatsPage = () => {
   const handleStartDateChange = (dateValue) => {
     setStartDate(dateValue);
     if (dateValue) {
-      const nextDay = addDays(new Date(dateValue), 1);
-      setEndDate(format(nextDay, 'yyyy-MM-dd'));
+      setEndDate(dateValue);
     } else {
       setEndDate('');
     }

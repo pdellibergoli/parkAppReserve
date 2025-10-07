@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import it from 'date-fns/locale/it';
 import { callApi } from '../services/api'; 
+import { getTextColor } from '../utils/colors';
 import './BookingDetailsModal.css';
 import '../components/AddBookingModal.css'; 
 
@@ -15,9 +16,10 @@ const Avatar = ({ user }) => {
     return user.firstName ? user.firstName[0] : 'U';
   };
   
-  const color = user.avatarColor || '#DE1F3C'; 
+  const backgroundColor = user.avatarColor || '#DE1F3C'; 
+  const textColor = getTextColor(backgroundColor);
 
-  return <div className="detail-avatar" style={{ backgroundColor: color }}>{getInitials()}</div>;
+  return <div className="detail-avatar" style={{ backgroundColor, color: textColor }}>{getInitials()}</div>;
 };
 
 const EditBookingModalContent = ({ bookingData, parkingSpaces, allBookings, users, onClose, onBookingUpdated }) => {

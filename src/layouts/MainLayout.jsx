@@ -3,6 +3,7 @@ import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { callApi } from '../services/api'; // Importa callApi
 import AddBookingModal from '../components/AddBookingModal'; // Importa la modale
+import { getTextColor } from '../utils/colors';
 import './MainLayout.css';
 import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
 import logo from '../assets/logo.png';
@@ -12,9 +13,11 @@ const UserAvatar = ({ user }) => {
         if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`;
         return user.firstName ? user.firstName[0] : 'U';
     };
-    const avatarStyle = {
-        backgroundColor: user.avatarColor || '#DE1F3C'
-    };
+    const backgroundColor = user.avatarColor || '#DE1F3C';
+    const textColor = getTextColor(backgroundColor);
+    
+    // Applica sia il colore di sfondo che quello del testo
+    const avatarStyle = { backgroundColor, color: textColor };
     return <div className="avatar" style={avatarStyle}>{getInitials()}</div>;
 };
 
