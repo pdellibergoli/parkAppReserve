@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+// 1. Importa 'useLocation' anche qui
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { callApi } from '../services/api';
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; // <-- 1. Importa le icone
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const LoginPage = () => {
   const [mail, setMail] = useState('');
@@ -11,15 +12,17 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
   const [showResendLink, setShowResendLink] = useState(false);
-  
-  // --- 2. Aggiungi uno stato per la visibilità della password ---
   const [showPassword, setShowPassword] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation(); // 2. Ottieni l'oggetto 'location'
+
+  // 3. Recupera l'URL di destinazione dallo stato. Se non esiste, usa la homepage '/' come default.
+  //    Combiniamo 'pathname' (es. /fulfill-request) e 'search' (es. ?requestId=...)
+  const from = location.state?.from?.pathname + (location.state?.from?.search || '') || "/";
 
   const handleSubmit = async (e) => {
-    // ... la funzione handleSubmit rimane invariata ...
     if (e) e.preventDefault();
     setError('');
     setResendMessage('');
@@ -33,7 +36,8 @@ const LoginPage = () => {
         setError(loginResult.message);
         setShowResendLink(true);
       } else if (loginResult && loginResult.id) {
-        navigate('/');
+        // 4. Naviga verso la destinazione salvata ('from') invece che sempre su '/'
+        navigate(from, { replace: true });
       } else {
         setError('Si è verificato un errore inaspettato durante il login.');
       }
@@ -45,8 +49,8 @@ const LoginPage = () => {
     }
   };
 
+  // ... (il resto del file LoginPage.jsx rimane invariato)
   const handleResendEmail = async () => {
-    // ... la funzione handleResendEmail rimane invariata ...
     setLoading(true);
     setError('');
     setResendMessage('');
@@ -76,21 +80,20 @@ const LoginPage = () => {
             />
           </div>
 
-          {/* --- 3. Modifica il gruppo della password --- */}
           <div className="input-group">
             <label htmlFor="password">Password</label>
             <div className="password-input-wrapper">
               <input
-                type={showPassword ? 'text' : 'password'} // Cambia dinamicamente il tipo
+                type={showPassword ? 'text' : 'password'}
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
               <button
-                type="button" // Impedisce l'invio del form
+                type="button"
                 className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)} // Inverte lo stato di visibilità
+                onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
