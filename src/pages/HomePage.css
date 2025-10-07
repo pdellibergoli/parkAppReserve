@@ -90,6 +90,7 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   background-color: #DE1F3C; 
   color: white;
+  z-index: 10;
 }
 .add-booking-btn:hover {
     background-color: #B81A33;

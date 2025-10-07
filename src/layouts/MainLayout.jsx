@@ -1,7 +1,4 @@
-// src/layouts/MainLayout.jsx
-
-import React, { useState } from 'react';
-// --- MODIFICA 1: Importa useNavigate ---
+import React, { useState, useRef } from 'react'; // 1. Importa useRef
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './MainLayout.css';
@@ -22,12 +19,30 @@ const UserAvatar = ({ user }) => {
 const MainLayout = () => {
     const { user, logout } = useAuth();
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const navigate = useNavigate(); // --- MODIFICA 2: Inizializza il navigatore ---
+    const navigate = useNavigate();
+    
+    // --- NUOVA LOGICA PER IL MENU DROPDOWN ---
+    const [isUserMenuOpen, setUserMenuOpen] = useState(false);
+    const menuTimerRef = useRef(null); // 2. Per memorizzare il nostro timer
 
-    // --- MODIFICA 3: Crea una funzione per gestire il logout ---
+    // 3. Funzione per quando il mouse entra nell'area del menu
+    const handleMenuEnter = () => {
+        clearTimeout(menuTimerRef.current); // Annulla qualsiasi timer di chiusura
+        setUserMenuOpen(true); // Apri il menu
+    };
+
+    // 4. Funzione per quando il mouse esce dall'area del menu
+    const handleMenuLeave = () => {
+        // Avvia un timer per chiudere il menu dopo 300ms
+        menuTimerRef.current = setTimeout(() => {
+            setUserMenuOpen(false);
+        }, 300);
+    };
+    // --- FINE NUOVA LOGICA ---
+
     const handleLogout = () => {
-      logout(); // Pulisce i dati dell'utente
-      navigate('/login'); // Naviga alla pagina di login
+      logout();
+      navigate('/login');
     };
 
     return (
@@ -38,16 +53,21 @@ const MainLayout = () => {
                     <span>ParkApp</span>
                 </Link>
                 <div className="header-right">
-                    <div className="user-menu">
+                    {/* 5. Applica i gestori di eventi al contenitore del menu */}
+                    <div 
+                        className="user-menu" 
+                        onMouseEnter={handleMenuEnter} 
+                        onMouseLeave={handleMenuLeave}
+                    >
                         <UserAvatar user={user} />
-                        <div className="dropdown">
+                        {/* 6. Usa lo stato per mostrare/nascondere il menu */}
+                        <div className={`dropdown ${isUserMenuOpen ? 'show' : ''}`}>
                             <div className="user-details">
                                 <p>{user.firstName} {user.lastName}</p>
                                 <p className="user-email">{user.mail}</p>
                             </div>
                             <hr />
                             <Link to="/profile" className="dropdown-item">Profilo</Link>
-                            {/* --- MODIFICA 4: Chiama la nuova funzione --- */}
                             <button onClick={handleLogout} className="dropdown-item logout-btn">Logout</button>
                         </div>
                     </div>
@@ -57,7 +77,6 @@ const MainLayout = () => {
                 </div>
             </header>
             
-            {/* Il resto del file rimane invariato */}
             <nav className={`main-nav ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
                 <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><FaCalendarAlt /> <span>Calendario</span></NavLink>
                 <NavLink to="/my-bookings" onClick={() => setMobileMenuOpen(false)}><FaListUl /><span>Le mie prenotazioni</span></NavLink>

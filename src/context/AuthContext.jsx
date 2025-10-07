@@ -1,25 +1,35 @@
-// src/context/AuthContext.jsx
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { callApi } from '../services/api';
 
 const AuthContext = createContext(null);
 
+const SESSION_DURATION = 30 * 60 * 1000; 
+
 export const AuthProvider = ({ children }) => {
+  // ... il resto del file rimane invariato ...
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('parkingAppUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      const storedSession = localStorage.getItem('parkingAppUser');
+      if (storedSession) {
+        const sessionData = JSON.parse(storedSession);
+        const now = new Date().getTime();
+
+        if (now - sessionData.timestamp > SESSION_DURATION) {
+          localStorage.removeItem('parkingAppUser');
+          console.log("Sessione di test scaduta, utente disconnesso.");
+        } else {
+          setUser(sessionData.user);
+        }
       }
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // ... (tutte le altre funzioni come login, logout, ecc. rimangono invariate)
   const login = async (mail, password) => {
     const loggedInUser = await callApi('login', { mail, password });
     
@@ -27,8 +37,13 @@ export const AuthProvider = ({ children }) => {
         return loggedInUser;
     }
     
+    const sessionData = {
+        user: loggedInUser,
+        timestamp: new Date().getTime()
+    };
+
     setUser(loggedInUser);
-    localStorage.setItem('parkingAppUser', JSON.stringify(loggedInUser));
+    localStorage.setItem('parkingAppUser', JSON.stringify(sessionData));
     return loggedInUser;
   };
   
@@ -36,18 +51,25 @@ export const AuthProvider = ({ children }) => {
     await callApi('signup', { firstName, lastName, mail, password });
   };
 
-  // --- MODIFICA CHIAVE QUI ---
   const logout = () => {
-    // Ora la funzione pulisce solo lo stato e localStorage
     setUser(null);
     localStorage.removeItem('parkingAppUser');
   };
-  // --- FINE MODIFICA ---
   
   const updateUserContext = (newUserData) => {
-    const updatedUser = { ...user, ...newUserData };
-    setUser(updatedUser);
-    localStorage.setItem('parkingAppUser', JSON.stringify(updatedUser));
+    const storedSession = localStorage.getItem('parkingAppUser');
+    if (storedSession) {
+        const sessionData = JSON.parse(storedSession);
+        
+        const updatedUser = { ...sessionData.user, ...newUserData };
+        const updatedSessionData = {
+            ...sessionData,
+            user: updatedUser
+        };
+        
+        setUser(updatedUser);
+        localStorage.setItem('parkingAppUser', JSON.stringify(updatedSessionData));
+    }
   };
 
   const value = {
@@ -66,6 +88,7 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
 
 export const useAuth = () => {
   return useContext(AuthContext);
