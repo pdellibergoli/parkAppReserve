@@ -41,9 +41,6 @@ export const callApi = async (action, payload = {}) => {
       console.log('--- INIZIO RISPOSTA GREZZA DAL SERVER GOOGLE ---');
       console.log(responseText);
       console.log('--- FINE RISPOSTA GREZZA DAL SERVER GOOGLE ---');
-      
-      // Mostriamo un errore più specifico all'utente
-      alert("Errore di comunicazione con il server. Controlla la console per i dettagli (premi F12).");
 
     } catch (e) {
       console.error("Impossibile anche recuperare la risposta come testo.", e);
