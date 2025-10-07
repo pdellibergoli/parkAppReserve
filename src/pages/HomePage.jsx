@@ -1,75 +1,49 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import it from 'date-fns/locale/it';
-
-// Assicurati che questo import sia presente!
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './HomePage.css';
 
-import { callApi } from '../services/api';
+import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BookingDetailsModal from '../components/BookingDetailsModal';
-import AddBookingModal from '../components/AddBookingModal';
+import { callApi } from '../services/api';
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
 const HomePage = () => {
-  const [events, setEvents] = useState([]);
-  const [allBookings, setAllBookings] = useState([]); 
-  const [users, setUsers] = useState([]);
-  const [parkingSpaces, setParkingSpaces] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
+  // Riceve i dati e le funzioni dal MainLayout tramite il "context" dell'Outlet
+  const { allBookings, users, parkingSpaces, loading, error, fetchData } = useOutletContext();
+  
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
+  
   // Stati per la navigazione del calendario
   const [date, setDate] = useState(new Date());
   const [view, setView] = useState('month');
-
+  
   const { user } = useAuth();
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [bookingsData, usersData, spacesData] = await Promise.all([
-        callApi('getBookings'),
-        callApi('getUsers'),
-        callApi('getParkingSpaces'),
-      ]);
-
-      setUsers(usersData);
-      setParkingSpaces(spacesData);
-      setAllBookings(bookingsData);
-
-      const calendarEvents = bookingsData.map(booking => {
-        const bookingUser = usersData.find(u => u.id === booking.userId);
-        const parkingSpot = spacesData.find(p => p.id === booking.parkingSpaceId);
-        return {
-          title: `${parkingSpot?.number || 'N/A'} - ${bookingUser?.firstName || 'Utente'}`,
-          start: new Date(booking.date),
-          end: new Date(booking.date),
-          resource: booking,
-        };
-      });
-      setEvents(calendarEvents);
-    } catch (err) {
-      setError('Impossibile caricare i dati delle prenotazioni. Riprova più tardi.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Calcola gli eventi per il calendario basandosi sui dati ricevuti
+  const events = useMemo(() => {
+    if (loading || error || !allBookings.length) return [];
+    
+    return allBookings.map(booking => {
+      const bookingUser = users.find(u => u.id === booking.userId);
+      const parkingSpot = parkingSpaces.find(p => p.id === booking.parkingSpaceId);
+      return {
+        title: `${parkingSpot?.number || 'N/A'} - ${bookingUser?.firstName || 'Utente'}`,
+        start: new Date(booking.date),
+        end: new Date(booking.date),
+        resource: booking, // Contiene i dati grezzi della prenotazione
+      };
+    });
+  }, [allBookings, users, parkingSpaces, loading, error]);
 
   const eventStyleGetter = (event) => {
     const isMyBooking = event.resource.userId === user.id;
@@ -85,30 +59,28 @@ const HomePage = () => {
     };
   };
 
-  // NUOVA FUNZIONE: Apre il modale e imposta l'evento
   const handleOpenDetailsModal = (event) => {
     setSelectedEvent(event);
     setIsDetailsModalOpen(true);
   };
   
-  // NUOVA FUNZIONE: Chiude il modale e pulisce lo stato dell'evento
   const handleCloseDetailsModal = () => {
     setIsDetailsModalOpen(false);
-    setSelectedEvent(null); // Pulisce lo stato al momento della chiusura
+    setSelectedEvent(null);
   };
 
   const handleDeleteBooking = async (bookingId) => {
     try {
       await callApi('deleteBookings', { bookingIds: [bookingId] });
-      fetchData(); // Ricarica i dati
-      handleCloseDetailsModal(); // Usa la funzione di chiusura per resettare gli stati
+      fetchData(); // Usa la funzione fetchData ricevuta dal layout per ricaricare
+      handleCloseDetailsModal();
     } catch (err) {
       alert(`Errore: ${err.message}`);
     }
   };
 
-  const handleBookingAddedOrUpdated = () => {
-    fetchData(); // Ricarica i dati
+  const handleBookingUpdated = () => {
+    fetchData(); // Usa la funzione fetchData ricevuta dal layout
   };
 
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
@@ -134,7 +106,6 @@ const HomePage = () => {
           onNavigate={newDate => setDate(newDate)}
           onView={newView => setView(newView)}
         />
-        <button className="add-booking-btn" onClick={() => setIsAddModalOpen(true)}>+</button>
       </div>
 
       <BookingDetailsModal
@@ -145,15 +116,7 @@ const HomePage = () => {
         parkingSpaces={parkingSpaces}
         allBookings={allBookings} 
         onDelete={handleDeleteBooking}
-        onBookingUpdated={handleBookingAddedOrUpdated} 
-      />
-
-      <AddBookingModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onBookingAdded={handleBookingAddedOrUpdated} 
-        parkingSpaces={parkingSpaces}
-        allBookings={allBookings}
+        onBookingUpdated={handleBookingUpdated} 
       />
     </>
   );
