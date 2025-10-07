@@ -45,21 +45,31 @@ const StatsPage = () => {
     };
     fetchInitialData();
   }, []);
+
+  // --- NUOVO BLOCCO PER SINCRONIZZARE LE DATE ---
+  // Questo useEffect si attiva ogni volta che le date cambiano.
+  useEffect(() => {
+    // Se la data di inizio è successiva a quella di fine, le invertiamo.
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      const tempStart = startDate;
+      setStartDate(endDate);
+      setEndDate(tempStart);
+    }
+  }, [startDate, endDate]);
+  // --- FINE NUOVO BLOCCO ---
   
   const handleStartDateChange = (dateValue) => {
     setStartDate(dateValue);
-    if (dateValue) {
+    if (dateValue && !endDate) { // Se endDate è vuoto, lo impostiamo uguale a startDate
       setEndDate(dateValue);
-    } else {
-      setEndDate('');
     }
     setFilterType('custom');
   };
 
   const handleEndDateChange = (dateValue) => {
     setEndDate(dateValue);
-    if (dateValue) {
-      setStartDate(dateValue);
+    if(dateValue && !startDate) { // Se startDate è vuoto, lo impostiamo uguale a endDate
+        setStartDate(dateValue);
     }
     setFilterType('custom');
   };
@@ -86,6 +96,11 @@ const StatsPage = () => {
       }
 
       if (start && end) {
+        // La logica di inversione per il calcolo non è più strettamente necessaria
+        // grazie a useEffect, ma la lasciamo come sicurezza aggiuntiva.
+        if (start > end) {
+          [start, end] = [end, start];
+        }
         filteredBookings = bookings.filter(b => {
           const bookingDate = new Date(b.date);
           return bookingDate >= start && bookingDate <= end;
@@ -127,12 +142,11 @@ const StatsPage = () => {
         <div className="filter-buttons">
           <button onClick={() => setFilterType('all')} className={filterType === 'all' ? 'active' : ''}>Sempre</button>
           <button onClick={() => setFilterType('week')} className={filterType === 'week' ? 'active' : ''}>Ultimi 7 giorni</button>
-          <button onClick={() => setFilterType('month')} className={filterType === 'month' ? 'active' : ''}>Ultimo mese</button>
+          <button onClick={() => setFilterType('month')} className={filterType === 'month' ? 'active' : ''}>Ultimo mese ad oggi</button>
         </div>
         <div className="custom-date-filter">
-          <input type="date" value={startDate} onChange={e => handleStartDateChange(e.target.value)} />
-          <span>-</span>
-          <input type="date" value={endDate} onChange={e => handleEndDateChange(e.target.value)} />
+        <span>Dal </span><input type="date" value={startDate} onChange={e => handleStartDateChange(e.target.value)} />
+        <span>Al </span><input type="date" value={endDate} onChange={e => handleEndDateChange(e.target.value)} />
         </div>
       </div>
 
