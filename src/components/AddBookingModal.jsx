@@ -13,17 +13,17 @@ const AddBookingModal = ({ isOpen, onClose, onBookingAdded, parkingSpaces, allBo
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
+  // --- MODIFICA 1: Logica per calcolare TUTTI gli spazi disponibili ---
+  // Ora filtriamo tutti i parcheggi (fissi e non) che non sono prenotati nella data selezionata.
   const availableSpaces = useMemo(() => {
     if (!selectedDate) return [];
     
-    // --- MODIFICA CHIAVE QUI ---
-    const nonFixedSpaces = parkingSpaces.filter(space => space.isFixed == true);
     const bookedSpaceIds = allBookings
       .filter(booking => format(new Date(booking.date), 'yyyy-MM-dd') === selectedDate)
       .map(booking => booking.parkingSpaceId);
       
-    // Filtriamo direttamente dalla lista completa di tutti i parcheggi
-    return nonFixedSpaces.filter(space => !bookedSpaceIds.includes(space.id));
+    // Restituisce tutti i parcheggi che non sono nella lista di quelli già prenotati.
+    return parkingSpaces.filter(space => !bookedSpaceIds.includes(space.id));
 
   }, [selectedDate, allBookings, parkingSpaces]);
 
@@ -32,6 +32,19 @@ const AddBookingModal = ({ isOpen, onClose, onBookingAdded, parkingSpaces, allBo
       format(new Date(booking.date), 'yyyy-MM-dd') === selectedDate && booking.userId === user.id
     );
   }, [selectedDate, allBookings, user.id]);
+
+  // --- MODIFICA 2: Nuova logica per decidere se mostrare il pulsante di richiesta ---
+  const showRequestButton = useMemo(() => {
+    // Non mostrare il pulsante se l'utente ha già una prenotazione.
+    if (userHasBookingOnDate) return false;
+
+    // Controlla se tra gli spazi disponibili ce n'è almeno uno fisso.
+    const hasAvailableFixedSpaces = availableSpaces.some(space => space.isFixed === true);
+
+    // Mostra il pulsante solo se NON ci sono più parcheggi fissi disponibili.
+    return !hasAvailableFixedSpaces;
+  }, [availableSpaces, userHasBookingOnDate]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,17 +114,29 @@ const AddBookingModal = ({ isOpen, onClose, onBookingAdded, parkingSpaces, allBo
           {userHasBookingOnDate ? (
             <p className="warning-message">Hai già una prenotazione per il giorno selezionato.</p>
           ) : availableSpaces.length > 0 ? (
+            // --- MODIFICA 3: Sezione per la selezione del parcheggio (sempre visibile se ci sono posti) ---
             <div className="form-group">
               <label htmlFor="parking-space">Seleziona un parcheggio</label>
               <select id="parking-space" value={selectedSpaceId} onChange={(e) => setSelectedSpaceId(e.target.value)} required>
                 <option value="">Scegli un posto...</option>
-                {availableSpaces.map(space => <option key={space.id} value={space.id}>{space.number}</option>)}
+                {availableSpaces.map(space => 
+                  <option key={space.id} value={space.id}>
+                    {space.number} {space.isFixed === false ? '(Libero)' : '(Fisso)'}
+                  </option>
+                )}
               </select>
             </div>
           ) : (
             <div className="no-spaces-message">
               <p>Nessun parcheggio disponibile per questa data.</p>
-              <p>Puoi inviare una richiesta agli altri utenti per cedere il loro posto.</p>
+            </div>
+          )}
+
+          {/* --- MODIFICA 4: Sezione per la richiesta, appare solo se le condizioni sono soddisfatte --- */}
+          {showRequestButton && availableSpaces.length > 0 && (
+            <div className="no-spaces-message">
+                <p>Non ci sono più parcheggi fissi disponibili.</p>
+                <p>Puoi inviare una richiesta agli altri utenti per cedere il loro posto.</p>
             </div>
           )}
           
@@ -119,13 +144,16 @@ const AddBookingModal = ({ isOpen, onClose, onBookingAdded, parkingSpaces, allBo
           
           <div className="modal-actions">
             <button type="button" className="cancel-btn" onClick={handleClose}>Annulla</button>
+            
+            {/* Pulsante di conferma: appare se ci sono posti disponibili e l'utente non ha già prenotato */}
             {(availableSpaces.length > 0 && !userHasBookingOnDate) && (
               <button type="submit" className="submit-btn" disabled={!selectedSpaceId || loading}>
                 {loading ? <div className="spinner-small"></div> : 'Conferma'}
               </button>
             )}
-            {/* La logica del pulsante richiesta rimane invariata, ma potrebbe non apparire più se ci sono sempre posti fissi disponibili */}
-            {(availableSpaces.length === 0 && !userHasBookingOnDate) && (
+
+            {/* Pulsante di richiesta: appare se la nostra nuova logica `showRequestButton` è true */}
+            {showRequestButton && (
               <button type="button" className="request-btn" onClick={handleRequestParking} disabled={loading}>
                 {loading ? <div className="spinner-small"></div> : 'Invia Richiesta'}
               </button>

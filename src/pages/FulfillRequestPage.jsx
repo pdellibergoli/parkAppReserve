@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react'; // 1. Importa useRef
 import { useSearchParams, Link } from 'react-router-dom';
 import { callApi } from '../services/api';
 
@@ -7,8 +7,19 @@ const FulfillRequestPage = () => {
   const [message, setMessage] = useState('Elaborazione della tua richiesta...');
   const [error, setError] = useState('');
 
+  // 2. Crea una "ref" per tenere traccia dell'esecuzione
+  const hasFulfilled = useRef(false);
+
   useEffect(() => {
+    // 3. Controlla se l'azione è già stata eseguita
+    if (hasFulfilled.current) {
+      return; // Se sì, non fare nulla
+    }
+
     const fulfillRequest = async () => {
+      // 4. Imposta il flag a true PRIMA di iniziare la chiamata API
+      hasFulfilled.current = true;
+
       const requestId = searchParams.get('requestId');
       const donorUserId = searchParams.get('donorUserId');
 
