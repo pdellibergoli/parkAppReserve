@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Layout
@@ -16,14 +16,31 @@ import MyBookingsPage from './pages/MyBookingsPage';
 import ParkingSpacesPage from './pages/ParkingSpacesPage';
 import StatsPage from './pages/StatsPage';
 import ProfilePage from './pages/ProfilePage';
+import FulfillRequestPage from './pages/FulfillRequestPage';
 
-// Componente per proteggere le rotte
-function ProtectedRoute() {
+// --- MODIFICA 1: Rinominiamo la vecchia ProtectedRoute in LayoutRoute ---
+// La sua unica responsabilità è mostrare il layout principale se l'utente è loggato.
+function LayoutRoute() {
   const { isAuthenticated } = useAuth();
-  // Se l'utente è autenticato, mostra il layout principale che a sua volta
-  // mostrerà la pagina richiesta. Altrimenti, reindirizza al login.
-  return isAuthenticated ? <MainLayout /> : <Navigate to="/login" />;
+  const location = useLocation();
+
+  return isAuthenticated 
+    ? <MainLayout /> 
+    : <Navigate to="/login" state={{ from: location }} replace />;
 }
+
+// --- MODIFICA 2: Creiamo una nuova ProtectedRoute più generica ---
+// Questa protegge un componente senza forzarlo dentro il MainLayout.
+// Mostra il componente (children) solo se l'utente è loggato.
+function ProtectedRoute({ children }) {
+    const { isAuthenticated } = useAuth();
+    const location = useLocation();
+
+    return isAuthenticated
+        ? children
+        : <Navigate to="/login" state={{ from: location }} replace />;
+}
+
 
 // Componente per le rotte pubbliche (login/signup)
 function PublicRoute({ children }) {
@@ -43,14 +60,26 @@ function App() {
           <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
           <Route path="/request-reset" element={<PublicRoute><RequestPasswordResetPage /></PublicRoute>} />
           <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
-          {/* Rotte Protette */}
-          <Route path="/" element={<ProtectedRoute />}>
-            <Route index element={<HomePage />} />
+
+          {/* --- MODIFICA 3: Rotte protette DENTRO il layout principale --- */}
+          <Route element={<LayoutRoute />}>
+            <Route path="/" element={<HomePage />} />
             <Route path="my-bookings" element={<MyBookingsPage />} />
             <Route path="parking-spaces" element={<ParkingSpacesPage />} />
             <Route path="stats" element={<StatsPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
+
+          {/* --- MODIFICA 4: Rotta protetta FUORI dal layout principale --- */}
+          {/* La pagina FulfillRequestPage ora usa la nuova ProtectedRoute */}
+          <Route 
+            path="/fulfill-request" 
+            element={
+              <ProtectedRoute>
+                <FulfillRequestPage />
+              </ProtectedRoute>
+            } 
+          />
 
         </Routes>
       </Router>
