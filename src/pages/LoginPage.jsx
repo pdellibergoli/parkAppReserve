@@ -18,10 +18,6 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation(); // 2. Ottieni l'oggetto 'location'
 
-  // 3. Recupera l'URL di destinazione dallo stato. Se non esiste, usa la homepage '/' come default.
-  //    Combiniamo 'pathname' (es. /fulfill-request) e 'search' (es. ?requestId=...)
-  const from = location.state?.from?.pathname + (location.state?.from?.search || '') || "/";
-
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError('');
@@ -35,10 +31,8 @@ const LoginPage = () => {
       if (loginResult && loginResult.verificationNeeded) {
         setError(loginResult.message);
         setShowResendLink(true);
-      } else if (loginResult && loginResult.id) {
-        // 4. Naviga verso la destinazione salvata ('from') invece che sempre su '/'
-        navigate(from, { replace: true });
-      } else {
+      } else if (!loginResult || !loginResult.id) {
+        // Aggiungiamo un controllo nel caso il login non restituisca un utente
         setError('Si è verificato un errore inaspettato durante il login.');
       }
     } catch (err) {

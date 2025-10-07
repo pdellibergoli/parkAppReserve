@@ -45,7 +45,18 @@ function ProtectedRoute({ children }) {
 // Componente per le rotte pubbliche (login/signup)
 function PublicRoute({ children }) {
   const { isAuthenticated } = useAuth();
-  return !isAuthenticated ? children : <Navigate to="/" />;
+  const location = useLocation();
+
+  if (isAuthenticated) {
+    // Controlla se siamo stati reindirizzati qui da una pagina protetta.
+    // Se 'location.state.from' esiste, significa che dobbiamo tornare lì.
+    const from = location.state?.from?.pathname + (location.state?.from?.search || '');
+    
+    // Se 'from' esiste, naviga lì. Altrimenti, vai alla homepage di default.
+    return <Navigate to={from || '/'} replace />;
+  }
+
+  return children;
 }
 
 
