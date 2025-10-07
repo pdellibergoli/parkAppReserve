@@ -18,8 +18,7 @@ import StatsPage from './pages/StatsPage';
 import ProfilePage from './pages/ProfilePage';
 import FulfillRequestPage from './pages/FulfillRequestPage';
 
-// --- MODIFICA 1: Rinominiamo la vecchia ProtectedRoute in LayoutRoute ---
-// La sua unica responsabilità è mostrare il layout principale se l'utente è loggato.
+
 function LayoutRoute() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
@@ -29,9 +28,6 @@ function LayoutRoute() {
     : <Navigate to="/login" state={{ from: location }} replace />;
 }
 
-// --- MODIFICA 2: Creiamo una nuova ProtectedRoute più generica ---
-// Questa protegge un componente senza forzarlo dentro il MainLayout.
-// Mostra il componente (children) solo se l'utente è loggato.
 function ProtectedRoute({ children }) {
     const { isAuthenticated } = useAuth();
     const location = useLocation();
@@ -42,18 +38,23 @@ function ProtectedRoute({ children }) {
 }
 
 
-// Componente per le rotte pubbliche (login/signup)
+// --- MODIFICA QUI ---
 function PublicRoute({ children }) {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
   if (isAuthenticated) {
-    // Controlla se siamo stati reindirizzati qui da una pagina protetta.
-    // Se 'location.state.from' esiste, significa che dobbiamo tornare lì.
-    const from = location.state?.from?.pathname + (location.state?.from?.search || '');
+    // Logica corretta e più sicura:
+    // 1. Inizializza il percorso di default alla homepage.
+    let from = '/'; 
     
-    // Se 'from' esiste, naviga lì. Altrimenti, vai alla homepage di default.
-    return <Navigate to={from || '/'} replace />;
+    // 2. Se esiste uno stato 'from' (perché veniamo da una pagina protetta), costruisci l'URL completo.
+    if (location.state?.from) {
+      from = location.state.from.pathname + (location.state.from.search || '');
+    }
+    
+    // 3. Reindirizza al percorso corretto.
+    return <Navigate to={from} replace />;
   }
 
   return children;
@@ -72,7 +73,7 @@ function App() {
           <Route path="/request-reset" element={<PublicRoute><RequestPasswordResetPage /></PublicRoute>} />
           <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
 
-          {/* --- MODIFICA 3: Rotte protette DENTRO il layout principale --- */}
+          {/* Rotte protette DENTRO il layout principale */}
           <Route element={<LayoutRoute />}>
             <Route path="/" element={<HomePage />} />
             <Route path="my-bookings" element={<MyBookingsPage />} />
@@ -81,8 +82,7 @@ function App() {
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 
-          {/* --- MODIFICA 4: Rotta protetta FUORI dal layout principale --- */}
-          {/* La pagina FulfillRequestPage ora usa la nuova ProtectedRoute */}
+          {/* Rotta protetta FUORI dal layout principale */}
           <Route 
             path="/fulfill-request" 
             element={
