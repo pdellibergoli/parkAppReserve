@@ -1,0 +1,131 @@
+.day-bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.booking-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 5px solid #3174ad;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  gap: 1rem;
+}
+
+.day-booking-card {
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 5px solid #DE1F3C;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.card-user-info {
+        display: flex;        
+        align-items: center;
+        gap: 1rem;
+}
+
+.card-parking-info {
+    display: flex;        
+    align-items: center;
+    gap: 1rem;
+}
+
+.edit-btn-day {
+    background-color: #4a4a4a;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.card-main-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.day-booking-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.card-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-details .user-name {
+  font-weight: 500;
+  white-space: nowrap; /* Assicura che il nome rimanga su una riga */
+}
+.card-details .parking-spot {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0; /* Impedisce ai pulsanti di rimpicciolirsi */
+  justify-content: flex-end;
+}
+
+.card-actions button {
+  padding: 0.5rem 1rem;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.card-actions .edit-btn {
+  background-color: #4a4a4a;
+}
+.card-actions .edit-btn:hover {
+  background-color: #5a5a5a;
+}
+
+.card-actions .delete-btn {
+  background-color: #b82d2d;
+}
+.card-actions .delete-btn:hover {
+  background-color: #d94848;
+}
+
+/* --- INIZIO NUOVI STILI PER LA VISUALIZZAZIONE MOBILE --- */
+@media (max-width: 768px) {
+  .booking-card {
+    flex-direction: column; /* Impila gli elementi verticalmente */
+    padding: 1.5rem; /* Aumenta lo spazio interno per rendere la scheda più alta */
+  }
+
+  .card-actions {
+    margin-top: 1rem; /* Aggiunge spazio sopra i pulsanti */
+    flex-direction: column; /* Impila i pulsanti verticalmente */
+    gap: 0.5rem; /* Spazio tra i pulsanti */
+  }
+
+  .card-actions button {
+    justify-content: center; /* Centra il testo nel pulsante */
+  }
+}
+/* --- FINE NUOVI STILI --- */
