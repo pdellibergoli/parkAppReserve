@@ -40,11 +40,9 @@
   background-color: transparent;
   transition: all 0.3s ease; 
 }
-.main-nav a span { display: none; white-space: nowrap; }
+.main-nav a span { display: inline; white-space: nowrap; }
 .main-nav a:hover { background-color: #e0e0e0; color: #000; }
-.main-nav a:hover span { display: inline; }
 .main-nav a.active { background-color: #DE1F3C; color: #fff; }
-.main-nav a.active span { display: inline; }
 
 .header-right { display: flex; align-items: center; gap: 1rem; }
 .user-menu { position: relative; }

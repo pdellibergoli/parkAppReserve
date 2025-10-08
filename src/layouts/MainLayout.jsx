@@ -124,7 +124,10 @@ const MainLayout = () => {
             <nav className={`main-nav ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
                 <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><FaCalendarAlt /> <span>Calendario</span></NavLink>
                 <NavLink to="/my-bookings" onClick={() => setMobileMenuOpen(false)}><FaListUl /><span>Le mie prenotazioni</span></NavLink>
-                <NavLink to="/parking-spaces" onClick={() => setMobileMenuOpen(false)}><FaParking /><span>Parcheggi</span></NavLink>
+                {/* Mostra questo link solo se user.isAdmin è true */}
+                {user && user.isAdmin === true && (
+                    <NavLink to="/parking-spaces" onClick={() => setMobileMenuOpen(false)}><FaParking /><span>Parcheggi</span></NavLink>
+                )}
                 <NavLink to="/stats" onClick={() => setMobileMenuOpen(false)}><FaChartBar /><span>Statistiche</span></NavLink>
             </nav>
 
