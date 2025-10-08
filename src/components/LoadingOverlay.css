@@ -1,0 +1,21 @@
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Un valore molto alto per stare sopra a tutto */
+    backdrop-filter: blur(2px); /* Effetto sfocato opzionale */
+  }
+  
+  /* Riusiamo lo stile dello spinner che già abbiamo, ma lo rendiamo più grande */
+  .loading-overlay .spinner {
+    width: 50px;
+    height: 50px;
+    border-width: 5px;
+    border-top-color: #DE1F3C; /* Colore personalizzato per coerenza */
+  }

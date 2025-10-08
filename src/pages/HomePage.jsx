@@ -12,6 +12,7 @@ import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BookingDetailsModal from '../components/BookingDetailsModal';
 import { callApi } from '../services/api';
+import { useLoading } from '../context/LoadingContext';
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -19,7 +20,7 @@ const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales
 const HomePage = () => {
   // Riceve i dati e le funzioni dal MainLayout tramite il "context" dell'Outlet
   const { allBookings, users, parkingSpaces, loading, error, fetchData } = useOutletContext();
-  
+  const { setIsLoading } = useLoading();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
@@ -49,11 +50,10 @@ const HomePage = () => {
     const isMyBooking = event.resource.userId === user.id;
     return {
       style: {
-        backgroundColor: isMyBooking ? '#DE1F3C' : '#3174ad',
+        backgroundColor: isMyBooking ? '#DE1F3C' : '#e0e0e0',
         borderRadius: '5px',
-        opacity: 0.8,
-        color: 'white',
-        border: '0px',
+        color: isMyBooking ? 'white' : 'black',
+        border: '2px solid #000000',
         display: 'block',
       },
     };
@@ -70,12 +70,15 @@ const HomePage = () => {
   };
 
   const handleDeleteBooking = async (bookingId) => {
+    setIsLoading(true);
     try {
       await callApi('deleteBookings', { bookingIds: [bookingId] });
       fetchData(); // Usa la funzione fetchData ricevuta dal layout per ricaricare
       handleCloseDetailsModal();
     } catch (err) {
       alert(`Errore: ${err.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 

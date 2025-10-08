@@ -101,8 +101,8 @@
   border-radius: 0;
 }
 .dropdown-item:hover { background-color: #c9c9c9; }
-.logout-btn { color: #d93025; }
-.logout-btn:hover { background-color: #d93025; color: #fff; }
+.logout-btn { color: #DE1F3C; }
+.logout-btn:hover { background-color: #DE1F3C; color: #fff; }
 .user-details { padding: 0.8rem 1.2rem; cursor: default; }
 .user-details:hover { background-color: transparent !important; }
 .user-details p { margin: 0; line-height: 1.4; }

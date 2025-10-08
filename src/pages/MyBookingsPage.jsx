@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { callApi } from '../services/api';
 import { format } from 'date-fns';
+import { useLoading } from '../context/LoadingContext';
 import it from 'date-fns/locale/it';
 import './MyBookingsPage.css';
 
@@ -13,7 +14,8 @@ const MyBookingsPage = () => {
   const [parkingSpaces, setParkingSpaces] = useState([]); // Aggiunto: Tutti i parcheggi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedBookings, setSelectedBookings] = useState([]); 
+  const [selectedBookings, setSelectedBookings] = useState([]);
+  const { setIsLoading } = useLoading();
 
   // NUOVI STATI PER LA MODIFICA
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -67,12 +69,15 @@ const MyBookingsPage = () => {
     if (bookingIdsToDelete.length === 0) return;
 
     if (window.confirm(`Sei sicuro di voler cancellare ${bookingIdsToDelete.length} prenotazione/i?`)) {
+      setIsLoading(true);
       try {
         await callApi('deleteBookings', { bookingIds: bookingIdsToDelete });
         fetchMyBookings();
         setSelectedBookings([]); 
       } catch (err) {
         alert(`Errore durante la cancellazione: ${err.message}`);
+      } finally {
+        setIsLoading(false);
       }
     }
   };

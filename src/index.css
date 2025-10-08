@@ -89,7 +89,7 @@ body {
 button, .btn {
   padding: .6rem 1.2rem;
   border: none;
-  background-color: #DE1F3C; /* Changed from #646cff */
+  background-color: #DE1F3C;
   color: #fff;
   font-size: 1rem;
   font-weight: 500;
@@ -104,8 +104,13 @@ button, .btn {
   width: auto;
 }
 
+.rbc-show-more {
+  color: #DE1F3C !important;
+}
+
 button:hover, .btn:hover {
-  background-color: #B81A33; /* Changed from #535bf2 to darker red */
+  background-color: #DE1F3C;
+  color: #ffffff !important;
 }
 
 button:disabled, .btn:disabled {

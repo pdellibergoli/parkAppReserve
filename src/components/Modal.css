@@ -60,5 +60,6 @@
   line-height: 1;
 }
 .modal-close-btn:hover {
-  color: #DE1F3C; 
+  color: #DE1F3C !important;
+  background: none !important;
 }

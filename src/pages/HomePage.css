@@ -55,7 +55,7 @@
 }
 
 .rbc-day-bg.rbc-today {
-  background-color: #f0f0f0;
+  background-color: #b8b8b8;
 }
 
 .rbc-date-cell {
@@ -64,7 +64,7 @@
 }
 
 .rbc-date-cell.rbc-now {
-  color: #213547;
+  color: #ffffff;
   font-weight: bold;
 }
 
@@ -73,7 +73,6 @@
 }
 
 .rbc-event {
-  color: #ffffff !important;
   padding: 4px 8px;
 }
 

@@ -1,4 +1,4 @@
-/* src/pages/MyBookingsPage.css - VERSIONE RESPONSIVE CORRETTA */
+/* src/pages/MyBookingsPage.css */
 
 .page-header {
   display: flex;
@@ -14,7 +14,7 @@
 }
 
 .delete-selected-btn {
-  background-color: #b82d2d;
+  background-color: #DE1F3C;
   color: white;
   padding: 0.6rem 1.2rem;
   border: none;
@@ -23,7 +23,7 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.delete-selected-btn:hover { background-color: #d94848; }
+.delete-selected-btn:hover { background-color: #b82d2d; }
 .delete-selected-btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
 .bookings-list {
@@ -42,14 +42,22 @@
   background-color: #fff;
   padding: 1.5rem;
   border-radius: 8px;
-  border-left: 5px solid #b82d2d;
+  border-left: 5px solid #DE1F3C;
   transition: all 0.2s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 .bookings-list li.selected { background-color: #fff8f8; border-left-color: #ff6b6b; }
 
-.booking-info { display: flex; flex-direction: column; gap: 0.3rem; }
-.booking-date { font-size: 1.1rem; font-weight: 500; text-transform: capitalize; }
+.booking-info { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 0.3rem; 
+}
+.booking-date { 
+  font-size: 1.1rem; 
+  font-weight: 500; 
+  text-transform: capitalize; 
+}
 .booking-space { color: #666; }
 
 .checkbox-container { position: relative; }
@@ -83,7 +91,16 @@
 }
 .checkbox-container input[type="checkbox"]:checked + label:after { display: block; }
 
-/* --- Media Query per Dispositivi Mobili --- */
+/* Spinge il contenitore dei pulsanti a destra */
+.booking-actions {
+  margin-left: auto;
+}
+
+/* Aggiunge un margine a sinistra SOLO al pulsante "Cancella" */
+.booking-actions .delete-button {
+  margin-left: 0.5rem; /* ~8px di spazio */
+}
+/* Media Query per Dispositivi Mobili */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
@@ -104,6 +121,7 @@
   .bookings-list li {
     padding: 1rem; /* Riduci lo spazio interno */
     gap: 1rem;
+    flex-wrap: wrap; /* Permette agli elementi di andare a capo */
   }
 
   .booking-date {
@@ -113,4 +131,18 @@
   .booking-space {
     font-size: 0.85rem; /* Riduci il testo del parcheggio */
   }
+  
+  /* --- INIZIO NUOVE REGOLE PER I PULSANTI IN MOBILE --- */
+  .booking-actions {
+    width: 100%; /* Occupa tutta la larghezza disponibile */
+    margin-top: 1rem; /* Aggiunge spazio sopra i pulsanti */
+    margin-left: 0; /* Annulla il margine sinistro della versione desktop */
+  }
+
+  .booking-actions button {
+    flex-grow: 1; /* Fa in modo che ogni pulsante occupi metà dello spazio */
+    text-align: center;
+    justify-content: center; /* Centra il testo all'interno del pulsante */
+  }
+  /* --- FINE NUOVE REGOLE --- */
 }
