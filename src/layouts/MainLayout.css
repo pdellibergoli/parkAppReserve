@@ -45,7 +45,13 @@
 .main-nav a.active { background-color: #DE1F3C; color: #fff; }
 
 .header-right { display: flex; align-items: center; gap: 1rem; }
-.user-menu { position: relative; }
+.user-menu { 
+  position: relative;
+  display: flex;
+  align-items: center; 
+  gap: 0.75rem; 
+  cursor: pointer;
+}
 
 .avatar {
   width: 40px;
@@ -160,5 +166,9 @@
 
   .main-nav.mobile-active a.active {
     color: #DE1F3C; /* Colore per il link attivo */
+  }
+  
+  .user-display-name {
+    display: none;
   }
 }

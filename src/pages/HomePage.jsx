@@ -86,6 +86,23 @@ const HomePage = () => {
     fetchData(); // Usa la funzione fetchData ricevuta dal layout
   };
 
+  const dayPropGetter = (date) => {
+    const day = date.getDay(); // 0 = Domenica, 6 = Sabato
+
+    // Se è Sabato o Domenica...
+    if (day === 0 || day === 6) {
+      // ...restituisci un oggetto 'style' che imposta il colore di sfondo direttamente.
+      // Questo ha la priorità su qualsiasi regola CSS esterna.
+      return {
+        style: {
+          backgroundColor: '#f5f5f5', // Grigio chiaro
+        },
+      };
+    }
+    // Per tutti gli altri giorni, non facciamo nulla.
+    return {};
+  };
+
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
 
@@ -101,7 +118,9 @@ const HomePage = () => {
           culture='it'
           messages={{ next: "Succ", previous: "Prec", today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
           eventPropGetter={eventStyleGetter}
-          onSelectEvent={handleOpenDetailsModal} 
+          onSelectEvent={handleOpenDetailsModal}
+
+          dayPropGetter={dayPropGetter}
           
           // Props per la navigazione
           date={date}

@@ -1,47 +1,60 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Modal from './Modal';
 import { useAuth } from '../context/AuthContext';
+import { useLoading } from '../context/LoadingContext';
 import { callApi } from '../services/api';
 import { format } from 'date-fns';
 import './AddBookingModal.css';
 
-const AddBookingModal = ({ isOpen, onClose, onBookingAdded, parkingSpaces, allBookings }) => {
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+const AddBookingModal = ({ isOpen, onClose, onBookingAdded, initialBookingData, parkingSpaces, allBookings }) => {
+  const [selectedDate, setSelectedDate] = useState('');
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  const [loading, setLoading] = useState(false); 
+  
   const { user } = useAuth();
+  const { setIsLoading } = useLoading();
+
+  const isEditMode = !!initialBookingData;
+
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditMode) {
+        setSelectedDate(format(new Date(initialBookingData.date), 'yyyy-MM-dd'));
+        setSelectedSpaceId(initialBookingData.parkingSpaceId);
+      } else {
+        setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
+        setSelectedSpaceId('');
+      }
+      setError('');
+    }
+  }, [isOpen, isEditMode, initialBookingData]);
 
   const availableSpaces = useMemo(() => {
     if (!selectedDate) return [];
     
     const bookedSpaceIds = allBookings
-      .filter(booking => format(new Date(booking.date), 'yyyy-MM-dd') === selectedDate)
+      .filter(booking => {
+        const isSameDate = format(new Date(booking.date), 'yyyy-MM-dd') === selectedDate;
+        const isCurrentBookingInEdit = isEditMode && booking.id === initialBookingData.id;
+        return isSameDate && !isCurrentBookingInEdit;
+      })
       .map(booking => booking.parkingSpaceId);
       
     return parkingSpaces.filter(space => !bookedSpaceIds.includes(space.id));
-  }, [selectedDate, allBookings, parkingSpaces]);
+  }, [selectedDate, allBookings, parkingSpaces, isEditMode, initialBookingData]);
 
   const userHasBookingOnDate = useMemo(() => {
+    const bookingIdToIgnore = isEditMode ? initialBookingData.id : null;
+
     return allBookings.some(booking => 
-      format(new Date(booking.date), 'yyyy-MM-dd') === selectedDate && booking.userId === user.id
+      format(new Date(booking.date), 'yyyy-MM-dd') === selectedDate && 
+      booking.userId === user.id &&
+      booking.id !== bookingIdToIgnore
     );
-  }, [selectedDate, allBookings, user.id]);
-
-  const showRequestButton = useMemo(() => {
-    if (userHasBookingOnDate) return false;
-    const hasAvailableFixedSpaces = availableSpaces.some(space => space.isFixed === true);
-    return !hasAvailableFixedSpaces;
-  }, [availableSpaces, userHasBookingOnDate]);
-
-  // --- 1. NUOVA LOGICA: Troviamo l'oggetto completo del parcheggio selezionato ---
-  const selectedSpace = useMemo(() => {
-    // Cerca nell'array di tutti i parcheggi quello che corrisponde all'ID selezionato
-    return parkingSpaces.find(space => space.id === selectedSpaceId);
-  }, [selectedSpaceId, parkingSpaces]);
-
-
+  }, [selectedDate, allBookings, user.id, isEditMode, initialBookingData]);
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedSpaceId) {
@@ -49,125 +62,83 @@ const AddBookingModal = ({ isOpen, onClose, onBookingAdded, parkingSpaces, allBo
       return;
     }
     setError('');
-    setLoading(true);
+    setIsLoading(true); // Attiva l'overlay globale
+    setLoading(true);   // Attiva lo spinner locale nel pulsante
 
     try {
-      const newBookingData = {
-        date: selectedDate,
-        parkingSpaceId: selectedSpaceId,
-        userId: user.id,
-      };
-      
-      const createdBooking = await callApi('createBooking', newBookingData);
-      onBookingAdded(createdBooking);
-      handleClose();
-
+      if (isEditMode) {
+        await callApi('updateBooking', { 
+            bookingId: initialBookingData.id, 
+            date: selectedDate, 
+            parkingSpaceId: selectedSpaceId 
+        });
+      } else {
+        await callApi('createBooking', {
+            date: selectedDate,
+            parkingSpaceId: selectedSpaceId,
+            userId: user.id,
+        });
+      }
+      onBookingAdded();
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setIsLoading(false); // Disattiva l'overlay globale
+      setLoading(false);   // Disattiva lo spinner locale
     }
   };
 
-  const handleRequestParking = async () => {
-    if (userHasBookingOnDate) {
-      setError("Hai già una prenotazione per questo giorno.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    setMessage('');
-    try {
-      const response = await callApi('requestParkingSpace', { date: selectedDate, userId: user.id });
-      setMessage(response.message);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleClose = () => {
-    setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
-    setSelectedSpaceId('');
-    setError('');
-    setMessage('');
-    setLoading(false);
-    onClose();
-  };
+  const modalTitle = isEditMode ? 'Modifica Prenotazione' : 'Aggiungi Prenotazione';
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Aggiungi Prenotazione">
-      {message ? (
-        <div className="success-message">{message}</div>
-      ) : (
-        <form onSubmit={handleSubmit} className="add-booking-form">
-          {/* ... (la parte superiore del form rimane invariata) ... */}
+    <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
+      <form onSubmit={handleSubmit} className="add-booking-form">
+        <div className="form-group">
+          <label htmlFor="booking-date">Seleziona una data</label>
+          <input 
+            type="date" 
+            id="booking-date" 
+            value={selectedDate} 
+            onChange={(e) => setSelectedDate(e.target.value)} 
+            min={format(new Date(), 'yyyy-MM-dd')} 
+            required 
+          />
+        </div>
+
+        {userHasBookingOnDate ? (
+          <p className="warning-message">Hai già un'altra prenotazione per il giorno selezionato.</p>
+        ) : (
           <div className="form-group">
-            <label htmlFor="booking-date">Seleziona una data</label>
-            <input type="date" id="booking-date" value={selectedDate} onChange={(e) => { setSelectedSpaceId(''); setSelectedDate(e.target.value); }} min={format(new Date(), 'yyyy-MM-dd')} required />
+            <label htmlFor="parking-space">Seleziona un parcheggio</label>
+            <select id="parking-space" value={selectedSpaceId} onChange={(e) => setSelectedSpaceId(e.target.value)} required>
+              <option value="">
+                {availableSpaces.length > 0 ? "Scegli un posto..." : "Nessun posto disponibile"}
+              </option>
+              {isEditMode && initialBookingData.parkingSpaceId && !availableSpaces.some(s => s.id === initialBookingData.parkingSpaceId) && (
+                <option key={initialBookingData.parkingSpaceId} value={initialBookingData.parkingSpaceId}>
+                    {parkingSpaces.find(p => p.id === initialBookingData.parkingSpaceId)?.number}
+                </option>
+              )}
+              {availableSpaces.map(space => 
+                <option key={space.id} value={space.id}>
+                  {space.number}
+                </option>
+              )}
+            </select>
           </div>
-
-          {userHasBookingOnDate ? (
-            <p className="warning-message">Hai già una prenotazione per il giorno selezionato.</p>
-          ) : availableSpaces.length > 0 ? (
-            <div className="form-group">
-              <label htmlFor="parking-space">Seleziona un parcheggio</label>
-              <select id="parking-space" value={selectedSpaceId} onChange={(e) => setSelectedSpaceId(e.target.value)} required>
-                <option value="">Scegli un posto...</option>
-                {availableSpaces.map(space => {
-                  let label = '';
-                  const isPaid = String(space.number).toLowerCase().includes('pagamento');
-
-                  if (isPaid) {
-                    label = ''; 
-                  } else if (space.isFixed === false) {
-                    label = '(Chiedere prima conferma)';
-                  }
-
-                  return (
-                    <option key={space.id} value={space.id}>
-                      {space.number} {label}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          ) : (
-            <div className="no-spaces-message">
-              <p>Nessun parcheggio disponibile per questa data.</p>
-            </div>
+        )}
+        
+        {error && <p className="error-message">{error}</p>}
+        
+        <div className="modal-actions">
+          <button type="button" className="cancel-btn" onClick={onClose} disabled={loading}>Annulla</button>
+          {!userHasBookingOnDate && (
+            <button type="submit" className="submit-btn" disabled={!selectedSpaceId || loading}>
+              {loading ? <div className="spinner-small"></div> : (isEditMode ? 'Salva Modifiche' : 'Conferma')}
+            </button>
           )}
-
-          {showRequestButton && availableSpaces.length > 0 && (
-            <div className="no-spaces-message">
-                <p>Non ci sono più parcheggi liberi disponibili.</p>
-                <p>Puoi chiedere alle Business Manager se il loro è disponibile,</p>
-                <p>segnalare che parcheggerai a Pagamento,</p>
-                <p>oppure puoi inviare una richiesta agli altri utenti per cedere il loro posto.</p>
-            </div>
-          )}
-          
-          {error && <p className="error-message">{error}</p>}
-          
-          <div className="modal-actions">
-            <button type="button" className="cancel-btn" onClick={handleClose}>Annulla</button>
-            
-            {(availableSpaces.length > 0 && !userHasBookingOnDate) && (
-              <button type="submit" className="submit-btn" disabled={!selectedSpaceId || loading}>
-                {loading ? <div className="spinner-small"></div> : 'Conferma'}
-              </button>
-            )}
-
-            {/* --- 2. MODIFICA CONDIZIONE: Aggiungiamo il controllo sul parcheggio selezionato --- */}
-            {showRequestButton && (!selectedSpace || selectedSpace.isFixed !== false) && (
-              <button type="button" className="request-btn" onClick={handleRequestParking} disabled={loading}>
-                {loading ? <div className="spinner-small"></div> : 'Invia Richiesta'}
-              </button>
-            )}
-          </div>
-        </form>
-      )}
+        </div>
+      </form>
     </Modal>
   );
 };

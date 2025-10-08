@@ -7,16 +7,14 @@ import { format } from 'date-fns';
 import it from 'date-fns/locale/it';
 import './MyBookingsPage.css';
 
-
 const MyBookingsPage = () => {
-  // 2. Ricevi i dati e le funzioni dal MainLayout invece di usare stati locali
-  const { allBookings, parkingSpaces, loading, error, fetchData } = useOutletContext();
+  // 1. Ricevi anche la funzione 'handleOpenEditModal' dal layout principale
+  const { allBookings, parkingSpaces, loading, error, fetchData, handleOpenEditModal } = useOutletContext();
   const { user } = useAuth();
   const { setIsLoading } = useLoading();
 
   const [selectedBookings, setSelectedBookings] = useState([]);
   
-  // 3. Calcola le prenotazioni dell'utente usando i dati ricevuti dal layout
   const myBookings = useMemo(() => {
     if (!allBookings || !parkingSpaces) return [];
     
@@ -37,7 +35,7 @@ const MyBookingsPage = () => {
       setIsLoading(true);
       try {
         await callApi('deleteBookings', { bookingIds: bookingIdsToDelete });
-        fetchData(); // 4. Usa la funzione 'fetchData' del layout per aggiornare i dati globali
+        fetchData();
         setSelectedBookings([]); 
       } catch (err) {
         alert(`Errore durante la cancellazione: ${err.message}`);
@@ -91,14 +89,15 @@ const MyBookingsPage = () => {
                     <span className="booking-space">Parcheggio: <strong>{booking.parkingSpaceNumber}</strong></span>
                   </div>
                   <div className="booking-actions">
-                      {/* La logica per la modifica va gestita tramite la modale globale o spostata */}
-                      <button 
-                          onClick={() => alert("La modifica va fatta dal calendario principale.")} 
-                          className="cancel-btn" 
-                          disabled={isPast}
-                      >
-                          Modifica
-                      </button>
+                      {!isPast && (
+                          // 2. Sostituisci l'alert con la chiamata alla funzione del layout
+                          <button 
+                              onClick={() => handleOpenEditModal(booking)} 
+                              className="cancel-btn" 
+                          >
+                              Modifica
+                          </button>
+                      )}
                       <button 
                           onClick={() => handleDeleteSelected([booking.id])} 
                           className="delete-button" 

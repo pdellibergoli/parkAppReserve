@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'; // Aggiungi useEffect e useCallback
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { callApi } from '../services/api'; // Importa callApi
-import AddBookingModal from '../components/AddBookingModal'; // Importa la modale
+import { callApi } from '../services/api';
+import AddBookingModal from '../components/AddBookingModal';
 import { getTextColor } from '../utils/colors';
 import './MainLayout.css';
 import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
@@ -16,7 +16,6 @@ const UserAvatar = ({ user }) => {
     const backgroundColor = user.avatarColor || '#DE1F3C';
     const textColor = getTextColor(backgroundColor);
     
-    // Applica sia il colore di sfondo che quello del testo
     const avatarStyle = { backgroundColor, color: textColor };
     return <div className="avatar" style={avatarStyle}>{getInitials()}</div>;
 };
@@ -26,19 +25,19 @@ const MainLayout = () => {
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
     const navigate = useNavigate();
     
+    // --- Stati per dati e modali ---
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    
-    // Stati per i dati globali dell'applicazione
     const [allBookings, setAllBookings] = useState([]); 
     const [users, setUsers] = useState([]);
     const [parkingSpaces, setParkingSpaces] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [bookingToEdit, setBookingToEdit] = useState(null);
 
-    // Funzione per caricare tutti i dati
+    // --- Funzioni di caricamento dati ---
     const fetchData = useCallback(async () => {
+        setLoading(true);
         try {
-          setLoading(true);
           const [bookingsData, usersData, spacesData] = await Promise.all([
             callApi('getBookings'),
             callApi('getUsers'),
@@ -55,34 +54,48 @@ const MainLayout = () => {
         }
     }, []);
 
-    // Carica i dati al primo rendering del layout
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    // Funzione da passare alla modale per ricaricare i dati dopo l'aggiunta
-    const handleBookingAdded = () => {
-        fetchData();
+    
+    // 1. Funzione generica per il successo (sia aggiunta che modifica)
+    const handleBookingSuccess = () => {
+        fetchData(); // Ricarica i dati
+        handleCloseModal(); // Chiude la modale
+    };
+    
+    // 2. Funzione per aprire la modale in modalità modifica (da passare ai figli)
+    const handleOpenEditModal = (booking) => {
+        const bookingDate = new Date(booking.date);
+        const today = new Date();
+        if (bookingDate.setHours(0,0,0,0) < today.setHours(0,0,0,0)) {
+            alert("Non è possibile modificare una prenotazione passata.");
+            return;
+        }
+        setBookingToEdit(booking);
     };
 
-    // --- NUOVA LOGICA PER IL MENU DROPDOWN ---
+    // 3. Funzione generica per chiudere la modale
+    const handleCloseModal = () => {
+        setIsAddModalOpen(false);
+        setBookingToEdit(null);
+    };
+
+    // --- Logica per il menu utente ---
     const [isUserMenuOpen, setUserMenuOpen] = useState(false);
-    const menuTimerRef = useRef(null); // 2. Per memorizzare il nostro timer
+    const menuTimerRef = useRef(null);
 
-    // 3. Funzione per quando il mouse entra nell'area del menu
     const handleMenuEnter = () => {
-        clearTimeout(menuTimerRef.current); // Annulla qualsiasi timer di chiusura
-        setUserMenuOpen(true); // Apri il menu
+        clearTimeout(menuTimerRef.current);
+        setUserMenuOpen(true);
     };
 
-    // 4. Funzione per quando il mouse esce dall'area del menu
     const handleMenuLeave = () => {
-        // Avvia un timer per chiudere il menu dopo 300ms
         menuTimerRef.current = setTimeout(() => {
             setUserMenuOpen(false);
         }, 300);
     };
-    // --- FINE NUOVA LOGICA ---
 
     const handleLogout = () => {
       logout();
@@ -97,14 +110,9 @@ const MainLayout = () => {
                     <span>ParkApp</span>
                 </Link>
                 <div className="header-right">
-                    {/* 5. Applica i gestori di eventi al contenitore del menu */}
-                    <div 
-                        className="user-menu" 
-                        onMouseEnter={handleMenuEnter} 
-                        onMouseLeave={handleMenuLeave}
-                    >
+                    <div className="user-menu" onMouseEnter={handleMenuEnter} onMouseLeave={handleMenuLeave}>
+                        <span className="user-display-name">{user.firstName} {user.lastName}</span>
                         <UserAvatar user={user} />
-                        {/* 6. Usa lo stato per mostrare/nascondere il menu */}
                         <div className={`dropdown ${isUserMenuOpen ? 'show' : ''}`}>
                             <div className="user-details">
                                 <p>{user.firstName} {user.lastName}</p>
@@ -124,7 +132,6 @@ const MainLayout = () => {
             <nav className={`main-nav ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
                 <NavLink to="/" end onClick={() => setMobileMenuOpen(false)}><FaCalendarAlt /> <span>Calendario</span></NavLink>
                 <NavLink to="/my-bookings" onClick={() => setMobileMenuOpen(false)}><FaListUl /><span>Le mie prenotazioni</span></NavLink>
-                {/* Mostra questo link solo se user.isAdmin è true */}
                 {user && user.isAdmin === true && (
                     <NavLink to="/parking-spaces" onClick={() => setMobileMenuOpen(false)}><FaParking /><span>Parcheggi</span></NavLink>
                 )}
@@ -132,16 +139,18 @@ const MainLayout = () => {
             </nav>
 
             <main className="main-content">
-                <Outlet context={{ allBookings, users, parkingSpaces, loading, error, fetchData }} />
+                {/* 4. Passa la nuova funzione 'handleOpenEditModal' alle pagine figlie */}
+                <Outlet context={{ allBookings, users, parkingSpaces, loading, error, fetchData, handleOpenEditModal }} />
             </main>
 
             <button className="add-booking-btn" onClick={() => setIsAddModalOpen(true)}>+</button>
 
-            {/* Anche la modale ora vive qui */}
+            {/* 5. Aggiorna le props della modale per gestire sia l'aggiunta che la modifica */}
             <AddBookingModal
-                isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
-                onBookingAdded={handleBookingAdded} 
+                isOpen={isAddModalOpen || !!bookingToEdit}
+                onClose={handleCloseModal}
+                onBookingAdded={handleBookingSuccess}
+                initialBookingData={bookingToEdit}
                 parkingSpaces={parkingSpaces}
                 allBookings={allBookings}
             />

@@ -94,6 +94,11 @@
 .add-booking-btn:hover {
     background-color: #B81A33;
 }
+.rbc-header {
+  background-color: #DE1F3C !important;
+  color: #fff;
+  border: 1px solid #000000;
+}
 
 @media (max-width: 768px) {
   .rbc-calendar {
