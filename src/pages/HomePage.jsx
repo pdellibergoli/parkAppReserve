@@ -9,100 +9,106 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './HomePage.css';
 
 import { useOutletContext } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import BookingDetailsModal from '../components/BookingDetailsModal';
+import DayBookingsModal from '../components/DayBookingsModal';
 import { callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
+// Funzione helper per confrontare le date in modo sicuro, ignorando fuso orario e orario
+const areDatesOnSameDay = (first, second) => {
+  if (!first || !second) return false;
+  return format(first, 'yyyy-MM-dd') === format(second, 'yyyy-MM-dd');
+};
+
 const HomePage = () => {
-  // Riceve i dati e le funzioni dal MainLayout tramite il "context" dell'Outlet
-  const { allBookings, users, parkingSpaces, loading, error, fetchData } = useOutletContext();
+  const { allBookings, users, parkingSpaces, loading, error, fetchData, handleOpenEditModal } = useOutletContext();
   const { setIsLoading } = useLoading();
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
-  // Stati per la navigazione del calendario
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [date, setDate] = useState(new Date());
   const [view, setView] = useState('month');
-  
-  const { user } = useAuth();
-
-  // Calcola gli eventi per il calendario basandosi sui dati ricevuti
-  const events = useMemo(() => {
-    if (loading || error || !allBookings.length) return [];
-    
-    return allBookings.map(booking => {
-      const bookingUser = users.find(u => u.id === booking.userId);
-      const parkingSpot = parkingSpaces.find(p => p.id === booking.parkingSpaceId);
-      return {
-        title: `${parkingSpot?.number || 'N/A'} - ${bookingUser?.firstName || 'Utente'}`,
-        start: new Date(booking.date),
-        end: new Date(booking.date),
-        resource: booking, // Contiene i dati grezzi della prenotazione
-      };
-    });
-  }, [allBookings, users, parkingSpaces, loading, error]);
-
-  const eventStyleGetter = (event) => {
-    const isMyBooking = event.resource.userId === user.id;
-    return {
-      style: {
-        backgroundColor: isMyBooking ? '#DE1F3C' : '#e0e0e0',
-        borderRadius: '5px',
-        color: isMyBooking ? 'white' : 'black',
-        border: '2px solid #000000',
-        display: 'block',
-      },
-    };
-  };
-
-  const handleOpenDetailsModal = (event) => {
-    setSelectedEvent(event);
-    setIsDetailsModalOpen(true);
-  };
-  
-  const handleCloseDetailsModal = () => {
-    setIsDetailsModalOpen(false);
-    setSelectedEvent(null);
-  };
-
-  const handleDeleteBooking = async (bookingId) => {
-    setIsLoading(true);
-    try {
-      await callApi('deleteBookings', { bookingIds: [bookingId] });
-      fetchData(); // Usa la funzione fetchData ricevuta dal layout per ricaricare
-      handleCloseDetailsModal();
-    } catch (err) {
-      alert(`Errore: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleBookingUpdated = () => {
-    fetchData(); // Usa la funzione fetchData ricevuta dal layout
-  };
 
   const dayPropGetter = (date) => {
-    const day = date.getDay(); // 0 = Domenica, 6 = Sabato
-
-    // Se è Sabato o Domenica...
+    const day = date.getDay();
     if (day === 0 || day === 6) {
-      // ...restituisci un oggetto 'style' che imposta il colore di sfondo direttamente.
-      // Questo ha la priorità su qualsiasi regola CSS esterna.
-      return {
-        style: {
-          backgroundColor: '#f5f5f5', // Grigio chiaro
-        },
-      };
+      return { className: 'weekend-day-bg' }; // Usiamo una classe per lo stile
     }
-    // Per tutti gli altri giorni, non facciamo nulla.
     return {};
   };
 
+  const handleDayClick = (date) => {
+    setSelectedDate(date);
+    setIsDayModalOpen(true);
+  };
+  
+  const bookingsForSelectedDay = useMemo(() => {
+    if (!selectedDate || !allBookings || !parkingSpaces) return [];
+    
+    return allBookings
+      .filter(b => b.date && areDatesOnSameDay(new Date(b.date), selectedDate))
+      .map(booking => {
+          const space = parkingSpaces.find(s => s.id === booking.parkingSpaceId);
+          return { ...booking, parkingSpaceNumber: space ? space.number : 'N/A' };
+      })
+      .sort((a, b) => {
+          const numA = parseInt(String(a.parkingSpaceNumber).replace(/\D/g, ''), 10) || 0;
+          const numB = parseInt(String(b.parkingSpaceNumber).replace(/\D/g, ''), 10) || 0;
+          return numA - numB;
+      });
+  }, [selectedDate, allBookings, parkingSpaces]);
+
+  const handleDeleteBooking = async (bookingId) => {
+    if (window.confirm('Sei sicuro di voler cancellare questa prenotazione?')) {
+        setIsLoading(true);
+        try {
+            await callApi('deleteBookings', { bookingIds: [bookingId] });
+            fetchData();
+            setIsDayModalOpen(false); // Chiudiamo la modale dopo la cancellazione
+        } catch (err) {
+            alert(`Errore: ${err.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+  };
+
+  const handleEditBooking = (booking) => {
+    setIsDayModalOpen(false); // Chiudiamo la modale dei dettagli del giorno
+    handleOpenEditModal(booking); // Apriamo la modale di modifica (dal MainLayout)
+  };
+
+  
+  const CustomDateCellWrapper = ({ children, value }) => {
+    const bookingsOnDay = useMemo(() => 
+      allBookings.filter(b => b.date && areDatesOnSameDay(new Date(b.date), value)),
+      [allBookings, value]
+    );
+    const count = bookingsOnDay.length;
+    
+    // Cloniamo l'elemento figlio originale (il contenitore della cella)
+    // e aggiungiamo le nostre modifiche senza rompere la struttura.
+    const child = React.Children.only(children);
+    return React.cloneElement(
+      child,
+      {
+        onClick: () => handleDayClick(value),
+        className: `${child.props.className} rbc-day-bg-clickable ${count > 0 ? 'has-booking-badge' : ''}`,
+      },
+      <>
+        {child.props.children}
+        {count > 0 && (
+          <div className="booking-badge-container">
+            <div className="booking-count-badge">{count}</div>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
 
@@ -111,34 +117,31 @@ const HomePage = () => {
       <div className="calendar-container">
         <Calendar
           localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
+          events={[]}
           style={{ height: '75vh' }}
           culture='it'
-          messages={{ next: "Succ", previous: "Prec", today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
-          eventPropGetter={eventStyleGetter}
-          onSelectEvent={handleOpenDetailsModal}
-
+          messages={{ next: "Succ", previous: "Prec", today: "Oggi" }}
           dayPropGetter={dayPropGetter}
-          
-          // Props per la navigazione
+          components={{
+            dateCellWrapper: CustomDateCellWrapper,
+          }}
           date={date}
-          view={view}
+          view="month" // Imposta la vista fissa a 'month'
           onNavigate={newDate => setDate(newDate)}
-          onView={newView => setView(newView)}
+          views={['month']}
+          selectable
         />
       </div>
 
-      <BookingDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={handleCloseDetailsModal} 
-        event={selectedEvent}
+      <DayBookingsModal
+        isOpen={isDayModalOpen}
+        onClose={() => setIsDayModalOpen(false)}
+        date={selectedDate}
+        bookings={bookingsForSelectedDay}
         users={users}
         parkingSpaces={parkingSpaces}
-        allBookings={allBookings} 
         onDelete={handleDeleteBooking}
-        onBookingUpdated={handleBookingUpdated} 
+        onEdit={handleEditBooking}
       />
     </>
   );

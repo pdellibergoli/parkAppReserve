@@ -43,11 +43,12 @@
 }
 
 .rbc-header {
-  color: #666;
   text-transform: capitalize;
   font-weight: 500;
-  border-bottom: 1px solid #e0e0e0;
   padding: 0.8rem 0;
+  background-color: #DE1F3C !important;
+  color: #fff;
+  border: 1px solid #000000;
 }
 
 .rbc-day-bg, .rbc-month-row {
@@ -55,21 +56,25 @@
 }
 
 .rbc-day-bg.rbc-today {
-  background-color: #b8b8b8;
+  background-color: #e0e0e0;
 }
 
 .rbc-date-cell {
-  color: #555;
-  font-size: 0.9rem;
+  text-align: right;
+  padding-top: 5px;
+  padding-right: 10px;
 }
 
-.rbc-date-cell.rbc-now {
-  color: #ffffff;
+.rbc-date-cell.rbc-now .rbc-date-header-label {
+  color: #213547;
   font-weight: bold;
 }
 
 .rbc-off-range .rbc-date-cell {
   color: #ccc;
+}
+.rbc-off-range-bg {
+    background: #f8f8f8;
 }
 
 .rbc-event {
@@ -94,23 +99,62 @@
 .add-booking-btn:hover {
     background-color: #B81A33;
 }
-.rbc-header {
-  background-color: #DE1F3C !important;
-  color: #fff;
-  border: 1px solid #000000;
+
+.rbc-btn-group.buttun{
+    color: #000;
 }
+
+/* --- STILI PER IL PALLINO E CURSORE (VERSIONE CORRETTA) --- */
+
+/* Applica la "manina" a tutte le celle di sfondo del calendario */
+.rbc-month-view .rbc-day-bg {
+  cursor: pointer;
+}
+
+/* Contenitore per centrare il pallino */
+.booking-badge-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.booking-count-badge {
+  background-color: #DE1F3C;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* L'header della data, che contiene il nostro componente, deve occupare tutto lo spazio */
+.rbc-date-cell .rbc-date-header {
+  height: 100%;
+}
+
+.rbc-date-header-label {
+    padding-top: 5px;
+    padding-right: 10px;
+}
+
+/* --- FINE STILI --- */
 
 @media (max-width: 768px) {
   .rbc-calendar {
     padding: 0.5rem;
   }
   
-  /* Riduce la dimensione del testo e dei pulsanti */
   .rbc-toolbar button, .rbc-header, .rbc-event {
     font-size: 0.8rem !important;
   }
 
-  /* Migliora la disposizione della barra degli strumenti su mobile */
   .rbc-toolbar {
     flex-direction: column;
     gap: 0.5rem;
