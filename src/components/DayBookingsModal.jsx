@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import it from 'date-fns/locale/it';
 import { getTextColor } from '../utils/colors';
+import { FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
 import './DayBookingsModal.css';
 
 const Avatar = ({ user }) => {
@@ -33,21 +34,27 @@ const DayBookingsModal = ({ isOpen, onClose, bookings, users, parkingSpaces, onE
                     const isMyBooking = bookingUser && loggedInUser.id === bookingUser.id;
                     const isPast = new Date(booking.date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
 
-
                     return (
-                        <div key={booking.id} className="day-booking-card">
-                            <div className="card-user-info">
+                        <div key={booking.id} className="booking-card">
+                            {/* Contenitore per le informazioni principali (Avatar, Nome, Parcheggio) */}
+                            <div className="card-main-info">
                                 {bookingUser && <Avatar user={bookingUser} />}
-                                <span>{bookingUser ? `${bookingUser.firstName} ${bookingUser.lastName}` : 'Utente non trovato'}</span>
+                                <div className="card-details">
+                                    <span className="user-name">{bookingUser ? `${bookingUser.firstName} ${bookingUser.lastName}` : 'Utente non trovato'}</span>
+                                    <span className="parking-spot">Parcheggio: {parkingSpot ? parkingSpot.number : 'N/A'}</span>
+                                </div>
                             </div>
-                            <div className="card-parking-info">
-                                Parcheggio: <strong>{parkingSpot ? parkingSpot.number : 'N/A'}</strong>
-                            </div>
+
+                            {/* Contenitore per i pulsanti di azione */}
                             <div className="card-actions">
                                 {isMyBooking && !isPast && (
                                     <>
-                                        <button className="edit-btn-day" onClick={() => onEdit(booking)}>Modifica</button>
-                                        <button className="delete-btn-day" onClick={() => onDelete(booking.id)}>Cancella</button>
+                                        <button className="icon-btn edit-btn" onClick={() => onEdit(booking)} title="Modifica prenotazione">
+                                            <FaPencilAlt />
+                                        </button>
+                                        <button className="icon-btn delete-btn" onClick={() => onDelete(booking.id)} title="Cancella prenotazione">
+                                            <FaTrashAlt />
+                                        </button>
                                     </>
                                 )}
                             </div>

@@ -11,49 +11,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #fff;
+  background-color: #f9f9f9;
   padding: 1rem;
   border-radius: 8px;
-  border-left: 5px solid #3174ad;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  border: 1px solid #e0e0e0;
   gap: 1rem;
-}
-
-.day-booking-card {
-    justify-content: space-between;
-    align-items: center;
-    background-color: #ffffff;
-    padding: 1rem;
-    border-radius: 8px;
-    border-left: 5px solid #DE1F3C;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-}
-
-.card-user-info {
-        display: flex;        
-        align-items: center;
-        gap: 1rem;
-}
-
-.card-parking-info {
-    display: flex;        
-    align-items: center;
-    gap: 1rem;
-}
-
-.edit-btn-day {
-    background-color: #4a4a4a;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
 }
 
 .card-main-info {
   display: flex;
   align-items: center;
   gap: 1rem;
+  /* Occupa lo spazio disponibile, spingendo le azioni a destra */
+  flex-grow: 1;
+  /* Evita che il testo vada a capo se lo spazio è poco */
+  min-width: 0;
 }
 
 .day-booking-avatar {
@@ -65,17 +37,20 @@
   align-items: center;
   font-weight: bold;
   font-size: 1rem;
-  flex-shrink: 0;
+  flex-shrink: 0; /* Impedisce all'avatar di rimpicciolirsi */
 }
 
 .card-details {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .card-details .user-name {
   font-weight: 500;
-  white-space: nowrap; /* Assicura che il nome rimanga su una riga */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Aggiunge i puntini se il nome è troppo lungo */
 }
 .card-details .parking-spot {
   font-size: 0.9rem;
@@ -86,46 +61,46 @@
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0; /* Impedisce ai pulsanti di rimpicciolirsi */
-  justify-content: flex-end;
 }
 
-.card-actions button {
-  padding: 0.5rem 1rem;
-  border: none;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
+/* Stile comune per i pulsanti-icona */
+.icon-btn {
+    background: none;
+    border: none;
+    color: #777;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s, background-color 0.2s;
 }
 
-.card-actions .edit-btn {
-  background-color: #4a4a4a;
-}
-.card-actions .edit-btn:hover {
-  background-color: #5a5a5a;
+.icon-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
-.card-actions .delete-btn {
-  background-color: #b82d2d;
-}
-.card-actions .delete-btn:hover {
-  background-color: #d94848;
+/* Colori specifici al passaggio del mouse */
+.icon-btn.edit-btn {
+    color: #f0f0f0;
+    background-color: #4a4a4a;
 }
 
-/* --- INIZIO NUOVI STILI PER LA VISUALIZZAZIONE MOBILE --- */
-@media (max-width: 768px) {
-  .booking-card {
-    flex-direction: column; /* Impila gli elementi verticalmente */
-    padding: 1.5rem; /* Aumenta lo spazio interno per rendere la scheda più alta */
-  }
-
-  .card-actions {
-    margin-top: 1rem; /* Aggiunge spazio sopra i pulsanti */
-    flex-direction: column; /* Impila i pulsanti verticalmente */
-    gap: 0.5rem; /* Spazio tra i pulsanti */
-  }
-
-  .card-actions button {
-    justify-content: center; /* Centra il testo nel pulsante */
-  }
+.icon-btn.delete-btn {
+    color: #fce8e6;
+    background-color: #DE1F3C;
 }
-/* --- FINE NUOVI STILI --- */
+
+.icon-btn.edit-btn:hover {
+  color: #4a4a4a !important;
+  background-color: #f0f0f0;
+}
+
+.icon-btn.delete-btn:hover {
+  color: #DE1F3C !important;
+  background-color: #fce8e6;
+}

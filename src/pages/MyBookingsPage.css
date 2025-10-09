@@ -1,5 +1,3 @@
-/* src/pages/MyBookingsPage.css */
-
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -35,34 +33,65 @@
   gap: 1rem;
 }
 
-.bookings-list li {
+/* Stile principale della card, preso dalla modale */
+.booking-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  gap: 1.5rem;
+  transition: all 0.2s;
+}
+
+.booking-card.selected { 
+  background-color: #fce8e6; 
+  border-color: #DE1F3C; 
+}
+
+.card-main-info {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  background-color: #fff;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border-left: 5px solid #DE1F3C;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  flex-grow: 1;
+  min-width: 0;
 }
-.bookings-list li.selected { background-color: #fff8f8; border-left-color: #ff6b6b; }
 
-.booking-info { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 0.3rem; 
+.card-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
+
 .booking-date { 
   font-size: 1.1rem; 
   font-weight: 500; 
   text-transform: capitalize; 
 }
-.booking-space { color: #666; }
+.booking-space { 
+  color: #666;
+  font-size: 0.9rem;
+}
 
-.checkbox-container { position: relative; }
-.checkbox-container input[type="checkbox"] { opacity: 0; width: 25px; height: 25px; cursor: pointer; }
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
 
+/* Stili per il checkbox */
+.checkbox-container { 
+  position: relative;
+  flex-shrink: 0;
+}
+.checkbox-container input[type="checkbox"] { 
+  opacity: 0; 
+  width: 25px; 
+  height: 25px; 
+  cursor: pointer; 
+}
 .checkbox-container label {
   position: absolute;
   top: 50%;
@@ -70,13 +99,16 @@
   transform: translate(-50%, -50%);
   width: 25px;
   height: 25px;
-  background-color: #f0f0f0;
+  background-color: #fff;
   border: 2px solid #ccc;
   border-radius: 4px;
   pointer-events: none;
   transition: all 0.2s;
 }
-.checkbox-container input[type="checkbox"]:checked + label { background-color: #ff6b6b; border-color: #ff6b6b; }
+.checkbox-container input[type="checkbox"]:checked + label { 
+  background-color: #DE1F3C; 
+  border-color: #DE1F3C; 
+}
 .checkbox-container label:after {
   content: '';
   position: absolute;
@@ -91,58 +123,55 @@
 }
 .checkbox-container input[type="checkbox"]:checked + label:after { display: block; }
 
-/* Spinge il contenitore dei pulsanti a destra */
-.booking-actions {
-  margin-left: auto;
+
+/* Stili per le icone, presi dalla modale */
+.icon-btn {
+    background: none;
+    border: none;
+    color: #777;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s, background-color 0.2s;
 }
 
-/* Aggiunge un margine a sinistra SOLO al pulsante "Cancella" */
-.booking-actions .delete-button {
-  margin-left: 0.5rem; /* ~8px di spazio */
+.icon-btn svg {
+    width: 18px;
+    height: 18px;
 }
+
+.icon-btn.edit-btn:hover {
+    color: #4a4a4a;
+    background-color: #e0e0e0;
+}
+
+.icon-btn.delete-btn:hover {
+    color: #DE1F3C;
+    background-color: #fce8e6;
+}
+
+
 /* Media Query per Dispositivi Mobili */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
   }
-
-  .page-header h1 {
-    font-size: 1.5rem; /* Riduci il titolo */
-  }
-  
   .delete-selected-btn {
-    width: 100%; /* Pulsante a tutta larghezza */
-    text-align: center;
+    width: 100%;
   }
-
-  .bookings-list li {
-    padding: 1rem; /* Riduci lo spazio interno */
-    gap: 1rem;
-    flex-wrap: wrap; /* Permette agli elementi di andare a capo */
+  .booking-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
   }
-
-  .booking-date {
-    font-size: 0.95rem; /* Riduci il testo della data */
+  .card-actions {
+    justify-content: flex-end;
+    margin-top: 0.5rem;
   }
-
-  .booking-space {
-    font-size: 0.85rem; /* Riduci il testo del parcheggio */
-  }
-  
-  /* --- INIZIO NUOVE REGOLE PER I PULSANTI IN MOBILE --- */
-  .booking-actions {
-    width: 100%; /* Occupa tutta la larghezza disponibile */
-    margin-top: 1rem; /* Aggiunge spazio sopra i pulsanti */
-    margin-left: 0; /* Annulla il margine sinistro della versione desktop */
-  }
-
-  .booking-actions button {
-    flex-grow: 1; /* Fa in modo che ogni pulsante occupi metà dello spazio */
-    text-align: center;
-    justify-content: center; /* Centra il testo all'interno del pulsante */
-  }
-  /* --- FINE NUOVE REGOLE --- */
 }
