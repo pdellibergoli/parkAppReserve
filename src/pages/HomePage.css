@@ -81,26 +81,22 @@
   padding: 4px 8px;
 }
 
-.add-booking-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  font-size: 2rem;
-  line-height: 1;
-  padding: 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  background-color: #DE1F3C; 
-  color: white;
-  z-index: 10;
-}
-.add-booking-btn:hover {
-    background-color: #B81A33;
+.page-actions-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
 }
 
-.rbc-btn-group.buttun{
+.btn-add-booking-header {
+  background-color: #DE1F3C;
+  /* ... altre regole ... */
+}
+
+.btn-add-booking-header:hover {
+  background-color: #B81A33;
+}
+
+.rbc-btn-group.button{
     color: #000;
 }
 

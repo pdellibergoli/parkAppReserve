@@ -23,13 +23,12 @@ const areDatesOnSameDay = (first, second) => {
 };
 
 const HomePage = () => {
-  const { allBookings, users, parkingSpaces, loading, error, fetchData, handleOpenEditModal } = useOutletContext();
+  const { allBookings, users, parkingSpaces, loading, error, fetchData, handleOpenEditModal, handleOpenAddModal } = useOutletContext();
   const { setIsLoading } = useLoading();
   
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [date, setDate] = useState(new Date());
-  const [view, setView] = useState('month');
 
   const dayPropGetter = (date) => {
     const day = date.getDay();
@@ -133,6 +132,8 @@ const HomePage = () => {
         />
       </div>
 
+      <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Aggiungi prenotazione</button>
+      
       <DayBookingsModal
         isOpen={isDayModalOpen}
         onClose={() => setIsDayModalOpen(false)}

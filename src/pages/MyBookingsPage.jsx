@@ -9,7 +9,7 @@ import { FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
 import './MyBookingsPage.css';
 
 const MyBookingsPage = () => {
-  const { allBookings, parkingSpaces, loading, error, fetchData, handleOpenEditModal } = useOutletContext();
+  const { allBookings, parkingSpaces, loading, error, fetchData, handleOpenEditModal, handleOpenAddModal } = useOutletContext();
   const { user } = useAuth();
   const { setIsLoading } = useLoading();
 
@@ -52,6 +52,7 @@ const MyBookingsPage = () => {
 
   return (
     <>
+      <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Aggiungi prenotazione</button>
       <div className="my-bookings-container">
         <div className="page-header">
           <h1>Le mie prenotazioni</h1>
@@ -117,6 +118,7 @@ const MyBookingsPage = () => {
           </ul>
         )}
       </div>
+      
     </>
   );
 };

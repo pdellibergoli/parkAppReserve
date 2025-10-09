@@ -102,6 +102,8 @@ const MainLayout = () => {
       navigate('/login');
     };
 
+    const handleOpenAddModal = () => setIsAddModalOpen(true);
+    
     return (
         <div className="main-layout">
             <header className="main-header">
@@ -140,10 +142,8 @@ const MainLayout = () => {
 
             <main className="main-content">
                 {/* 4. Passa la nuova funzione 'handleOpenEditModal' alle pagine figlie */}
-                <Outlet context={{ allBookings, users, parkingSpaces, loading, error, fetchData, handleOpenEditModal }} />
+                <Outlet context={{ allBookings, users, parkingSpaces, loading, error, fetchData, handleOpenEditModal, handleOpenAddModal }} />
             </main>
-
-            <button className="add-booking-btn" onClick={() => setIsAddModalOpen(true)}>+</button>
 
             {/* 5. Aggiorna le props della modale per gestire sia l'aggiunta che la modifica */}
             <AddBookingModal

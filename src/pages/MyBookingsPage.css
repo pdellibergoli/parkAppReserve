@@ -51,6 +51,24 @@
   border-color: #DE1F3C !important; 
 }
 
+.add-booking-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  background-color: #DE1F3C;
+  color: white;
+  z-index: 10;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.add-booking-btn:hover {
+    background-color: #B81A33;
+}
+
 .card-main-info {
   display: flex;
   align-items: center;
