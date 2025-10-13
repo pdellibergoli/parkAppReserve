@@ -96,21 +96,23 @@ const MyBookingsPage = () => {
                     {/* Contenitore per Azioni */}
                     <div className="card-actions">
                         {!isPast && (
-                            <button 
-                                onClick={() => handleOpenEditModal(booking)} 
-                                className="icon-btn edit-btn"
-                                title="Modifica prenotazione"
-                            >
-                                <FaPencilAlt />
-                            </button>
+                          <button 
+                              onClick={() => handleOpenEditModal(booking)} 
+                              className="icon-btn edit-btn"
+                              title="Modifica prenotazione"
+                          >
+                              <FaPencilAlt />
+                          </button>
                         )}
-                        <button 
-                            onClick={() => handleDeleteSelected([booking.id])} 
-                            className="icon-btn delete-btn"
-                            title="Cancella prenotazione"
-                        >
-                            <FaTrashAlt />
-                        </button>
+                        {!isPast && (
+                          <button 
+                              onClick={() => handleDeleteSelected([booking.id])} 
+                              className="icon-btn delete-btn"
+                              title="Cancella prenotazione"
+                          >
+                              <FaTrashAlt />
+                          </button>
+                      )}
                     </div>
                 </li>
               );
