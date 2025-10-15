@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -9,86 +9,78 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './HomePage.css';
 
 import { useOutletContext } from 'react-router-dom';
-import DayBookingsModal from '../components/DayBookingsModal';
+import DayRequestsModal from '../components/DayRequestsModal';
 import { callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
-// Funzione helper per confrontare le date in modo sicuro, ignorando fuso orario e orario
 const areDatesOnSameDay = (first, second) => {
   if (!first || !second) return false;
-  return format(first, 'yyyy-MM-dd') === format(second, 'yyyy-MM-dd');
+  return format(new Date(first), 'yyyy-MM-dd') === format(new Date(second), 'yyyy-MM-dd');
 };
 
 const HomePage = () => {
-  const { allBookings, users, parkingSpaces, loading, error, fetchData, handleOpenEditModal, handleOpenAddModal } = useOutletContext();
+  const { handleOpenAddModal, handleOpenEditModal, refreshKey, forceDataRefresh } = useOutletContext();
   const { setIsLoading } = useLoading();
   
+  const [allRequests, setAllRequests] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [date, setDate] = useState(new Date());
 
-  const dayPropGetter = (date) => {
-    const day = date.getDay();
-    if (day === 0 || day === 6) {
-      return { className: 'weekend-day-bg' }; // Usiamo una classe per lo stile
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [requestsData, usersData] = await Promise.all([
+        callApi('getRequests', {}),
+        callApi('getUsers'),
+      ]);
+      setAllRequests(requestsData);
+      setUsers(usersData);
+    } catch (err) {
+      setError('Impossibile caricare i dati. Riprova più tardi.');
+    } finally {
+      setLoading(false);
     }
-    return {};
-  };
+  }, []);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, refreshKey]);
+  
   const handleDayClick = (date) => {
-    setSelectedDate(date);
-    setIsDayModalOpen(true);
+    const requestsOnDay = allRequests.filter(r => r.requestedDate && areDatesOnSameDay(new Date(r.requestedDate), date));
+    if (requestsOnDay.length > 0) {
+        setSelectedDate(date);
+        setIsDayModalOpen(true);
+    }
   };
   
-  const bookingsForSelectedDay = useMemo(() => {
-    if (!selectedDate || !allBookings || !parkingSpaces) return [];
+  const requestsForSelectedDay = useMemo(() => {
+    if (!selectedDate || !allRequests) return [];
     
-    return allBookings
-      .filter(b => b.date && areDatesOnSameDay(new Date(b.date), selectedDate))
-      .map(booking => {
-          const space = parkingSpaces.find(s => s.id === booking.parkingSpaceId);
-          return { ...booking, parkingSpaceNumber: space ? space.number : 'N/A' };
-      })
+    return allRequests
+      .filter(r => r.requestedDate && areDatesOnSameDay(new Date(r.requestedDate), selectedDate))
       .sort((a, b) => {
-          const numA = parseInt(String(a.parkingSpaceNumber).replace(/\D/g, ''), 10) || 0;
-          const numB = parseInt(String(b.parkingSpaceNumber).replace(/\D/g, ''), 10) || 0;
-          return numA - numB;
+          const userA = users.find(u => u.id === a.userId);
+          const userB = users.find(u => u.id === b.userId);
+          return (userA?.firstName || '').localeCompare(userB?.firstName || '');
       });
-  }, [selectedDate, allBookings, parkingSpaces]);
-
-  const handleDeleteBooking = async (bookingId) => {
-    if (window.confirm('Sei sicuro di voler cancellare questa prenotazione?')) {
-        setIsLoading(true);
-        try {
-            await callApi('deleteBookings', { bookingIds: [bookingId] });
-            fetchData();
-            setIsDayModalOpen(false); // Chiudiamo la modale dopo la cancellazione
-        } catch (err) {
-            alert(`Errore: ${err.message}`);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-  };
-
-  const handleEditBooking = (booking) => {
-    setIsDayModalOpen(false); // Chiudiamo la modale dei dettagli del giorno
-    handleOpenEditModal(booking); // Apriamo la modale di modifica (dal MainLayout)
-  };
-
+  }, [selectedDate, allRequests, users]);
   
   const CustomDateCellWrapper = ({ children, value }) => {
-    const bookingsOnDay = useMemo(() => 
-      allBookings.filter(b => b.date && areDatesOnSameDay(new Date(b.date), value)),
-      [allBookings, value]
+    const requestsOnDay = useMemo(() => 
+      allRequests.filter(r => r.requestedDate && areDatesOnSameDay(new Date(r.requestedDate), value)),
+      [allRequests, value]
     );
-    const count = bookingsOnDay.length;
+    const count = requestsOnDay.length;
     
-    // Cloniamo l'elemento figlio originale (il contenitore della cella)
-    // e aggiungiamo le nostre modifiche senza rompere la struttura.
     const child = React.Children.only(children);
     return React.cloneElement(
       child,
@@ -106,8 +98,43 @@ const HomePage = () => {
       </>
     );
   };
-
   
+  const handleCancelRequest = async (requestId) => {
+    if (window.confirm('Sei sicuro di voler cancellare questa richiesta?')) {
+        setIsLoading(true);
+        try {
+            await callApi('cancelRequest', { requestId });
+            setIsDayModalOpen(false);
+            forceDataRefresh();
+        } catch (err) {
+            alert(`Errore: ${err.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+  };
+
+  // 1. NUOVA FUNZIONE PER ANNULLARE L'ASSEGNAZIONE
+  const handleCancelAssignment = async (requestId) => {
+    if (window.confirm('Sei sicuro di voler annullare questa assegnazione e cedere il tuo posto?')) {
+        setIsLoading(true);
+        try {
+            await callApi('cancelAssignmentAndReassign', { requestId });
+            setIsDayModalOpen(false); // Chiudi la modale
+            forceDataRefresh(); // Ricarica i dati
+        } catch (err) {
+            alert(`Errore durante l'annullamento: ${err.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+  };
+
+  const handleEditRequest = (request) => {
+    setIsDayModalOpen(false);
+    handleOpenEditModal(request);
+  };
+
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
 
@@ -120,29 +147,27 @@ const HomePage = () => {
           style={{ height: '75vh' }}
           culture='it'
           messages={{ next: "Succ", previous: "Prec", today: "Oggi" }}
-          dayPropGetter={dayPropGetter}
           components={{
             dateCellWrapper: CustomDateCellWrapper,
           }}
           date={date}
-          view="month" // Imposta la vista fissa a 'month'
+          view="month"
           onNavigate={newDate => setDate(newDate)}
           views={['month']}
-          selectable
         />
       </div>
 
-      <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Aggiungi prenotazione</button>
+      <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Invia richiesta</button>
       
-      <DayBookingsModal
+      {/* 2. PASSA LA NUOVA FUNZIONE ALLA MODALE */}
+      <DayRequestsModal
         isOpen={isDayModalOpen}
         onClose={() => setIsDayModalOpen(false)}
-        date={selectedDate}
-        bookings={bookingsForSelectedDay}
+        requests={requestsForSelectedDay}
         users={users}
-        parkingSpaces={parkingSpaces}
-        onDelete={handleDeleteBooking}
-        onEdit={handleEditBooking}
+        onCancel={handleCancelRequest}
+        onEdit={handleEditRequest}
+        onCancelAssignment={handleCancelAssignment}
       />
     </>
   );

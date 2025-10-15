@@ -14,7 +14,7 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import HomePage from './pages/HomePage';
-import MyBookingsPage from './pages/MyBookingsPage';
+import MyRequestsPage from './pages/MyRequestsPage';
 import ParkingSpacesPage from './pages/ParkingSpacesPage';
 import StatsPage from './pages/StatsPage';
 import ProfilePage from './pages/ProfilePage';
@@ -80,7 +80,7 @@ function App() {
             {/* Rotte protette DENTRO il layout principale */}
             <Route element={<LayoutRoute />}>
               <Route path="/" element={<HomePage />} />
-              <Route path="my-bookings" element={<MyBookingsPage />} />
+              <Route path="my-requests" element={<MyRequestsPage />} />
               <Route path="parking-spaces" element={<ParkingSpacesPage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="profile" element={<ProfilePage />} />

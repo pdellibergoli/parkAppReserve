@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { callApi } from '../services/api';
-import { subDays, subMonths, startOfDay, endOfDay, addDays, format } from 'date-fns';
+import { subDays, subMonths, startOfDay, endOfDay, format } from 'date-fns';
 import { getTextColor } from '../utils/colors';
 import './StatsPage.css';
 
@@ -19,7 +19,7 @@ const UserAvatar = ({ user }) => {
 
 
 const StatsPage = () => {
-  const [allData, setAllData] = useState({ bookings: [], users: [], spaces: [] });
+  const [allData, setAllData] = useState({ history: [], users: [], spaces: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -31,36 +31,33 @@ const StatsPage = () => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        const [bookings, users, spaces] = await Promise.all([
-          callApi('getBookings'),
+        // MODIFICA: Carichiamo lo storico delle assegnazioni
+        const [history, users, spaces] = await Promise.all([
+          callApi('getAssignmentHistory'),
           callApi('getUsers'),
           callApi('getParkingSpaces')
         ]);
-        setAllData({ bookings, users, spaces });
+        setAllData({ history, users, spaces });
       } catch (err) {
-        setError("Impossibile caricare i dati.");
+        setError("Impossibile caricare i dati delle statistiche.");
       } finally {
         setLoading(false);
       }
     };
     fetchInitialData();
   }, []);
-
-  // --- NUOVO BLOCCO PER SINCRONIZZARE LE DATE ---
-  // Questo useEffect si attiva ogni volta che le date cambiano.
+  
   useEffect(() => {
-    // Se la data di inizio è successiva a quella di fine, le invertiamo.
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
       const tempStart = startDate;
       setStartDate(endDate);
       setEndDate(tempStart);
     }
   }, [startDate, endDate]);
-  // --- FINE NUOVO BLOCCO ---
   
   const handleStartDateChange = (dateValue) => {
     setStartDate(dateValue);
-    if (dateValue && !endDate) { // Se endDate è vuoto, lo impostiamo uguale a startDate
+    if (dateValue && !endDate) {
       setEndDate(dateValue);
     }
     setFilterType('custom');
@@ -68,18 +65,20 @@ const StatsPage = () => {
 
   const handleEndDateChange = (dateValue) => {
     setEndDate(dateValue);
-    if(dateValue && !startDate) { // Se startDate è vuoto, lo impostiamo uguale a endDate
+    if(dateValue && !startDate) {
         setStartDate(dateValue);
     }
     setFilterType('custom');
   };
 
   const statsData = useMemo(() => {
-    const { bookings, users, spaces } = allData;
+    // MODIFICA: Usiamo 'history' invece di 'bookings'
+    const { history, users, spaces } = allData;
     if (!users.length || !spaces.length) return [];
 
-    let filteredBookings = bookings;
+    let filteredHistory = history;
 
+    // La logica di filtraggio per data ora usa 'assignmentDate'
     if (filterType !== 'all') {
       let start, end;
       const today = new Date();
@@ -96,25 +95,24 @@ const StatsPage = () => {
       }
 
       if (start && end) {
-        // La logica di inversione per il calcolo non è più strettamente necessaria
-        // grazie a useEffect, ma la lasciamo come sicurezza aggiuntiva.
-        if (start > end) {
-          [start, end] = [end, start];
-        }
-        filteredBookings = bookings.filter(b => {
-          const bookingDate = new Date(b.date);
-          return bookingDate >= start && bookingDate <= end;
+        if (start > end) [start, end] = [end, start];
+        
+        filteredHistory = history.filter(h => {
+          const assignmentDate = new Date(h.assignmentDate);
+          return assignmentDate >= start && assignmentDate <= end;
         });
       }
     }
 
     const spaceMap = new Map(spaces.map(s => [s.id, s.number]));
+    
+    // Il calcolo delle statistiche ora si basa sullo storico filtrato
     const userStats = users.map(user => {
-      const userBookings = filteredBookings.filter(b => b.userId === user.id);
-      const totalBookings = userBookings.length;
+      const userAssignments = filteredHistory.filter(h => h.userId === user.id);
+      const totalAssignments = userAssignments.length;
       
-      const parkingCounts = userBookings.reduce((acc, currentBooking) => {
-        const spaceName = spaceMap.get(currentBooking.parkingSpaceId) || 'Sconosciuto';
+      const parkingCounts = userAssignments.reduce((acc, currentAssignment) => {
+        const spaceName = spaceMap.get(currentAssignment.parkingSpaceId) || 'Sconosciuto';
         acc[spaceName] = (acc[spaceName] || 0) + 1;
         return acc;
       }, {});
@@ -122,9 +120,9 @@ const StatsPage = () => {
       const sortedParkingCounts = Object.entries(parkingCounts)
         .sort(([, countA], [, countB]) => countB - countA);
 
-      return { user, totalBookings, parkingCounts: sortedParkingCounts };
+      return { user, totalAssignments, parkingCounts: sortedParkingCounts };
     })
-    .sort((a,b) => b.totalBookings - a.totalBookings);
+    .sort((a,b) => b.totalAssignments - a.totalAssignments);
 
     return userStats;
 
@@ -135,14 +133,14 @@ const StatsPage = () => {
 
   return (
     <div className="stats-container">
-      <h1>Statistiche di Utilizzo</h1>
-      <p>Visualizza il numero totale di prenotazioni per ogni utente e il dettaglio per singolo parcheggio.</p>
+      <h1>Statistiche di Assegnazione</h1>
+      <p>Visualizza il numero totale di parcheggi assegnati a ogni utente e il dettaglio per singolo posto.</p>
 
       <div className="filters-container">
         <div className="filter-buttons">
           <button onClick={() => setFilterType('all')} className={filterType === 'all' ? 'active' : ''}>Sempre</button>
           <button onClick={() => setFilterType('week')} className={filterType === 'week' ? 'active' : ''}>Ultimi 7 giorni</button>
-          <button onClick={() => setFilterType('month')} className={filterType === 'month' ? 'active' : ''}>Ultimo mese ad oggi</button>
+          <button onClick={() => setFilterType('month')} className={filterType === 'month' ? 'active' : ''}>Ultimo mese</button>
         </div>
         <div className="custom-date-filter">
         <span>Dal </span><input type="date" value={startDate} onChange={e => handleStartDateChange(e.target.value)} />
@@ -151,17 +149,17 @@ const StatsPage = () => {
       </div>
 
       <div className="stats-grid">
-        {statsData.map(({ user, totalBookings, parkingCounts }) => (
+        {statsData.map(({ user, totalAssignments, parkingCounts }) => (
           <div key={user.id} className="user-stat-card">
             <div className="card-header">
               <UserAvatar user={user} />
               <div className="user-info">
                 <span className="user-name">{user.firstName} {user.lastName}</span>
-                <span className="total-bookings">{totalBookings} prenotazioni totali</span>
+                <span className="total-bookings">{totalAssignments} assegnazioni totali</span>
               </div>
             </div>
             <div className="card-body">
-              {totalBookings > 0 ? (
+              {totalAssignments > 0 ? (
                 <ul className="parking-counts-list">
                   {parkingCounts.map(([spaceName, count]) => (
                     <li key={spaceName}>
@@ -171,7 +169,7 @@ const StatsPage = () => {
                   ))}
                 </ul>
               ) : (
-                <p className="no-bookings-message">Nessuna prenotazione trovata in questo periodo.</p>
+                <p className="no-bookings-message">Nessuna assegnazione trovata in questo periodo.</p>
               )}
             </div>
           </div>
