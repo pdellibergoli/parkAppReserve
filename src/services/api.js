@@ -1,4 +1,4 @@
-const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL_2;
+const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
 if (!SCRIPT_URL) {
   // Se la variabile non è definita, blocchiamo l'app con un errore chiaro.
