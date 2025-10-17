@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // Importa useMemo
 import Modal from './Modal';
 import { useAuth } from '../context/AuthContext';
 import { useLoading } from '../context/LoadingContext';
@@ -8,9 +8,7 @@ import './AddRequestModal.css';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 
 const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
-  // 1. Lo stato ora è un array di date
   const [selectedDates, setSelectedDates] = useState(['']);
-  
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -18,17 +16,28 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
   const { user } = useAuth();
   const { setIsLoading } = useLoading();
 
-  // Imposta lo stato iniziale all'apertura della modale
   useEffect(() => {
     if (isOpen) {
-      setSelectedDates([format(new Date(), 'yyyy-MM-dd')]); // Inizia con la data di oggi
+      setSelectedDates([format(new Date(), 'yyyy-MM-dd')]);
       setError('');
       setMessage('');
       setSubmitLoading(false);
     }
   }, [isOpen]);
 
-  // 2. Funzioni per gestire la lista di date
+  // --- NUOVA LOGICA PER L'AVVISO POST-ORARIO ---
+  const showLateRequestWarning = useMemo(() => {
+    const now = new Date();
+    // Se è prima delle 19, non mostrare nessun avviso
+    if (now.getHours() < 19) {
+      return false;
+    }
+    // Controlla se una delle date selezionate è oggi
+    const todayString = format(now, 'yyyy-MM-dd');
+    return selectedDates.some(date => date === todayString);
+  }, [selectedDates]);
+  // --- FINE NUOVA LOGICA ---
+
   const handleDateChange = (index, date) => {
     const newDates = [...selectedDates];
     newDates[index] = date;
@@ -46,8 +55,6 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Filtra eventuali date vuote e rimuovi duplicati
     const validDates = [...new Set(selectedDates.filter(date => date))];
 
     if (validDates.length === 0) {
@@ -61,7 +68,6 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
     setSubmitLoading(true);
 
     try {
-      // Chiama la nuova API `createBatchRequests` con l'array di date
       const response = await callApi('createBatchRequests', {
         userId: user.id,
         dates: validDates,
@@ -91,7 +97,6 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="add-booking-form">
-          {/* 3. UI aggiornata con la lista dinamica */}
           <div className="form-group">
             <label>Seleziona una o più date</label>
             {selectedDates.map((date, index) => (
@@ -126,6 +131,13 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
                 <FaPlus /> Aggiungi un'altra data
             </button>
           </div>
+
+          {/* MESSAGGIO DI AVVISO DINAMICO */}
+          {showLateRequestWarning && (
+            <p className="warning-message" style={{ textAlign: 'center' }}>
+              Attenzione: L'assegnazione principale per oggi è già avvenuta. La tua richiesta verrà messa in lista d'attesa e, se un posto è libero o si libererà, ti verrà assegnato automaticamente.
+            </p>
+          )}
 
           {error && <p className="error-message">{error}</p>}
           

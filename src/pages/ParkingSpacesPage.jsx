@@ -11,6 +11,9 @@ const ParkingSpacesPage = () => {
   const [newSpaceName, setNewSpaceName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   
+  // 1. NUOVO STATO PER GESTIRE IL CARICAMENTO DELLA SINGOLA RIGA
+  const [deletingSpaceId, setDeletingSpaceId] = useState(null);
+
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState(null);
 
@@ -51,12 +54,15 @@ const ParkingSpacesPage = () => {
   };
 
   const handleDeleteSpace = async (spaceId, spaceNumber) => {
-    if (window.confirm(`Sei sicuro di voler eliminare il parcheggio "${spaceNumber}"?`)) {
+    if (window.confirm(`Sei sicuro di voler eliminare il parcheggio "${spaceNumber}"? Questa azione annullerà anche eventuali assegnazioni future per questo posto.`)) {
+      setDeletingSpaceId(spaceId); // 2. IMPOSTA LO STATO DI CARICAMENTO
       try {
         await callApi('deleteParkingSpace', { spaceId });
-        fetchParkingSpaces();
+        fetchParkingSpaces(); // Il refresh dei dati farà sparire la riga
       } catch (err) {
         alert(`Errore: ${err.message}`);
+      } finally {
+        setDeletingSpaceId(null); // 3. RESETTA LO STATO DI CARICAMENTO
       }
     }
   };
@@ -112,42 +118,48 @@ const ParkingSpacesPage = () => {
         <div className="spaces-list-container">
           <h2>Parcheggi Esistenti ({parkingSpaces.length})</h2>
           <ul className="spaces-list">
-            {parkingSpaces.map(space => (
-              <li key={space.id} className="space-item">
-                <span className="space-number">{space.number}</span>
-                <div className="space-actions">
-                  <div className="fixed-toggle">
-                    <label htmlFor={`fixed-${space.id}`}>Fisso</label>
-                    <input
-                      type="checkbox"
-                      id={`fixed-${space.id}`}
-                      checked={space.isFixed === true}
-                      onChange={() => handleFixedChange(space.id, space.isFixed)}
-                    />
-                  </div>
-                  
-                  {/* --- MODIFICA QUI --- */}
-                  {/* Mostra il pulsante solo se il parcheggio NON è fisso */}
-                  {space.isFixed !== true && (
-                    <button 
-                      className="icon-btn edit-btn"
-                      onClick={() => handleOpenAvailabilityModal(space)}
-                      title={`Gestisci disponibilità per ${space.number}`}
-                    >
-                      <FaCalendarPlus />
-                    </button>
-                  )}
+            {parkingSpaces.map(space => {
+              const isDeleting = deletingSpaceId === space.id; // 4. Controlla se questa è la riga in cancellazione
 
-                  <button 
-                    className="delete-space-btn"
-                    onClick={() => handleDeleteSpace(space.id, space.number)}
-                    title={`Elimina parcheggio ${space.number}`}
-                  >
-                    <FaTrashAlt />
-                  </button>
-                </div>
-              </li>
-            ))}
+              return (
+                <li key={space.id} className="space-item">
+                  <span className="space-number">{space.number}</span>
+                  <div className="space-actions">
+                    <div className="fixed-toggle">
+                      <label htmlFor={`fixed-${space.id}`}>Fisso</label>
+                      <input
+                        type="checkbox"
+                        id={`fixed-${space.id}`}
+                        checked={space.isFixed === true}
+                        onChange={() => handleFixedChange(space.id, space.isFixed)}
+                        disabled={isDeleting} // Disabilita durante la cancellazione
+                      />
+                    </div>
+                    
+                    {space.isFixed !== true && (
+                      <button 
+                        className="icon-btn edit-btn"
+                        onClick={() => handleOpenAvailabilityModal(space)}
+                        title={`Gestisci disponibilità per ${space.number}`}
+                        disabled={isDeleting} // Disabilita durante la cancellazione
+                      >
+                        <FaCalendarPlus />
+                      </button>
+                    )}
+
+                    <button 
+                      className="delete-space-btn"
+                      onClick={() => handleDeleteSpace(space.id, space.number)}
+                      title={`Elimina parcheggio ${space.number}`}
+                      disabled={isDeleting} // Disabilita durante la cancellazione
+                    >
+                      {/* 5. MOSTRA SPINNER O ICONA */}
+                      {isDeleting ? <div className="spinner-small" style={{borderColor: 'rgba(0,0,0,0.2)', borderTopColor: '#DE1F3C'}}></div> : <FaTrashAlt />}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
