@@ -3,7 +3,6 @@ import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLoading } from '../context/LoadingContext';
 import { callApi } from '../services/api';
-// MODIFICA: Rimuoviamo 'it' perché non serve più per il formato numerico
 import { format, isBefore, startOfToday } from 'date-fns';
 import { FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
 import './MyRequestsPage.css';
@@ -19,6 +18,7 @@ const MyRequestsPage = () => {
   const { setIsLoading, isLoading } = useLoading();
 
   const [myRequests, setMyRequests] = useState([]);
+  const [selectedRequests, setSelectedRequests] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -28,6 +28,7 @@ const MyRequestsPage = () => {
             const requests = await callApi('getRequests', { userId: user.id });
             requests.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
             setMyRequests(requests);
+            setSelectedRequests([]);
         } catch (err) {
             setError('Impossibile caricare le tue richieste.');
         } finally {
@@ -36,33 +37,29 @@ const MyRequestsPage = () => {
     };
     fetchMyRequests();
   }, [user.id, setIsLoading, refreshKey]);
+  
+  const handleSelectionChange = (requestId) => {
+      setSelectedRequests(prev => 
+          prev.includes(requestId)
+              ? prev.filter(id => id !== requestId)
+              : [...prev, requestId]
+      );
+  };
+  
+  // Funzione UNIFICATA per gestire tutte le cancellazioni
+  const handleCancellations = async (requestIds, confirmationMessage) => {
+    if (requestIds.length === 0) return;
 
-
-  const handleCancelRequest = async (requestId) => {
-    if (window.confirm(`Sei sicuro di voler cancellare questa richiesta?`)) {
+    if (window.confirm(confirmationMessage)) {
       setIsLoading(true);
       try {
-        await callApi('cancelRequest', { requestId });
+        await callApi('cancelMultipleRequests', { requestIds });
         forceDataRefresh();
       } catch (err) {
-        alert(`Errore durante la cancellazione: ${err.message}`);
+        alert(`Errore: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
-    }
-  };
-  
-  const handleCancelAssignment = async (requestId) => {
-    if (window.confirm(`Sei sicuro di voler annullare questa assegnazione e cedere il tuo posto?`)) {
-        setIsLoading(true);
-        try {
-            await callApi('cancelAssignmentAndReassign', { requestId });
-            forceDataRefresh();
-        } catch (err) {
-            alert(`Errore durante l'annullamento: ${err.message}`);
-        } finally {
-            setIsLoading(false);
-        }
     }
   };
 
@@ -87,6 +84,13 @@ const MyRequestsPage = () => {
       <div className="my-bookings-container">
         <div className="page-header">
           <h1>Le mie richieste</h1>
+          <button 
+            className="delete-selected-btn"
+            onClick={() => handleCancellations(selectedRequests, `Sei sicuro di voler cancellare ${selectedRequests.length} richiesta/e?`)}
+            disabled={selectedRequests.length === 0}
+          >
+            Cancella Selezionati ({selectedRequests.length})
+          </button>
         </div>
 
         {myRequests.length === 0 ? (
@@ -97,16 +101,27 @@ const MyRequestsPage = () => {
               const requestDate = new Date(request.requestedDate);
               const isPast = isBefore(requestDate, today);
               
-              const canBeManaged = request.status === 'pending' && !isPast;
-              const canBeCancelled = request.status === 'assigned' && !isPast;
+              const isPending = request.status === 'pending' && !isPast;
+              const isAssigned = request.status === 'assigned' && !isPast;
+              const canBeCancelledOrSelected = isPending || isAssigned;
 
               const statusText = getStatusText(request.status);
 
               return (
-                <li key={request.requestId} className={`booking-card status-${request.status}`}>
+                <li key={request.requestId} className={`booking-card ${selectedRequests.includes(request.requestId) ? 'selected' : ''}`}>
                     <div className="card-main-info">
-                        <div className="card-details">
-                            {/* MODIFICA FORMATO DATA QUI */}
+                        {canBeCancelledOrSelected && (
+                            <div className="checkbox-container">
+                                <input 
+                                    type="checkbox" 
+                                    id={`cb-${request.requestId}`} 
+                                    checked={selectedRequests.includes(request.requestId)}
+                                    onChange={() => handleSelectionChange(request.requestId)}
+                                />
+                                <label htmlFor={`cb-${request.requestId}`}></label>
+                            </div>
+                        )}
+                        <div className="card-details" style={{ marginLeft: canBeCancelledOrSelected ? '0' : '50px' }}>
                             <span className="booking-date">{format(requestDate, 'dd/MM/yyyy')}</span>
                             <span className="booking-space">
                                 Stato: <strong>{statusText}</strong>
@@ -116,18 +131,21 @@ const MyRequestsPage = () => {
                     </div>
                     
                     <div className="card-actions">
-                        {canBeManaged && (
-                          <>
-                            <button onClick={() => handleOpenEditModal(request)} className="icon-btn edit-btn" title="Modifica richiesta">
-                                <FaPencilAlt />
-                            </button>
-                            <button onClick={() => handleCancelRequest(request.requestId)} className="icon-btn delete-btn" title="Cancella richiesta">
-                                <FaTrashAlt />
-                            </button>
-                          </>
+                        {isPending && (
+                          <button onClick={() => handleOpenEditModal(request)} className="icon-btn edit-btn" title="Modifica richiesta">
+                              <FaPencilAlt />
+                          </button>
                         )}
-                        {canBeCancelled && (
-                            <button onClick={() => handleCancelAssignment(request.requestId)} className="icon-btn delete-btn" title="Annulla assegnazione">
+                        {/* ICONA CESTINO VISIBILE SIA PER PENDING CHE PER ASSIGNED */}
+                        {canBeCancelledOrSelected && (
+                            <button 
+                                onClick={() => handleCancellations(
+                                    [request.requestId], 
+                                    isPending ? 'Sei sicuro di voler cancellare questa richiesta?' : 'Sei sicuro di voler annullare questa assegnazione?'
+                                )} 
+                                className="icon-btn delete-btn" 
+                                title={isPending ? 'Cancella richiesta' : 'Annulla assegnazione'}
+                            >
                                 <FaTrashAlt />
                             </button>
                         )}

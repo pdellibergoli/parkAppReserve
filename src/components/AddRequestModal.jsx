@@ -5,71 +5,53 @@ import { useLoading } from '../context/LoadingContext';
 import { callApi } from '../services/api';
 import { format } from 'date-fns';
 import './AddRequestModal.css';
-
-// Funzione di supporto per confrontare le date ignorando l'orario
-const areDatesOnSameDay = (first, second) => {
-  if (!first || !second) return false;
-  return format(new Date(first), 'yyyy-MM-dd') === format(new Date(second), 'yyyy-MM-dd');
-};
+import { FaPlus, FaTrash } from 'react-icons/fa';
 
 const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
-  const [selectedDate, setSelectedDate] = useState('');
+  // 1. Lo stato ora è un array di date
+  const [selectedDates, setSelectedDates] = useState(['']);
+  
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [warningMessage, setWarningMessage] = useState(''); // Stato specifico per l'avviso
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-
+  
   const { user } = useAuth();
   const { setIsLoading } = useLoading();
-  const [userRequests, setUserRequests] = useState([]);
 
-  // Carica le richieste dell'utente solo quando la modale si apre
+  // Imposta lo stato iniziale all'apertura della modale
   useEffect(() => {
     if (isOpen) {
-      setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
+      setSelectedDates([format(new Date(), 'yyyy-MM-dd')]); // Inizia con la data di oggi
       setError('');
       setMessage('');
-      setWarningMessage('');
       setSubmitLoading(false);
-      
-      const fetchUserRequests = async () => {
-        setInitialLoading(true);
-        try {
-            const requests = await callApi('getRequests', { userId: user.id });
-            setUserRequests(requests);
-        } catch (err) {
-            setError("Impossibile verificare le richieste esistenti.");
-        } finally {
-            setInitialLoading(false);
-        }
-      };
-      
-      fetchUserRequests();
     }
-  }, [isOpen, user.id]);
+  }, [isOpen]);
 
-  // Controlla la data ogni volta che cambia e imposta/resetta l'avviso
-  useEffect(() => {
-    if (!selectedDate || userRequests.length === 0) {
-        setWarningMessage('');
-        return;
-    }
+  // 2. Funzioni per gestire la lista di date
+  const handleDateChange = (index, date) => {
+    const newDates = [...selectedDates];
+    newDates[index] = date;
+    setSelectedDates(newDates);
+  };
 
-    const hasExistingRequest = userRequests.some(req => areDatesOnSameDay(req.requestedDate, selectedDate));
-    
-    if (hasExistingRequest) {
-        setWarningMessage("Hai già una richiesta per il giorno selezionato.");
-    } else {
-        setWarningMessage(''); // Pulisce l'avviso se la data è valida
-    }
-  }, [selectedDate, userRequests]);
+  const handleAddDate = () => {
+    setSelectedDates([...selectedDates, '']);
+  };
 
+  const handleRemoveDate = (index) => {
+    const newDates = selectedDates.filter((_, i) => i !== index);
+    setSelectedDates(newDates);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (warningMessage) { // Controlliamo se c'è un avviso attivo
-        setError(warningMessage);
+    
+    // Filtra eventuali date vuote e rimuovi duplicati
+    const validDates = [...new Set(selectedDates.filter(date => date))];
+
+    if (validDates.length === 0) {
+        setError("Devi selezionare almeno una data.");
         return;
     }
     
@@ -79,9 +61,10 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
     setSubmitLoading(true);
 
     try {
-      const response = await callApi('createNewRequest', {
-        date: selectedDate,
+      // Chiama la nuova API `createBatchRequests` con l'array di date
+      const response = await callApi('createBatchRequests', {
         userId: user.id,
+        dates: validDates,
       });
       setMessage(response.message);
     } catch (err) {
@@ -108,32 +91,41 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="add-booking-form">
-          {initialLoading ? (
-            <div className="loading-container" style={{height: '100px'}}><div className="spinner"></div></div>
-          ) : (
-            <>
-              <div className="form-group">
-                <label htmlFor="request-date">Seleziona una data per la richiesta</label>
+          {/* 3. UI aggiornata con la lista dinamica */}
+          <div className="form-group">
+            <label>Seleziona una o più date</label>
+            {selectedDates.map((date, index) => (
+              <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
                 <input 
                   type="date" 
-                  id="request-date" 
-                  value={selectedDate} 
-                  onChange={(e) => {
-                      setSelectedDate(e.target.value);
-                      setError(''); // Pulisce l'errore generico al cambio data
-                  }} 
-                  min={format(new Date(), 'yyyy-MM-dd')} 
-                  required 
+                  value={date} 
+                  onChange={(e) => handleDateChange(index, e.target.value)} 
+                  min={format(new Date(), 'yyyy-MM-dd')}
+                  required
+                  style={{ flexGrow: 1 }}
                 />
+                {selectedDates.length > 1 && (
+                  <button 
+                    type="button" 
+                    onClick={() => handleRemoveDate(index)} 
+                    className="icon-btn delete-btn" 
+                    style={{ marginLeft: '10px', width: '40px', height: '40px' }}
+                    title="Rimuovi data"
+                  >
+                    <FaTrash />
+                  </button>
+                )}
               </div>
-
-              {warningMessage && (
-                <p className="warning-message">
-                  {warningMessage}
-                </p>
-              )}
-            </>
-          )}
+            ))}
+            <button 
+                type="button" 
+                onClick={handleAddDate} 
+                className="secondary-btn" 
+                style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+                <FaPlus /> Aggiungi un'altra data
+            </button>
+          </div>
 
           {error && <p className="error-message">{error}</p>}
           
@@ -142,9 +134,9 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
             <button 
               type="submit" 
               className="submit-btn" 
-              disabled={!selectedDate || submitLoading || initialLoading || !!warningMessage} // Disabilita se c'è un avviso
+              disabled={submitLoading}
             >
-              {submitLoading ? <div className="spinner-small"></div> : 'Invia Richiesta'}
+              {submitLoading ? <div className="spinner-small"></div> : 'Invia Richiesta/e'}
             </button>
           </div>
         </form>
