@@ -65,9 +65,9 @@
 }
 
 .warning-message {
-  color: #f0ad4e;
-  background-color: rgba(240, 173, 78, 0.1);
-  border: 1px solid #f0ad4e;
+  color: #DE1F3C;
+  background-color: rgba(239, 110, 125, 0.1);
+  border: 1px solid #DE1F3C;
   padding: 0.8rem;
   border-radius: 4px;
   text-align: center;
