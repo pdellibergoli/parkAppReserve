@@ -82,6 +82,36 @@
   animation: spin 1s ease-in-out infinite;
 }
 
+/* Stili per la lista di date scrollabile */
+.date-list-container {
+  max-height: 250px; /* Altezza massima della lista, puoi regolarla */
+  overflow-y: auto; /* Mostra la scrollbar verticale se necessario */
+  padding-right: 10px; /* Aggiunge un po' di spazio per la scrollbar */
+  margin-bottom: 10px; /* Spazio prima del pulsante "Aggiungi" */
+  border: 1px solid #eee; /* Bordo leggero opzionale */
+  padding: 10px; /* Padding interno opzionale */
+  border-radius: 4px; /* Angoli arrotondati opzionali */
+}
+
+/* Stile opzionale per migliorare l'aspetto della scrollbar (non supportato da tutti i browser) */
+.date-list-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.date-list-container::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+  border-radius: 4px;
+}
+ 
+.date-list-container::-webkit-scrollbar-thumb {
+  background: #ccc; 
+  border-radius: 4px;
+}
+
+.date-list-container::-webkit-scrollbar-thumb:hover {
+  background: #aaa; 
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

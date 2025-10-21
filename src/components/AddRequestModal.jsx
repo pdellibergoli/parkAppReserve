@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react'; // Importa useMemo
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
 import { useAuth } from '../context/AuthContext';
 import { useLoading } from '../context/LoadingContext';
 import { callApi } from '../services/api';
 import { format } from 'date-fns';
-import './AddRequestModal.css';
+// Assicurati che il CSS importato sia corretto (potrebbe essere AddRequestModal.css o AddBookingModal.css)
+import './AddRequestModal.css'; 
 import { FaPlus, FaTrash } from 'react-icons/fa';
 
 const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
@@ -25,18 +26,14 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
     }
   }, [isOpen]);
 
-  // --- NUOVA LOGICA PER L'AVVISO POST-ORARIO ---
   const showLateRequestWarning = useMemo(() => {
     const now = new Date();
-    // Se è prima delle 19, non mostrare nessun avviso
     if (now.getHours() < 19) {
       return false;
     }
-    // Controlla se una delle date selezionate è oggi
     const todayString = format(now, 'yyyy-MM-dd');
     return selectedDates.some(date => date === todayString);
   }, [selectedDates]);
-  // --- FINE NUOVA LOGICA ---
 
   const handleDateChange = (index, date) => {
     const newDates = [...selectedDates];
@@ -99,29 +96,32 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
         <form onSubmit={handleSubmit} className="add-booking-form">
           <div className="form-group">
             <label>Seleziona una o più date</label>
-            {selectedDates.map((date, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                <input 
-                  type="date" 
-                  value={date} 
-                  onChange={(e) => handleDateChange(index, e.target.value)} 
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                  required
-                  style={{ flexGrow: 1 }}
-                />
-                {selectedDates.length > 1 && (
-                  <button 
-                    type="button" 
-                    onClick={() => handleRemoveDate(index)} 
-                    className="icon-btn delete-btn" 
-                    style={{ marginLeft: '10px', width: '40px', height: '40px' }}
-                    title="Rimuovi data"
-                  >
-                    <FaTrash />
-                  </button>
-                )}
-              </div>
-            ))}
+            {/* ---- MODIFICA QUI: Aggiungi il contenitore ---- */}
+            <div className="date-list-container"> 
+              {selectedDates.map((date, index) => (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                  <input 
+                    type="date" 
+                    value={date} 
+                    onChange={(e) => handleDateChange(index, e.target.value)} 
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    required
+                    style={{ flexGrow: 1 }}
+                  />
+                  {selectedDates.length > 1 && (
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveDate(index)} 
+                      className="icon-btn delete-btn" 
+                      style={{ marginLeft: '10px', width: '40px', height: '40px' }}
+                      title="Rimuovi data"
+                    >
+                      <FaTrash />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div> {/* ---- FINE CONTENITORE ---- */}
             <button 
                 type="button" 
                 onClick={handleAddDate} 
@@ -132,7 +132,6 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
             </button>
           </div>
 
-          {/* MESSAGGIO DI AVVISO DINAMICO */}
           {showLateRequestWarning && (
             <p className="warning-message" style={{ textAlign: 'center' }}>
               Attenzione: L'assegnazione principale per oggi è già avvenuta. La tua richiesta verrà messa in lista d'attesa e, se un posto è libero o si libererà, ti verrà assegnato automaticamente.
