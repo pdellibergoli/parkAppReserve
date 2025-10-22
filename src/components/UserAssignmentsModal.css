@@ -1,0 +1,100 @@
+.user-assignments-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .modal-user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .user-info-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+  }
+  
+  .modal-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  
+  .modal-user-name {
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: #213547;
+  }
+  
+  .modal-total-assignments {
+    font-size: 1rem;
+    color: #555;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  
+  .assignments-list-container {
+    max-height: 50vh; /* Altezza massima per la lista */
+    overflow-y: auto; /* Scrollbar verticale se necessario */
+    padding-right: 10px; /* Spazio per la scrollbar */
+  }
+  
+  .assignments-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .assignment-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.8rem 0.5rem;
+    border-bottom: 1px solid #eee;
+  }
+  .assignment-item:last-child {
+      border-bottom: none;
+  }
+  
+  
+  .assignment-date {
+    color: #333;
+  }
+  
+  .assignment-space {
+    font-weight: 500;
+    color: #DE1F3C;
+  }
+  
+  .no-assignments-message {
+      text-align: center;
+      color: #777;
+      margin-top: 1rem;
+  }
+  
+  /* Stili scrollbar (opzionale) */
+  .assignments-list-container::-webkit-scrollbar {
+    width: 6px;
+  }
+  .assignments-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  .assignments-list-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+  }
+  .assignments-list-container::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+  }
