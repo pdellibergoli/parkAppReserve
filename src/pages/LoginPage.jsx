@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-// 1. Importa 'useLocation' anche qui
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { callApi } from '../services/api';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import logo from '../assets/logo.png'; // 1. IMPORTA IL LOGO
 
 const LoginPage = () => {
   const [mail, setMail] = useState('');
@@ -13,13 +13,14 @@ const LoginPage = () => {
   const [resendMessage, setResendMessage] = useState('');
   const [showResendLink, setShowResendLink] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation(); // 2. Ottieni l'oggetto 'location'
+  const location = useLocation();
 
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
+    // ... (logica handleSubmit invariata) ...
+     if (e) e.preventDefault();
     setError('');
     setResendMessage('');
     setShowResendLink(false);
@@ -32,7 +33,6 @@ const LoginPage = () => {
         setError(loginResult.message);
         setShowResendLink(true);
       } else if (!loginResult || !loginResult.id) {
-        // Aggiungiamo un controllo nel caso il login non restituisca un utente
         setError('Si è verificato un errore inaspettato durante il login.');
       }
     } catch (err) {
@@ -43,8 +43,8 @@ const LoginPage = () => {
     }
   };
 
-  // ... (il resto del file LoginPage.jsx rimane invariato)
   const handleResendEmail = async () => {
+    // ... (logica handleResendEmail invariata) ...
     setLoading(true);
     setError('');
     setResendMessage('');
@@ -62,10 +62,18 @@ const LoginPage = () => {
   return (
     <div className="auth-container">
       <div className="auth-form">
+
+        {/* --- 2. AGGIUNGI LOGO E TITOLO QUI --- */}
+        <div className="auth-header">
+          <img src={logo} alt="ParkApp Logo" className="auth-logo" />
+        </div>
+        {/* --- FINE AGGIUNTA --- */}
+
         <h2>Accedi</h2>
         <p>Prenota il tuo parcheggio aziendale.</p>
         <form onSubmit={handleSubmit}>
-          <div className="input-group">
+          {/* ... (resto del form invariato) ... */}
+           <div className="input-group">
             <label htmlFor="email">Email</label>
             <input
               type="email" id="email" value={mail}

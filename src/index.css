@@ -210,6 +210,31 @@ button:disabled, .btn:disabled {
   background: none !important; /* Assicura che non ci sia sfondo al passaggio del mouse */
 }
 
+/* Stili per l'header del form di autenticazione */
+.auth-header {
+  display: flex;
+  flex-direction: column; /* Impila logo e titolo verticalmente */
+  align-items: center; /* Centra orizzontalmente */
+  margin-bottom: 1.5rem; /* Spazio prima del titolo "Accedi" */
+}
+
+.auth-logo {
+  height: 80px; /* Regola l'altezza del logo */
+  width: auto;
+  margin-bottom: 0.5rem; /* Spazio tra logo e titolo */
+}
+
+.auth-header h1 {
+  margin: 0; /* Rimuovi margini di default */
+  font-size: 2rem; /* Dimensione del titolo del sito */
+  color: #333; /* Colore del titolo */
+}
+
+/* Opzionale: Riduci un po' il margine superiore del titolo h2 del form */
+.auth-form h2 {
+  margin-bottom: 0.5rem;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
