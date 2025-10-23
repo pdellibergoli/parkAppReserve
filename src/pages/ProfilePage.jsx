@@ -5,23 +5,20 @@ import AvatarColorModal from '../components/AvatarColorModal';
 import { getTextColor } from '../utils/colors';
 import './ProfilePage.css';
 
-// Componente per l'avatar dell'utente
+// Componente AvatarDisplay (invariato)
 const AvatarDisplay = ({ user }) => {
   const getInitials = () => {
     if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`;
     return user.firstName ? user.firstName[0] : 'U';
   };
-  
-  const backgroundColor = user.avatarColor || '#DE1F3C'; 
-  const textColor = getTextColor(backgroundColor); 
-
+  const backgroundColor = user.avatarColor || '#DE1F3C';
+  const textColor = getTextColor(backgroundColor);
   return <div className="profile-avatar" style={{ backgroundColor: backgroundColor, color: textColor }}>{getInitials()}</div>;
 };
 
-
 const ProfilePage = () => {
   const { user, updateUserContext } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     firstName: user.firstName,
     lastName: user.lastName || '',
@@ -32,109 +29,123 @@ const ProfilePage = () => {
     confirmPassword: '',
   });
 
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  // --- MODIFICA 1: Stati separati per messaggi/errori ---
+  const [infoMessage, setInfoMessage] = useState('');
+  const [infoError, setInfoError] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  // --- Fine Modifica 1 ---
+
   const [loading, setLoading] = useState(false);
-  
-  // STATO PER LA MODALE COLORE
-  const [isColorModalVisible, setIsColorModalVisible] = useState(false); 
+  const [isColorModalVisible, setIsColorModalVisible] = useState(false);
 
   const handleInfoChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Pulisci i messaggi quando l'utente modifica i dati
+    setInfoMessage('');
+    setInfoError('');
   };
-  
+
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordData(prev => ({ ...prev, [name]: value }));
+    // Pulisci i messaggi quando l'utente modifica i dati
+    setPasswordMessage('');
+    setPasswordError('');
   };
 
   const handleInfoSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
-    setError('');
-    
-    // SICUREZZA: Pulizia dell'ID prima di inviare l'API
+    // --- MODIFICA 2: Pulisci tutti i messaggi prima dell'invio ---
+    setInfoMessage('');
+    setInfoError('');
+    setPasswordMessage('');
+    setPasswordError('');
+    // --- Fine Modifica 2 ---
+
     const cleanId = user.id ? user.id.toString().trim() : null;
     if (!cleanId) {
-        setError("ID utente non valido.");
-        setLoading(false);
-        return;
+      setInfoError("ID utente non valido."); // Imposta errore specifico
+      setLoading(false);
+      return;
     }
-    
+
     try {
-      const updatedUser = await callApi('updateUserProfile', { 
-        id: cleanId, 
+      const updatedUser = await callApi('updateUserProfile', {
+        id: cleanId,
         ...formData,
-      }); 
-      updateUserContext(updatedUser); 
-      setMessage('Informazioni personali aggiornate con successo!');
+      });
+      updateUserContext(updatedUser);
+      setInfoMessage('Informazioni personali aggiornate con successo!'); // Imposta messaggio specifico
     } catch (err) {
-      setError(err.message);
+      setInfoError(err.message); // Imposta errore specifico
     } finally {
       setLoading(false);
     }
   };
-  
+
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
+     // --- MODIFICA 3: Pulisci tutti i messaggi prima dell'invio ---
+    setInfoMessage('');
+    setInfoError('');
+    setPasswordMessage('');
+    setPasswordError('');
+    // --- Fine Modifica 3 ---
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-        setError("Le password non coincidono.");
-        return;
+      setPasswordError("Le password non coincidono."); // Imposta errore specifico
+      return;
     }
     if (passwordData.newPassword.length < 6) {
-        setError("La password deve essere di almeno 6 caratteri.");
-        return;
+      setPasswordError("La password deve essere di almeno 6 caratteri."); // Imposta errore specifico
+      return;
     }
     setLoading(true);
-    setMessage('');
-    setError('');
-    
-    // SICUREZZA: Pulizia dell'ID prima di inviare l'API
+
     const cleanId = user.id ? user.id.toString().trim() : null;
     if (!cleanId) {
-        setError("ID utente non valido.");
-        setLoading(false);
-        return;
+      setPasswordError("ID utente non valido."); // Imposta errore specifico
+      setLoading(false);
+      return;
     }
 
     try {
-        await callApi('updateUserProfile', { id: cleanId, password: passwordData.newPassword });
-        setMessage('Password modificata con successo!');
-        setPasswordData({ newPassword: '', confirmPassword: ''}); // Pulisce i campi
+      await callApi('updateUserProfile', { id: cleanId, password: passwordData.newPassword });
+      setPasswordMessage('Password modificata con successo!'); // Imposta messaggio specifico
+      setPasswordData({ newPassword: '', confirmPassword: ''});
     } catch (err) {
-        setError(err.message);
+      setPasswordError(err.message); // Imposta errore specifico
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
-  // FUNZIONE PER CAMBIARE IL COLORE
   const handleColorSelected = async (newColor) => {
       setLoading(true);
-      setMessage('');
-      setError('');
-      
-      // SICUREZZA: Pulizia dell'ID prima di inviare l'API
+      // Pulisci messaggi
+      setInfoMessage('');
+      setInfoError('');
+      setPasswordMessage('');
+      setPasswordError('');
+
       const cleanId = user.id ? user.id.toString().trim() : null;
       if (!cleanId) {
-          setError("ID utente non valido.");
+          setInfoError("ID utente non valido.");
           setLoading(false);
           return;
       }
-
       try {
-          // Chiama l'API per aggiornare solo avatarColor
-          const updatedUser = await callApi('updateUserProfile', { 
-              id: cleanId, 
-              avatarColor: newColor 
-          }); 
-          // Aggiorna il contesto
-          updateUserContext(updatedUser); 
-          setMessage('Stile avatar aggiornato con successo!');
+          const updatedUser = await callApi('updateUserProfile', {
+              id: cleanId,
+              avatarColor: newColor
+          });
+          updateUserContext(updatedUser);
+          setInfoMessage('Stile avatar aggiornato con successo!'); // Messaggio nella sezione info
       } catch (err) {
-          setError(err.message);
+          setInfoError(err.message); // Errore nella sezione info
       } finally {
           setLoading(false);
       }
@@ -144,20 +155,20 @@ const ProfilePage = () => {
   return (
     <div className="profile-container">
       <h1>Il mio profilo</h1>
-      
+
+      {/* Card Informazioni e Avatar */}
       <div className="profile-card">
         <h2>Informazioni e Avatar</h2>
-        
+
+        {/* ... Sezione Avatar (invariata) ... */}
         <div className="avatar-info-group">
-            <AvatarDisplay user={user} /> 
-            
+            <AvatarDisplay user={user} />
             <div className="info-group-details">
               <p>Personalizza l'aspetto del tuo avatar iniziale.</p>
-              
-              <button 
-                  type="button" 
-                  className="change-avatar-btn" 
-                  onClick={() => setIsColorModalVisible(true)} // APRE LA MODALE
+              <button
+                  type="button"
+                  className="change-avatar-btn"
+                  onClick={() => setIsColorModalVisible(true)}
                   disabled={loading}
               >
                   Cambia stile avatar
@@ -165,6 +176,7 @@ const ProfilePage = () => {
             </div>
         </div>
 
+        {/* Form Informazioni */}
         <form onSubmit={handleInfoSubmit}>
           <div className="form-row">
             <div className="form-group">
@@ -184,8 +196,14 @@ const ProfilePage = () => {
             {loading ? <div className="spinner-small"></div> : 'Salva Informazioni'}
           </button>
         </form>
+
+        {/* --- MODIFICA 4: Sposta messaggi/errori qui --- */}
+        {infoMessage && <p className="success-message" style={{marginTop: '1rem'}}>{infoMessage}</p>}
+        {infoError && <p className="error-message" style={{marginTop: '1rem'}}>{infoError}</p>}
+        {/* --- Fine Modifica 4 --- */}
       </div>
 
+      {/* Card Modifica Password */}
       <div className="profile-card">
         <h2>Modifica Password</h2>
         <form onSubmit={handlePasswordSubmit}>
@@ -201,12 +219,19 @@ const ProfilePage = () => {
             {loading ? <div className="spinner-small"></div> : 'Cambia Password'}
           </button>
         </form>
+
+        {/* --- MODIFICA 5: Sposta messaggi/errori qui --- */}
+        {passwordMessage && <p className="success-message" style={{marginTop: '1rem'}}>{passwordMessage}</p>}
+        {passwordError && <p className="error-message" style={{marginTop: '1rem'}}>{passwordError}</p>}
+        {/* --- Fine Modifica 5 --- */}
       </div>
 
-      {message && <p className="success-message">{message}</p>}
-      {error && <p className="error-message">{error}</p>}
-      
-      {/* MODALE PER IL CAMBIO COLORE AVATAR */}
+      {/* MODIFICA 6: Rimuovi i messaggi/errori da qui */}
+      {/* {message && <p className="success-message">{message}</p>} */}
+      {/* {error && <p className="error-message">{error}</p>} */}
+      {/* --- Fine Modifica 6 --- */}
+
+      {/* Modale Colore Avatar (invariata) */}
       <AvatarColorModal
           isOpen={isColorModalVisible}
           onClose={() => setIsColorModalVisible(false)}

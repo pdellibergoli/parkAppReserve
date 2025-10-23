@@ -66,8 +66,8 @@ const MainLayout = () => {
             <header className="main-header">
                 {/* ... header invariato ... */}
                  <Link to="/" className="logo">
-                    <img src={logo} alt="ParkApp" className="logo-img" />
-                    <span>ParkApp</span>
+                    <img src={logo} alt="Park App Reserve" className="logo-img" />
+                    <span>Park App Reserve</span>
                 </Link>
                 <div className="header-right">
                     <div className="user-menu" onMouseEnter={handleMenuEnter} onMouseLeave={handleMenuLeave}>
