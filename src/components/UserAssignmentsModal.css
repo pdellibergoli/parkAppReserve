@@ -33,12 +33,12 @@
   .modal-user-name {
     font-size: 1.3rem;
     font-weight: 500;
-    color: #213547;
+    color: var(--text-color);
   }
   
   .modal-total-assignments {
     font-size: 1rem;
-    color: #555;
+    color: var(--text-color);
     font-weight: 500;
     white-space: nowrap;
   }
@@ -69,12 +69,12 @@
   
   
   .assignment-date {
-    color: #333;
+    color: var(--text-color);
   }
   
   .assignment-space {
     font-weight: 500;
-    color: #DE1F3C;
+    color: var(--primary-color);
   }
   
   .no-assignments-message {

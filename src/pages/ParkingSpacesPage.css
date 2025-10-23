@@ -11,7 +11,7 @@
 /* Stile per le schede/contenitori */
 .add-space-form-container,
 .spaces-list-container {
-  background-color: #f9f9f9; 
+  background-color: var(--bg-rgb);
   border: 1px solid #e0e0e0; 
   padding: 2rem;
   border-radius: 8px;
@@ -22,7 +22,7 @@
 .spaces-list-container h2 {
   margin-top: 0;
   margin-bottom: 1.5rem;
-  color: #213547;
+  color: var(--text-color-secondary); 
 }
 
 .add-space-form {
@@ -30,14 +30,13 @@
   gap: 1rem;
 }
 
-/* Stile input per tema chiaro */
 .space-input {
   flex-grow: 1;
   padding: 0.8rem;
   border: 1px solid #ccc;
-  background-color: #ffffff;
+  background-color: var(--bg-color-hover);
   border-radius: 4px;
-  color: #213547;
+  color: var(--text-color);
   font-size: 1rem;
 }
 
@@ -77,14 +76,14 @@
 .space-number {
   font-size: 1.1rem;
   font-weight: 500;
-  color: #333;
+  color: var(--text-color);
 }
 
 /* Stile bottone "Elimina" */
 .delete-space-btn {
-  background: none;
+  background: var(--primary-color);
   border: none;
-  color: #777;
+  color: #fce8e6;
   cursor: pointer;
   font-size: 1.1rem;
   padding: 0.5rem;
@@ -98,7 +97,7 @@
 }
 
 .delete-space-btn:hover {
-  color: #DE1F3C; 
+  color: var(--primary-color) !important;
   background-color: #fce8e6;
 }
 

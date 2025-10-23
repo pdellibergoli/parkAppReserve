@@ -1,28 +1,101 @@
 /* src/index.css */
 
-/* Reset e Stili Globali per TEMA CHIARO */
+/* Definisci le variabili CSS per entrambi i temi */
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --line-height: 1.5;
+  --font-weight-normal: 400;
 
-  /* Impostazioni per il tema chiaro */
-  color-scheme: light;
-  color: #213547; /* Testo scuro di default */
-  background-color: #ffffff; /* Sfondo bianco */
+  /* --- Tema Chiaro (Default) --- */
+  --bg-color: #ffffff;
+  --bg-rgb: 255, 255, 255;
+  --bg-color-secondary: #f9f9f9; /* Sfondo cards/modali */
+  --bg-color-hover: #f0f0f0;
+  --text-color: #213547;
+  --text-color-secondary: #555;
+  --text-color-light: #666; /* Per placeholder, note */
+  --cal-bg-off-range: #c8c8c8;
+  --cal-txt-off-range: #232323;
+  --border-color: #e0e0e0;
+  --border-color-input: #ccc;
+  --primary-color: #DE1F3C; 
+  --primary-color-hover: #b71c34;
+  --primary-text-color: #ffffff;
+  --text-input-color: #181818;
+  --secondary-color: #4a4a4a; /* Grigio scuro per bottoni secondari */
+  --secondary-color-hover: #5a5a5a;
+  --secondary-text-color: #ffffff;
+  --error-bg: #fce8e6;
+  --error-border: #f9bdbb;
+  --error-text: #d93025;
+  --success-bg: #d4edda;
+  --success-border: #c3e6cb;
+  --success-text: #155724;
+  --warning-bg: rgba(240, 173, 78, 0.1);
+  --warning-border: #f0ad4e;
+  --warning-text: #DE1F3C;
+  --link-color: var(--primary-color);
+  --input-bg: #ffffff;
+  --input-text: var(--text-color);
+  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  --modal-bg: rgba(255, 255, 255, 0.3); /* Sfondo overlay modale */
 }
 
-.forgot-password-link {
-  text-align: center;
-  margin-top: 1rem;
-  font-size: 0.9rem;
+.dark-theme {
+  /* --- Tema Scuro --- */
+  --bg-color: #1a1a1a;
+  --bg-rgb: 26, 26, 26;
+  --bg-color-secondary: #242424; /* Sfondo cards/modali */
+  --bg-color-hover: #333333;
+  --text-color: #e0e0e0; /* Testo più chiaro */
+  --text-color-secondary: #b0b0b0;
+  --text-color-light: #888;
+  --cal-bg-off-range: #666;
+  --cal-txt-off-range: #ffffff;
+  --border-color: #444;
+  --border-color-input: #555;
+  --primary-color: #DE1F3C; 
+  --primary-color-hover: #b71c34;
+  --primary-text-color: #ffffff;
+  --text-input-color: #ffffff;
+  --secondary-color: #6b7280; /* Grigio medio */
+  --secondary-color-hover: #4b5563;
+  --secondary-text-color: #ffffff;
+  --error-bg: #4b1b1b;
+  --error-border: #7f1d1d;
+  --error-text: #fecaca;
+  --success-bg: #163020;
+  --success-border: #155e34;
+  --success-text: #bbf7d0;
+  --warning-bg: rgba(234, 179, 8, 0.1); /* Sfondo Giallo Scuro */
+  --warning-border: #ca8a04; /* Giallo Scuro */
+  --warning-text: #fef08a; /* Testo Giallo Chiaro */
+  --link-color: var(--primary-color);
+  --input-bg: #333;
+  --input-text: var(--text-color);
+  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  --modal-bg: rgba(0, 0, 0, 0.5); /* Sfondo overlay modale scuro */
+
+  /* Colori specifici tema scuro per componenti (es. calendario) */
+  --rbc-today-bg: #333;
+  --rbc-off-range-bg: #222;
+  --rbc-header-bg: #444;
+  --rbc-header-text: var(--text-color);
+  --rbc-date-cell-color: var(--text-color-secondary);
 }
 
+/* Applica le variabili globali */
 body {
   margin: 0;
   display: flex;
   min-width: 320px;
   min-height: 100vh;
+  font-family: var(--font-family);
+  line-height: var(--line-height);
+  font-weight: var(--font-weight-normal);
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  transition: background-color 0.3s, color 0.3s; /* Transizione fluida */
 }
 
 #root {
@@ -33,7 +106,7 @@ body {
   width: 100%;
 }
 
-/* Stili per il contenitore di autenticazione */
+/* Stili Generali usando le variabili */
 .auth-container {
   display: flex;
   justify-content: center;
@@ -41,12 +114,36 @@ body {
   height: 80vh;
 }
 
+.auth-header {
+  display: flex;
+  flex-direction: column; 
+  align-items: center; 
+  margin-bottom: 1.5rem; 
+}
+
+.auth-logo {
+  height: 100px;
+  width: auto;
+  margin-bottom: 0.5rem; 
+}
+
+.auth-header h1 {
+  margin: 0; 
+  font-size: 2rem; 
+  color: #333; /* Potresti voler usare var(--text-color) qui */
+}
+
+/* Opzionale: Riduci un po' il margine superiore del titolo h2 del form */
+.auth-form h2 {
+  margin-bottom: 0.5rem;
+}
+
 .auth-form {
-  background-color: #f9f9f9; /* Grigio molto chiaro */
+  background-color: var(--bg-color-secondary);
   padding: 2.5rem;
   border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
   width: 100%;
   max-width: 400px;
   text-align: left;
@@ -56,12 +153,13 @@ body {
   text-align: center;
   margin-bottom: 0.5rem;
   font-size: 2rem;
+  color: var(--text-color); /* Usa variabile */
 }
 
 .auth-form p {
   text-align: center;
   margin-bottom: 2rem;
-  color: #666;
+  color: var(--text-color-light); /* Usa variabile */
 }
 
 .input-group {
@@ -71,16 +169,18 @@ body {
 .input-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #333;
+  color: var(--text-color-secondary); /* Usa variabile */
 }
 
-.input-group input {
+.input-group input,
+.form-group input, /* Stili per modali */
+.form-group select {
   width: 100%;
   padding: 0.8rem;
-  border: 1px solid #ccc;
-  background-color: #ffffff;
+  border: 1px solid var(--border-color-input);
+  background-color: var(--input-bg);
   border-radius: 4px;
-  color: #213547;
+  color: var(--input-text);
   font-size: 1rem;
   box-sizing: border-box;
 }
@@ -88,8 +188,8 @@ body {
 button, .btn {
   padding: .6rem 1.2rem;
   border: none;
-  background-color: #DE1F3C;
-  color: #fff;
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
   font-size: 1rem;
   font-weight: 500;
   border-radius: 6px;
@@ -103,30 +203,77 @@ button, .btn {
   width: auto;
 }
 
-.rbc-show-more {
-  color: #DE1F3C !important;
-}
-
 button:hover, .btn:hover {
-  background-color: #DE1F3C;
-  color: #ffffff !important;
+  background-color: var(--primary-color-hover);
+  color: var(--primary-text-color) !important;
 }
 
 button:disabled, .btn:disabled {
-  background-color: #d1d1d1;
-  color: #777;
+  background-color: #555; /* Grigio scuro per disabilitato */
+  color: #aaa;
   cursor: not-allowed;
 }
 
+/* Stili specifici per bottoni secondari */
+.secondary-btn {
+  background-color: var(--secondary-color) !important;
+  color: var(--secondary-text-color) !important;
+  border: none !important; /* Rimuovi bordo se presente */
+}
+.secondary-btn:hover {
+  background-color: var(--secondary-color-hover) !important;
+  color: var(--secondary-text-color) !important;
+}
+/* Modifica per bottoni cancel nelle modali */
+.cancel-btn {
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+}
+.cancel-btn:hover {
+  background-color: var(--secondary-color-hover);
+  color: var(--secondary-text-color);
+}
+.submit-btn {
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
+}
+.submit-btn:hover {
+  background-color: var(--primary-color-hover);
+}
+.submit-btn:disabled {
+  background-color: #555 !important;
+  color: #aaa !important;
+}
+
+/* Messaggi di errore/successo/warning */
 .error-message {
-  color: #d93025;
-  background-color: #fce8e6;
-  border: 1px solid #f9bdbb;
+  color: var(--error-text);
+  background-color: var(--error-bg);
+  border: 1px solid var(--error-border);
   padding: 0.8rem;
   border-radius: 4px;
   margin-bottom: 1rem;
   text-align: center;
 }
+.success-message {
+  color: var(--success-text);
+  background-color: var(--success-bg);
+  border: 1px solid var(--success-border);
+  padding: 0.8rem;
+  border-radius: 4px;
+  text-align: center;
+  margin: 1rem 0;
+}
+.warning-message {
+  color: var(--warning-text);
+  background-color: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  padding: 0.8rem;
+  border-radius: 4px;
+  text-align: center;
+  margin: 1rem 0;
+}
+
 
 .redirect-link {
   margin-top: 1.5rem;
@@ -134,109 +281,226 @@ button:disabled, .btn:disabled {
   font-size: 0.9rem;
 }
 
-.redirect-link a {
-  color: #DE1F3C; /* Changed from #646cff */
+.redirect-link a,
+.forgot-password-link a {
+  color: var(--link-color);
   text-decoration: none;
 }
-.redirect-link a:hover {
+.redirect-link a:hover,
+.forgot-password-link a:hover {
   text-decoration: underline;
 }
 
-/* Spinner di caricamento */
+.forgot-password-link {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Spinner */
 .spinner {
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(0, 0, 0, 0.2);
+  border: 3px solid rgba(150, 150, 150, 0.3); /* Grigio più chiaro per contrasto */
   border-radius: 50%;
-  border-top-color: #213547;
+  border-top-color: var(--text-color); /* Usa colore testo del tema */
+  animation: spin 1s ease-in-out infinite;
+}
+.spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--primary-text-color); /* Bianco per contrasto su pulsante */
   animation: spin 1s ease-in-out infinite;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Altri stili (password toggle, resend, ecc. che usano colori specifici) */
+.password-input-wrapper { position: relative; display: flex; align-items: center; }
+.password-input-wrapper input { padding-right: 3rem; }
+.password-toggle-btn {
+  position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: #a0a0a0; /* Mantenuto grigio per visibilità */
+  display: flex; align-items: center; justify-content: center;
+  padding: 0.5rem !important; width: auto !important; height: auto !important;
+}
+.password-toggle-btn:hover { color: var(--text-color); background: none !important; }
+
 .resend-container {
-  text-align: center;
-  margin: 1.5rem 0;
-  padding: 1rem;
-  background-color: rgba(240, 173, 78, 0.1);
-  border: 1px solid #f0ad4e;
+  text-align: center; margin: 1.5rem 0; padding: 1rem;
+  background-color: var(--warning-bg); border: 1px solid var(--warning-border);
   border-radius: 4px;
 }
-.resend-container p {
-  margin: 0 0 1rem 0;
-  color: #f0ad4e;
-  text-align: center;
+.resend-container p { margin: 0 0 1rem 0; color: var(--warning-text); text-align: center; }
+
+/* Stili specifici tema per react-big-calendar */
+.rbc-calendar {
+  background-color: var(--bg-color-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  color: var(--text-color); /* Colore testo generale calendario */
 }
-.secondary-btn {
-  background-color: transparent !important;
-  border: 1px solid #c0c0c0 !important;
-  color: #c0c0c0 !important;
+.rbc-toolbar button {
+  color: var(--text-color-secondary);
+  background: transparent;
+  border: 1px solid var(--border-color-input); /* Aggiunto bordo leggero */
 }
-.secondary-btn:hover {
-  background-color: #444 !important;
-  color: white !important;
+.rbc-toolbar button:hover, 
+.rbc-toolbar button:focus {
+  background-color: var(--bg-color-hover); 
+  color: var(--text-color); 
+}
+.rbc-toolbar button.rbc-active {
+  background-color: var(--primary-color); 
+  color: var(--primary-text-color);
+  border-color: var(--primary-color);
+}
+.rbc-toolbar-label {
+  color: var(--text-color);
+}
+.rbc-header {
+  background-color: var(--rbc-header-bg, #DE1F3C) !important; /* Usa variabile se definita, altrimenti default */
+  color: var(--rbc-header-text, #fff);
+  border: 1px solid var(--border-color);
+}
+.rbc-day-bg, .rbc-month-row {
+  border-color: var(--border-color);
+}
+.rbc-day-bg.rbc-today {
+  background-color: var(--rbc-today-bg, #e0e0e0);
+}
+.rbc-off-range .rbc-date-cell {
+  color: var(--text-color-light);
+}
+.rbc-off-range-bg {
+    background: var(--rbc-off-range-bg, #f8f8f8);
+}
+.rbc-date-cell.rbc-now .rbc-date-header-label {
+  color: var(--text-color);
+  font-weight: bold;
+}
+.rbc-show-more {
+  color: var(--primary-color) !important;
+}
+/* Pallino prenotazioni */
+.booking-count-badge {
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
 }
 
-.password-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
+/* Stili per le Modali */
+.modal-overlay {
+  background-color: var(--modal-bg);
 }
-
-.password-input-wrapper input {
-  padding-right: 3rem; /* Aggiunge spazio a destra per l'icona */
+.modal-content {
+  background-color: var(--bg-color-secondary);
+  color: var(--text-color);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4); /* Ombra più scura per tema scuro */
 }
-
-.password-toggle-btn {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  
-  background: none;
-  border: none;
-  cursor: pointer;
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+}
+.modal-title {
+  color: var(--text-color);
+}
+.modal-close-btn {
   color: #a0a0a0;
-  
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  padding: 0.5rem !important; /* Resetta il padding */
-  width: auto !important;
-  height: auto !important;
+}
+.modal-close-btn:hover {
+  color: var(--primary-color) !important;
+  background: none !important;
 }
 
-.password-toggle-btn:hover {
-  color: white;
-  background: none !important; /* Assicura che non ci sia sfondo al passaggio del mouse */
+/* Card e Liste */
+.profile-card,
+.add-space-form-container,
+.spaces-list-container,
+.user-stat-card {
+  background-color: var(--bg-color-secondary);
+  border: 1px solid var(--border-color);
 }
+.profile-card h2,
+.add-space-form-container h2,
+.spaces-list-container h2 {
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
+}
+.booking-card { /* Anche per DayRequestsModal, MyRequestsPage */
+    background-color: var(--bg-color-hover) !important;
+    border: 1px solid var(--border-color) !important;
+}
+.booking-card.selected { /* MyRequestsPage */
+    background-color: rgba(222, 31, 60, 0.2) !important; /* Sfondo rosso tenue */
+    border-color: var(--primary-color) !important;
+}
+.card-details .user-name { /* DayRequestsModal, StatsPage */
+    color: var(--text-color);
+}
+.card-details .parking-spot, /* DayRequestsModal */
+.booking-space, /* MyRequestsPage */
+.card-header .total-bookings /* StatsPage */
+ {
+    color: var(--text-color-secondary);
+}
+.space-item { /* ParkingSpacesPage */
+    border-bottom: 1px solid var(--border-color);
+}
+.space-number { /* ParkingSpacesPage */
+    color: var(--text-color);
+}
+.fixed-toggle label { /* ParkingSpacesPage */
+    color: var(--text-color-light);
+}
+.parking-counts-list li { /* StatsPage */
+    color: var(--text-color-secondary);
+}
+.count-badge { /* StatsPage */
+    background-color: var(--primary-color);
+    color: var(--primary-text-color);
+}
+/* Icon Buttons */
+.icon-btn { color: var(--text-color-secondary); }
+.icon-btn.edit-btn { color: var(--secondary-text-color); background-color: var(--secondary-color); }
+.icon-btn.delete-btn { color: #fce8e6; background-color: var(--primary-color); } /* Mantenuto per visibilità rosso */
+.icon-btn.edit-btn:hover { color: var(--secondary-color) !important; background-color: var(--bg-color-hover); }
+.icon-btn.delete-btn:hover { color: var(--primary-color) !important; background-color: rgba(222, 31, 60, 0.1); }
+.delete-space-btn { color: var(--text-color-secondary); } /* ParkingSpacesPage */
+.delete-space-btn:hover { color: var(--primary-color); background-color: rgba(222, 31, 60, 0.1); }
 
-/* Stili per l'header del form di autenticazione */
-.auth-header {
-  display: flex;
-  flex-direction: column; /* Impila logo e titolo verticalmente */
-  align-items: center; /* Centra orizzontalmente */
-  margin-bottom: 1.5rem; /* Spazio prima del titolo "Accedi" */
-}
 
-.auth-logo {
-  height: 80px; /* Regola l'altezza del logo */
-  width: auto;
-  margin-bottom: 0.5rem; /* Spazio tra logo e titolo */
+/* Header Principale */
+.main-header {
+    border-bottom: 1px solid var(--border-color);
 }
-
-.auth-header h1 {
-  margin: 0; /* Rimuovi margini di default */
-  font-size: 2rem; /* Dimensione del titolo del sito */
-  color: #333; /* Colore del titolo */
+.main-nav {
+    background-color: var(--bg-color-hover);
 }
-
-/* Opzionale: Riduci un po' il margine superiore del titolo h2 del form */
-.auth-form h2 {
-  margin-bottom: 0.5rem;
+.main-nav a {
+    color: var(--text-color-secondary);
 }
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.main-nav a:hover {
+    background-color: var(--border-color); /* Leggermente più scuro del bg-hover */
+    color: var(--text-color);
 }
+.main-nav a.active {
+    background-color: var(--primary-color);
+    color: var(--primary-text-color);
+}
+/* Dropdown utente */
+.dropdown {
+    background-color: var(--bg-color-secondary);
+    border: 1px solid var(--border-color);
+}
+.dropdown-item {
+    color: var(--text-color);
+}
+.dropdown-item:hover { background-color: var(--bg-color-hover); }
+.logout-btn { color: var(--primary-color); }
+.logout-btn:hover { background-color: var(--primary-color); color: var(--primary-text-color); }
+.user-details .user-email { color: var(--text-color-light); }
+.dropdown hr { border-top: 1px solid var(--border-color); }

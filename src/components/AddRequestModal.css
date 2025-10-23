@@ -54,10 +54,10 @@
 }
 
 .submit-btn {
-  background-color: #DE1F3C;
+  background-color: var(--primary-color);
 }
 .submit-btn:hover {
-  background-color: #B81A33; 
+  background-color: var(--primary-color-hover);
 }
 
 .submit-btn:disabled {
@@ -65,9 +65,9 @@
 }
 
 .warning-message {
-  color: #DE1F3C;
+  color: var(--primary-color);
   background-color: rgba(239, 110, 125, 0.1);
-  border: 1px solid #DE1F3C;
+  border: 1px solid var(--primary-color);
   padding: 0.8rem;
   border-radius: 4px;
   text-align: center;

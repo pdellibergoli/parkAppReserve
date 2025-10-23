@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { callApi } from '../services/api';
 import AvatarColorModal from '../components/AvatarColorModal';
 import { getTextColor } from '../utils/colors';
@@ -18,6 +19,7 @@ const AvatarDisplay = ({ user }) => {
 
 const ProfilePage = () => {
   const { user, updateUserContext } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const [formData, setFormData] = useState({
     firstName: user.firstName,
@@ -151,6 +153,23 @@ const ProfilePage = () => {
       }
   };
 
+  const handleThemeChange = async () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    toggleTheme(); // Aggiorna il contesto e localStorage
+
+    // Salva nel backend (senza mostrare loading/messaggi invasivi)
+    const cleanId = user.id ? user.id.toString().trim() : null;
+    if (cleanId) {
+        try {
+            await callApi('updateUserProfile', { id: cleanId, preferredTheme: newTheme });
+            // Potresti aggiungere un piccolo feedback non bloccante se vuoi
+        } catch (err) {
+            console.error("Errore salvataggio tema:", err);
+            // Gestisci l'errore silenziosamente o con un toast
+        }
+    }
+  };
+
 
   return (
     <div className="profile-container">
@@ -201,6 +220,22 @@ const ProfilePage = () => {
         {infoMessage && <p className="success-message" style={{marginTop: '1rem'}}>{infoMessage}</p>}
         {infoError && <p className="error-message" style={{marginTop: '1rem'}}>{infoError}</p>}
         {/* --- Fine Modifica 4 --- */}
+      </div>
+
+      <div className="profile-card">
+          <h2>Impostazioni Tema</h2>
+          <div className="theme-toggle-container">
+              <span>Tema Chiaro</span>
+              <label className="switch">
+                  <input
+                      type="checkbox"
+                      checked={theme === 'dark'}
+                      onChange={handleThemeChange}
+                  />
+                  <span className="slider round"></span>
+              </label>
+              <span>Tema Scuro</span>
+          </div>
       </div>
 
       {/* Card Modifica Password */}

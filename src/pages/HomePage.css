@@ -10,14 +10,14 @@
 }
 
 .rbc-calendar {
-  background-color: #ffffff;
+  background-color: var(--bg-rgb);
   border-radius: 8px;
   padding: 1rem;
   border: 1px solid #e0e0e0;
 }
 
 .rbc-toolbar button {
-  color: #333;
+  color: var(--text-color-secondary);
   background: transparent;
   border: none;
   padding: 0.5rem 1rem;
@@ -27,17 +27,17 @@
 
 .rbc-toolbar button:hover, 
 .rbc-toolbar button:focus {
-  background-color: #fce8e6; 
-  color: #DE1F3C; 
+  background-color: var(--primary-color);
+  color: var(--text-color-secondary); 
 }
 
 .rbc-toolbar button.rbc-active {
-  background-color: #DE1F3C; 
-  color: #ffffff;
+  background-color: var(--bg-rgb);
+  color: var(--text-color-secondary);
 }
 
 .rbc-toolbar-label {
-  color: #213547;
+  color: var(--text-color-secondary);
   font-weight: bold;
   font-size: 1.5rem;
 }
@@ -46,8 +46,8 @@
   text-transform: capitalize;
   font-weight: 500;
   padding: 0.8rem 0;
-  background-color: #DE1F3C !important;
-  color: #fff;
+  background-color: var(--primary-color) !important;
+  color: #ffffff;
   border: 1px solid #000000;
 }
 
@@ -56,7 +56,7 @@
 }
 
 .rbc-day-bg.rbc-today {
-  background-color: #e0e0e0;
+  background-color: #68c19a
 }
 
 .rbc-date-cell {
@@ -66,15 +66,17 @@
 }
 
 .rbc-date-cell.rbc-now .rbc-date-header-label {
-  color: #213547;
+  color: var(--text-color-secondary);
   font-weight: bold;
 }
 
 .rbc-off-range .rbc-date-cell {
-  color: #ccc;
+  color: var(var(--primary-text-color)) !important;
 }
+
 .rbc-off-range-bg {
-    background: #f8f8f8;
+    background: var(--cal-bg-off-range);
+    color: var(--cal-txt-off-range);
 }
 
 .rbc-event {
@@ -88,16 +90,16 @@
 }
 
 .btn-add-booking-header {
-  background-color: #DE1F3C;
+  background-color: var(--primary-color);
   /* ... altre regole ... */
 }
 
 .btn-add-booking-header:hover {
-  background-color: #B81A33;
+  background-color: var(--primary-color-hover);
 }
 
 .rbc-btn-group.button{
-    color: #000;
+  color: var(--text-color-secondary);
 }
 
 /* --- STILI PER IL PALLINO E CURSORE (VERSIONE CORRETTA) --- */
@@ -117,7 +119,7 @@
 }
 
 .booking-count-badge {
-  background-color: #DE1F3C;
+  background-color: var(--primary-color);
   color: white;
   width: 28px;
   height: 28px;

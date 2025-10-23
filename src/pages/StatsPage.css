@@ -7,7 +7,7 @@
 }
 .stats-container p {
   margin-bottom: 2.5rem;
-  color: #666; /* Testo secondario più scuro */
+  color: var(--text-color-secondary);
   font-size: 1.1rem;
 }
 
@@ -19,7 +19,8 @@
 
 /* Stile per la singola scheda statistica */
 .user-stat-card {
-  background-color: #f9f9f9; /* <-- SFONDO GRIGIO CHIARO */
+  background-color: var(--border-color);
+  color: var(--text-color-secondary);
   border: 1px solid #e0e0e0; /* Bordo sottile */
   border-radius: 8px;
   overflow: hidden;
@@ -37,7 +38,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  background-color: #f0f0f0; /* Sfondo leggermente più scuro per l'header */
+  background-color: var(--bg-color);
   border-bottom: 1px solid #e0e0e0;
 }
 
@@ -45,7 +46,7 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background-color: #DE1F3C; /* Changed from #646cff */
+  background-color: var(--primary-color);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -62,10 +63,10 @@
 .card-header .user-name {
   font-size: 1.2rem;
   font-weight: 500;
-  color: #213547; /* Testo scuro primario */
+  color: var(--text-color-secondary);
 }
 .card-header .total-bookings {
-  color: #555; /* Testo secondario */
+  color: var(--text-color-secondary);
   font-size: 0.9rem;
 }
 
@@ -86,11 +87,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #333;
+  color: var(--text-color-secondary);
 }
 
 .count-badge {
-  background-color: #DE1F3C; /* Changed from #535bf2 */
+  background-color: var(--primary-color);
   color: white;
   padding: 0.2rem 0.6rem;
   border-radius: 12px;
@@ -99,7 +100,7 @@
 }
 
 .no-bookings-message {
-  color: #777;
+  color: var(--text-color) !important;
   text-align: center;
   margin: 1rem 0;
 }
@@ -113,7 +114,7 @@
 }
 .stats-container p {
   margin-bottom: 2.5rem;
-  color: #666;
+  color: var(--text-color);
   font-size: 1.1rem;
 }
 
@@ -124,20 +125,22 @@
   align-items: center;
   flex-wrap: wrap; /* Permette di andare a capo su schermi piccoli */
   gap: 1rem;
-  background-color: #f0f0f0;
+  background-color: var(--bg-color-hover);
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 2.5rem;
 }
 
 .filter-buttons {
+  background-color: var(--bg-color);
+  color: var(--text-color-secondary);
   display: flex;
   gap: 0.5rem;
 }
 
 .filter-buttons button {
-  background-color: #fff;
-  color: #333;
+  background-color: var(--bg-color);
+  color: var(--text-color-secondary);
   border: 1px solid #ccc;
   padding: 0.5rem 1rem;
   border-radius: 6px;
@@ -146,13 +149,14 @@
 }
 
 .filter-buttons button:hover {
-  background-color: #e0e0e0;
+  background-color: var(--primary-text-color);
+  color: var(--bg-color) !important;
 }
 
 .filter-buttons button.active {
-  background-color: #DE1F3C;
+  background-color: var(--primary-color);
   color: #fff;
-  border-color: #DE1F3C;
+  border-color: var(--primary-color-hover);
 }
 
 .custom-date-filter {
@@ -162,6 +166,8 @@
 }
 
 .custom-date-filter input[type="date"] {
+  background-color: var(--bg-color-hover);
+  color: var(--primary-text-color) !important;
   padding: 0.5rem;
   border-radius: 4px;
   border: 1px solid #ccc;

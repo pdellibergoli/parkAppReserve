@@ -92,7 +92,7 @@
 
 .icon-btn.delete-btn {
     color: #fce8e6;
-    background-color: #DE1F3C;
+    background-color: var(--primary-color);
 }
 
 .icon-btn.edit-btn:hover {
@@ -101,7 +101,7 @@
 }
 
 .icon-btn.delete-btn:hover {
-  color: #DE1F3C !important;
+  color: var(--primary-color) !important;
   background-color: #fce8e6;
 }
 

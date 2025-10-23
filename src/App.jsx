@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
+import { ThemeProvider } from './context/ThemeContext';
 import LoadingOverlay from './components/LoadingOverlay';
 
 // Layout
@@ -67,37 +68,39 @@ function App() {
   return (
     <AuthProvider>
       <LoadingProvider>
-        <Router>
-          <LoadingOverlay />
-          <Routes>
-            {/* Rotte Pubbliche */}
-            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-            <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-            <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
-            <Route path="/request-reset" element={<PublicRoute><RequestPasswordResetPage /></PublicRoute>} />
-            <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+        <ThemeProvider>
+          <Router>
+            <LoadingOverlay />
+            <Routes>
+              {/* Rotte Pubbliche */}
+              <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+              <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+              <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
+              <Route path="/request-reset" element={<PublicRoute><RequestPasswordResetPage /></PublicRoute>} />
+              <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
 
-            {/* Rotte protette DENTRO il layout principale */}
-            <Route element={<LayoutRoute />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="my-requests" element={<MyRequestsPage />} />
-              <Route path="parking-spaces" element={<ParkingSpacesPage />} />
-              <Route path="stats" element={<StatsPage />} />
-              <Route path="profile" element={<ProfilePage />} />
-            </Route>
+              {/* Rotte protette DENTRO il layout principale */}
+              <Route element={<LayoutRoute />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="my-requests" element={<MyRequestsPage />} />
+                <Route path="parking-spaces" element={<ParkingSpacesPage />} />
+                <Route path="stats" element={<StatsPage />} />
+                <Route path="profile" element={<ProfilePage />} />
+              </Route>
 
-            {/* Rotta protetta FUORI dal layout principale */}
-            <Route 
-              path="/fulfill-request" 
-              element={
-                <ProtectedRoute>
-                  <FulfillRequestPage />
-                </ProtectedRoute>
-              } 
-            />
+              {/* Rotta protetta FUORI dal layout principale */}
+              <Route 
+                path="/fulfill-request" 
+                element={
+                  <ProtectedRoute>
+                    <FulfillRequestPage />
+                  </ProtectedRoute>
+                } 
+              />
 
-          </Routes>
-        </Router>
+            </Routes>
+          </Router>
+        </ThemeProvider>
       </LoadingProvider>
     </AuthProvider>
   );

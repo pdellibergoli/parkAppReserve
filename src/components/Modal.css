@@ -18,14 +18,26 @@
   to { opacity: 1; }
 }
 
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-color) !important;
+}
+
+.secondary-btn {
+  background-color: var(--border-color) !important;
+  color: var(--secondary-text-color) !important;
+  border: none !important;
+}
+
 .modal-content {
-  background-color: #f9f9f9; 
+  background-color: var(--bg-color);
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
   width: 90%;
   max-width: 500px;
-  color: #213547; 
+  color: var(--text-color);
   text-align: left;
   animation: slideIn 0.3s ease-out;
 }
@@ -47,7 +59,7 @@
 .modal-title {
   margin: 0;
   font-size: 1.5rem;
-  color: #213547; 
+  color: var(--text-color);
 }
 
 .modal-close-btn {
@@ -60,6 +72,6 @@
   line-height: 1;
 }
 .modal-close-btn:hover {
-  color: #DE1F3C !important;
+  color: var(--primary-color) !important;
   background: none !important;
 }
