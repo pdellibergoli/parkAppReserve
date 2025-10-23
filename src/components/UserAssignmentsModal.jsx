@@ -1,7 +1,7 @@
 import React from 'react';
 import Modal from './Modal';
 import { format } from 'date-fns';
-import './UserAssignmentsModal.css'; // Creeremo questo file CSS tra poco
+import './UserAssignmentsModal.css';
 import { getTextColor } from '../utils/colors';
 
 // Avatar simile a quello della StatsPage
@@ -21,7 +21,6 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
     return null;
   }
 
-  // Ordina le assegnazioni per data, dalla più recente alla più vecchia
   const sortedAssignments = [...userAssignments].sort((a, b) => new Date(b.assignmentDate) - new Date(a.assignmentDate));
 
   return (
@@ -39,6 +38,7 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
         </div>
 
         {/* Lista delle Assegnazioni */}
+        {/* ---- ASSICURATI CHE QUESTO DIV ABBIA LA CLASSE ---- */}
         <div className="assignments-list-container">
           {sortedAssignments.length > 0 ? (
             <ul className="assignments-list">
@@ -57,6 +57,8 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
             <p className="no-assignments-message">Nessuna assegnazione trovata per questo utente nel periodo selezionato.</p>
           )}
         </div>
+        {/* ---- FINE CONTENITORE ---- */}
+
          <div className="modal-actions">
             <button className="submit-btn" onClick={onClose}>Chiudi</button>
           </div>

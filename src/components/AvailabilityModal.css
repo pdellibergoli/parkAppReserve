@@ -1,0 +1,33 @@
+/* Stili per la lista di disponibilità scrollabile */
+.availability-list-container {
+    max-height: 200px; /* Altezza massima - puoi regolarla */
+    overflow-y: auto;  /* Scrollbar verticale */
+    padding-right: 10px; /* Spazio per scrollbar */
+    margin-top: 10px;   /* Spazio dalla label */
+    border: 1px solid #eee; /* Bordo leggero */
+    padding: 10px;        /* Padding interno */
+    border-radius: 4px;   /* Angoli arrotondati */
+  }
+  
+  /* Stile opzionale per ul dentro il container */
+  .availability-list-container .bookings-list {
+    padding: 0; /* Rimuove padding di default */
+  }
+  
+  /* Stili opzionali per la scrollbar (come prima) */
+  .availability-list-container::-webkit-scrollbar {
+    width: 8px;
+  }
+  .availability-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+    border-radius: 4px;
+  }
+  .availability-list-container::-webkit-scrollbar-thumb {
+    background: #ccc; 
+    border-radius: 4px;
+  }
+  .availability-list-container::-webkit-scrollbar-thumb:hover {
+    background: #aaa; 
+  }
+  
+  /* Assicurati di importare questo file CSS in AvailabilityModal.jsx */

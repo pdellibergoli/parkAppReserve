@@ -98,3 +98,33 @@
   .assignments-list-container::-webkit-scrollbar-thumb:hover {
     background: #aaa;
   }
+
+  .assignments-list-container {
+    max-height: 50vh; /* Altezza massima per la lista (puoi regolarla) */
+    overflow-y: auto; /* Scrollbar verticale se necessario */
+    padding-right: 10px; /* Spazio per la scrollbar */
+  }
+  
+  /* Stili scrollbar (opzionale) */
+  .assignments-list-container::-webkit-scrollbar {
+    width: 6px;
+  }
+  .assignments-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  .assignments-list-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+  }
+  .assignments-list-container::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+  }
+  
+  .assignments-list {
+    list-style: none;
+    padding: 0;
+    margin: 0; /* Assicurati che non ci sia margine di default */
+    display: flex;
+    flex-direction: column;
+  }

@@ -3,13 +3,16 @@ import Modal from './Modal';
 import { callApi } from '../services/api';
 import { format } from 'date-fns';
 import { FaPlus, FaTrash } from 'react-icons/fa';
-import './AddRequestModal.css'; // Riusiamo stili simili
+// Assicurati che il CSS importato sia corretto
+import './AvailabilityModal.css'; // O il nome del file CSS che stai usando
+// Potresti anche importare AddBookingModal.css se vuoi condividere stili
+// import './AddBookingModal.css';
 
 const AvailabilityModal = ({ isOpen, onClose, space }) => {
   const [availabilities, setAvailabilities] = useState([]);
   const [newDate, setNewDate] = useState('');
   const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false); // 1. NUOVO STATO PER LO SPINNER
+  const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -34,14 +37,14 @@ const AvailabilityModal = ({ isOpen, onClose, space }) => {
   const handleAdd = async (e) => {
     e.preventDefault();
     setError('');
-    setIsAdding(true); // 2. ATTIVA LO SPINNER
+    setIsAdding(true);
     try {
       await callApi('addTemporaryAvailability', { spaceId: space.id, date: newDate });
-      fetchAvailabilities(); // Ricarica la lista
+      fetchAvailabilities();
     } catch (err) {
       setError(err.message);
     } finally {
-      setIsAdding(false); // 3. DISATTIVA LO SPINNER
+      setIsAdding(false);
     }
   };
 
@@ -61,7 +64,8 @@ const AvailabilityModal = ({ isOpen, onClose, space }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Disponibilità per ${space.number}`}>
-      <div className="add-booking-form">
+      <div className="add-booking-form"> {/* Potresti voler usare una classe più specifica qui se necessario */}
+        {/* Sezione Aggiungi Data */}
         <form onSubmit={handleAdd} style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
           <div className="form-group">
             <label htmlFor="avail-date">Aggiungi data di disponibilità</label>
@@ -75,7 +79,6 @@ const AvailabilityModal = ({ isOpen, onClose, space }) => {
                 style={{ flexGrow: 1 }}
                 required
               />
-              {/* 4. LOGICA CONDIZIONALE PER MOSTRARE SPINNER O ICONA */}
               <button type="submit" className="submit-btn" style={{ padding: '0 1rem', width: '50px' }} disabled={isAdding}>
                 {isAdding ? <div className="spinner-small"></div> : <FaPlus />}
               </button>
@@ -83,28 +86,35 @@ const AvailabilityModal = ({ isOpen, onClose, space }) => {
           </div>
         </form>
 
+        {/* Sezione Lista Disponibilità */}
         <div className="form-group">
           <label>Date di disponibilità future</label>
-          {loading ? (
-            <p>Caricamento...</p>
-          ) : availabilities.length === 0 ? (
-            <p>Nessuna disponibilità futura impostata per questo parcheggio.</p>
-          ) : (
-            <ul className="bookings-list" style={{ gap: '0.5rem' }}>
-              {availabilities.map(avail => (
-                <li key={avail.availabilityId} className="booking-card" style={{ padding: '0.8rem 1rem' }}>
-                  <span style={{ flexGrow: 1 }}>{format(new Date(avail.availableDate), 'dd/MM/yyyy')}</span>
-                  <button onClick={() => handleDelete(avail.availabilityId)} className="icon-btn delete-btn" title="Rimuovi data">
-                    <FaTrash />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {/* ---- MODIFICA QUI: Aggiungi il contenitore con la classe ---- */}
+          <div className="availability-list-container">
+            {loading ? (
+              <p>Caricamento...</p>
+            ) : availabilities.length === 0 ? (
+              <p>Nessuna disponibilità futura impostata per questo parcheggio.</p>
+            ) : (
+              <ul className="bookings-list" style={{ gap: '0.5rem', margin: 0 }}> {/* Rimuovi margine default ul se necessario */}
+                {availabilities.map(avail => (
+                  <li key={avail.availabilityId} className="booking-card" style={{ padding: '0.8rem 1rem' }}>
+                    <span style={{ flexGrow: 1 }}>{format(new Date(avail.availableDate), 'dd/MM/yyyy')}</span>
+                    <button onClick={() => handleDelete(avail.availabilityId)} className="icon-btn delete-btn" title="Rimuovi data">
+                      <FaTrash />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div> {/* ---- FINE CONTENITORE ---- */}
         </div>
         
         {error && <p className="error-message">{error}</p>}
       </div>
+       <div className="modal-actions">
+            <button className="submit-btn" onClick={onClose}>Chiudi</button>
+        </div>
     </Modal>
   );
 };
