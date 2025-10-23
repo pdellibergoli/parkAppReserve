@@ -92,7 +92,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 42px;
 }
 
 .success-message {
@@ -184,4 +183,60 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+/* Stili per Selettore Colore Primario */
+.primary-color-selector {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color); /* Separatore */
+  text-align: center;
+}
+
+.primary-color-selector p {
+  margin-bottom: 1rem;
+  color: var(--text-color-secondary);
+  font-weight: 500;
+}
+
+.color-options-grid {
+  display: flex;
+  justify-content: center;
+  gap: 10px; /* Spazio tra i quadratini */
+  flex-wrap: wrap; /* Va a capo se non c'è spazio */
+}
+
+.color-swatch {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%; /* Cerchietti */
+  border: 2px solid var(--border-color); /* Bordo leggero */
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+  display: flex; /* Per centrare il checkmark */
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: white; /* Colore checkmark */
+  text-shadow: 0 0 3px rgba(0,0,0,0.5); /* Ombra checkmark */
+  padding: 0; /* Rimuovi padding default bottoni */
+  min-height: auto; /* Sovrascrivi min-height globale */
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.selected {
+  border-color: var(--text-color); /* Bordo più scuro quando selezionato */
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+/* Rimuovi outline al focus per i bottoni colore */
+.color-swatch:focus {
+    outline: none;
+}
+.color-swatch:focus-visible { /* Mostra outline solo con navigazione da tastiera */
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }

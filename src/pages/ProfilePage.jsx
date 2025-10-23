@@ -17,9 +17,18 @@ const AvatarDisplay = ({ user }) => {
   return <div className="profile-avatar" style={{ backgroundColor: backgroundColor, color: textColor }}>{getInitials()}</div>;
 };
 
+const PRIMARY_COLOR_OPTIONS = [
+  '#DE1F3C', // Rosso Default
+  '#007bff', // Blu
+  '#28a745', // Verde
+  '#6f42c1', // Viola
+  '#fd7e14', // Arancione
+  '#20c997', // Ciano
+];
+
 const ProfilePage = () => {
   const { user, updateUserContext } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, primaryColor, setPrimaryColor } = useTheme();
 
   const [formData, setFormData] = useState({
     firstName: user.firstName,
@@ -170,10 +179,56 @@ const ProfilePage = () => {
     }
   };
 
+  const handlePrimaryColorChange = async (newColor) => {
+    setPrimaryColor(newColor); // Aggiorna contesto e localStorage
+
+    // Salva nel backend
+    const cleanId = user.id ? user.id.toString().trim() : null;
+    if (cleanId) {
+        try {
+            await callApi('updateUserProfile', { id: cleanId, primaryColor: newColor });
+        } catch (err) {
+            console.error("Errore salvataggio colore primario:", err);
+            // Potresti voler ripristinare il colore precedente in caso di errore
+        }
+    }
+  };
 
   return (
     <div className="profile-container">
       <h1>Il mio profilo</h1>
+      <div className="profile-card">
+          <h2>Impostazioni Tema</h2>
+          <div className="theme-toggle-container">
+              <span>Tema Chiaro</span>
+              <label className="switch">
+                  <input
+                      type="checkbox"
+                      checked={theme === 'dark'}
+                      onChange={handleThemeChange}
+                  />
+                  <span className="slider round"></span>
+              </label>
+              <span>Tema Scuro</span>
+            </div>
+            <div className="theme-toggle-container">
+              <p>Colore Primario:</p>
+              <div className="color-options-grid">
+                  {PRIMARY_COLOR_OPTIONS.map(color => (
+                      <button
+                          key={color}
+                          type="button"
+                          className={`color-swatch ${primaryColor === color ? 'selected' : ''}`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => handlePrimaryColorChange(color)}
+                          title={`Imposta ${color} come primario`}
+                      >
+                          {primaryColor === color && '✓'}
+                      </button>
+                  ))}
+              </div>
+          </div>
+      </div>
 
       {/* Card Informazioni e Avatar */}
       <div className="profile-card">
@@ -220,22 +275,6 @@ const ProfilePage = () => {
         {infoMessage && <p className="success-message" style={{marginTop: '1rem'}}>{infoMessage}</p>}
         {infoError && <p className="error-message" style={{marginTop: '1rem'}}>{infoError}</p>}
         {/* --- Fine Modifica 4 --- */}
-      </div>
-
-      <div className="profile-card">
-          <h2>Impostazioni Tema</h2>
-          <div className="theme-toggle-container">
-              <span>Tema Chiaro</span>
-              <label className="switch">
-                  <input
-                      type="checkbox"
-                      checked={theme === 'dark'}
-                      onChange={handleThemeChange}
-                  />
-                  <span className="slider round"></span>
-              </label>
-              <span>Tema Scuro</span>
-          </div>
       </div>
 
       {/* Card Modifica Password */}
