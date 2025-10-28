@@ -12,6 +12,8 @@ import { useOutletContext } from 'react-router-dom';
 import DayRequestsModal from '../components/DayRequestsModal';
 import { callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
+import { useAuth } from '../context/AuthContext';
+import { FaCar } from 'react-icons/fa';
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -24,6 +26,7 @@ const areDatesOnSameDay = (first, second) => {
 const HomePage = () => {
   const { handleOpenAddModal, handleOpenEditModal, refreshKey, forceDataRefresh } = useOutletContext();
   const { setIsLoading } = useLoading();
+  const { user } = useAuth(); 
   
   const [allRequests, setAllRequests] = useState([]);
   const [users, setUsers] = useState([]);
@@ -80,6 +83,12 @@ const HomePage = () => {
       [allRequests, value]
     );
     const count = requestsOnDay.length;
+
+    const myRequestStatus = useMemo(() => {
+        if (!user || count === 0) return null;
+        const myRequest = requestsOnDay.find(request => request.userId === user.id);
+        return myRequest ? myRequest.status : null;
+    }, [requestsOnDay, user, count]);
     
     const child = React.Children.only(children);
     return React.cloneElement(
@@ -89,12 +98,19 @@ const HomePage = () => {
         className: `${child.props.className} rbc-day-bg-clickable ${count > 0 ? 'has-booking-badge' : ''}`,
       },
       <>
-        {child.props.children}
-        {count > 0 && (
-          <div className="booking-badge-container">
-            <div className="booking-count-badge">{count}</div>
-          </div>
-        )}
+        {child.props.children} 
+        <div className="day-indicators-container">
+            {count > 0 && (
+              <div className="booking-badge-container">
+                <div className="booking-count-badge">{count}</div>
+              </div>
+            )}
+            {myRequestStatus && (
+                <div className="my-request-icon-container">
+                    <FaCar className={`my-request-icon status-${myRequestStatus}`} />
+                </div>
+            )}
+        </div>
       </>
     );
   };
@@ -114,14 +130,13 @@ const HomePage = () => {
     }
   };
 
-  // 1. NUOVA FUNZIONE PER ANNULLARE L'ASSEGNAZIONE
   const handleCancelAssignment = async (requestId) => {
     if (window.confirm('Sei sicuro di voler annullare questa assegnazione e cedere il tuo posto?')) {
         setIsLoading(true);
         try {
             await callApi('cancelAssignmentAndReassign', { requestId });
-            setIsDayModalOpen(false); // Chiudi la modale
-            forceDataRefresh(); // Ricarica i dati
+            setIsDayModalOpen(false);
+            forceDataRefresh();
         } catch (err) {
             alert(`Errore durante l'annullamento: ${err.message}`);
         } finally {
@@ -157,9 +172,25 @@ const HomePage = () => {
         />
       </div>
 
+      {/* --- 1. AGGIUNTA DELLA LEGENDA --- */}
+      <div className="calendar-legend">
+        <div className="legend-item">
+          <FaCar className="my-request-icon status-assigned" />
+          <span>Richiesta Assegnata</span>
+        </div>
+        <div className="legend-item">
+          <FaCar className="my-request-icon status-pending" />
+          <span>Richiesta In Attesa</span>
+        </div>
+        <div className="legend-item">
+          <FaCar className="my-request-icon status-not_assigned" />
+          <span>Richiesta Non Assegnata</span>
+        </div>
+      </div>
+      {/* --- FINE AGGIUNTA --- */}
+
       <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Invia richiesta</button>
       
-      {/* 2. PASSA LA NUOVA FUNZIONE ALLA MODALE */}
       <DayRequestsModal
         isOpen={isDayModalOpen}
         onClose={() => setIsDayModalOpen(false)}

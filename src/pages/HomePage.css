@@ -60,9 +60,8 @@
 }
 
 .rbc-date-cell {
-  text-align: right;
-  padding-top: 5px;
-  padding-right: 10px;
+  /* Rimuoviamo il padding da qui per un controllo migliore */
+  text-align: right; 
 }
 
 .rbc-date-cell.rbc-now .rbc-date-header-label {
@@ -109,13 +108,50 @@
   cursor: pointer;
 }
 
+/* --- INIZIO MODIFICHE PER CENTRATURA --- */
+
+/* 1. Rendi il contenitore del numero e degli indicatori 'relative' */
+/* Questa volta usiamo flex per centrare il contenuto (gli indicatori) */
+.rbc-date-cell .rbc-date-header {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center; /* Centra verticalmente gli indicatori */
+  justify-content: center; /* Centra orizzontalmente gli indicatori */
+}
+
+/* 2. Posiziona il numero del giorno in modo ASSOLUTO */
+.rbc-date-header-label {
+    position: absolute;
+    top: 5px; /* Spazio dall'alto */
+    right: 10px; /* Spazio da destra */
+    width: auto; /* Larghezza automatica */
+    z-index: 2; /* Sta sopra gli indicatori */
+    padding: 0; /* Resetta padding */
+}
+
+/* 3. Il contenitore degli indicatori ora è un figlio flex */
+.day-indicators-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* Non serve più posizionamento assoluto */
+  padding-top: 10px; /* Aggiungi un po' di spazio per non sovrapporsi al numero */
+  z-index: 1; 
+  pointer-events: none;
+}
+/* --- FINE MODIFICHE PER CENTRATURA --- */
+
+
 /* Contenitore per centrare il pallino */
 .booking-badge-container {
   width: 100%;
-  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  height: auto; 
 }
 
 .booking-count-badge {
@@ -130,19 +166,77 @@
   font-size: 1rem;
   font-weight: bold;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  flex-shrink: 0; /* Impedisce che si rimpicciolisca */
 }
 
-/* L'header della data, che contiene il nostro componente, deve occupare tutto lo spazio */
-.rbc-date-cell .rbc-date-header {
-  height: 100%;
+
+/* Stile per il contenitore dell'icona auto */
+.my-request-icon-container {
+  margin-top: 4px; /* Spazio tra il pallino e l'icona */
+  line-height: 1; /* Assicura che non ci sia spazio extra */
 }
 
-.rbc-date-header-label {
-    padding-top: 5px;
-    padding-right: 10px;
+/* --- INIZIO NUOVE REGOLE COLORE ICONA --- */
+
+.my-request-icon {
+  font-size: 1.1rem; /* Dimensione dell'icona auto */
+  /* Il colore e l'opacità sono ora gestiti dalle classi di stato */
 }
 
-/* --- FINE STILI --- */
+/* Grigio (universale) per 'in attesa' o 'annullato' */
+.my-request-icon.status-pending,
+.my-request-icon.status-cancelled_by_user {
+  color: #888888; /* Grigio medio, visibile su chiaro e scuro */
+  opacity: 0.9;
+}
+
+/* Verde per 'assegnato' */
+.my-request-icon.status-assigned {
+  color: #28a745; /* Verde brillante */
+  opacity: 1;
+}
+
+/* Rosso per 'non assegnato' */
+.my-request-icon.status-not_assigned {
+  color: #d93025; /* Rosso errore */
+  opacity: 1;
+}
+
+/* --- FINE NUOVE REGOLE COLORE ICONA --- */
+
+
+/* --- NUOVI STILI LEGENDA --- */
+.calendar-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap; /* Va a capo su mobile */
+  gap: 1.5rem; /* Spazio tra gli elementi */
+  margin-top: 1.5rem; /* Spazio dal calendario */
+  padding: 0.8rem 1.2rem;
+  background-color: var(--bg-color-hover); /* Sfondo leggero */
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* Spazio tra icona e testo */
+}
+
+.legend-item .my-request-icon {
+  font-size: 1.2rem; /* Leggermente più grande per visibilità */
+  flex-shrink: 0;
+}
+
+.legend-item span {
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+  font-weight: 500;
+}
+/* --- FINE STILI LEGENDA --- */
+
 
 @media (max-width: 768px) {
   .rbc-calendar {
@@ -156,5 +250,36 @@
   .rbc-toolbar {
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  /* Riduci dimensioni su mobile */
+  .booking-count-badge {
+    width: 22px;
+    height: 22px;
+    font-size: 0.8rem;
+  }
+
+  .my-request-icon {
+    font-size: 0.9rem;
+  }
+  
+  /* Adatta il padding del contenitore indicatori su mobile */
+  .day-indicators-container {
+    padding-top: 15px; /* Più spazio per il numero */
+  }
+
+  /* Legenda su mobile */
+  .calendar-legend {
+    justify-content: flex-start; /* Allinea a sinistra su mobile */
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .legend-item {
+    gap: 0.4rem;
+  }
+
+  .legend-item span {
+    font-size: 0.85rem;
   }
 }
