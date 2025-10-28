@@ -66,7 +66,7 @@ In questa pagina puoi:
 
 ## 5. Statistiche
 
-La pagina **Statistiche** (quarta icona nella barra di navigazione) mostra la cronologia di tutte le assegnazioni avvenute.
+La pagina **Statistiche** mostra la cronologia di tutte le assegnazioni avvenute.
 
 * Mostra una scheda per ogni utente, con il totale delle assegnazioni ricevute.
 * Puoi filtrare i risultati per data (Sempre, Ultimi 7 giorni, Ultimo mese, o un intervallo personalizzato).
