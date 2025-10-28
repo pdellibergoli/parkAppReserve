@@ -130,6 +130,11 @@
     padding: 0; /* Resetta padding */
 }
 
+.rbc-button-link:hover{
+  cursor: default;
+  background-color: transparent;
+}
+
 /* 3. Il contenitore degli indicatori ora è un figlio flex */
 .day-indicators-container {
   display: flex;
@@ -235,6 +240,10 @@
   color: var(--text-color-secondary);
   font-weight: 500;
 }
+
+.day-indicators-container {
+  padding-top: 30px; /* Più spazio per il numero */
+}
 /* --- FINE STILI LEGENDA --- */
 
 
@@ -265,7 +274,7 @@
   
   /* Adatta il padding del contenitore indicatori su mobile */
   .day-indicators-container {
-    padding-top: 15px; /* Più spazio per il numero */
+    padding-top: 40px; /* Più spazio per il numero */
   }
 
   /* Legenda su mobile */
