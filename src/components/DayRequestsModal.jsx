@@ -31,7 +31,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
             case 'pending': return 'In attesa';
             case 'assigned': return 'Assegnato';
             case 'not_assigned': return 'Non assegnato';
-            case 'cancelled_by_user': return 'Annullato da te';
+            case 'cancelled_by_user': return 'Annullato dall\'utente';
             default: return status;
         }
     };
