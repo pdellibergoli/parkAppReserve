@@ -44,37 +44,46 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
                     const isMyRequest = requestUser && loggedInUser.id === requestUser.id;
                     const requestDate = new Date(request.requestedDate);
                     const isPast = isBefore(requestDate, today);
+                    const status = request.status; // Usiamo variabile per leggibilità
 
-                    const canBeManaged = isMyRequest && request.status === 'pending' && !isPast;
-                    const canBeCancelled = isMyRequest && request.status === 'assigned' && !isPast;
-                    
-                    const statusText = getStatusText(request.status);
+                    // Condizioni per mostrare i bottoni
+                    const canEdit = isMyRequest && status === 'pending' && !isPast;
+                    const canCancelAssignment = isMyRequest && status === 'assigned' && !isPast;
+                    const canCancelRequest = isMyRequest && (status === 'pending' || status === 'not_assigned') && !isPast;
+
+                    const statusText = getStatusText(status);
 
                     return (
-                        <div key={request.requestId} className={`booking-card status-${request.status}`}>
+                        <div key={request.requestId} className={`booking-card status-${status}`}>
                             <div className="card-main-info">
                                 {requestUser && <Avatar user={requestUser} />}
                                 <div className="card-details">
                                     <span className="user-name">{requestUser ? `${requestUser.firstName} ${requestUser.lastName}` : 'Utente non trovato'}</span>
                                     <span className="parking-spot">
                                         Stato: <strong>{statusText}</strong>
-                                        {request.status === 'assigned' && ` - Posto: ${request.assignedParkingSpaceNumber}`}
+                                        {status === 'assigned' && ` - Posto: ${request.assignedParkingSpaceNumber}`}
                                     </span>
                                 </div>
                             </div>
 
                             <div className="card-actions">
-                                {canBeManaged && (
-                                    <>
-                                        <button className="icon-btn edit-btn" onClick={() => onEdit(request)} title="Modifica richiesta">
-                                            <FaPencilAlt />
-                                        </button>
-                                        <button className="icon-btn delete-btn" onClick={() => onCancel(request.requestId)} title="Cancella richiesta">
-                                            <FaTrashAlt />
-                                        </button>
-                                    </>
+                                {/* Bottone Modifica: solo se 'pending' */}
+                                {canEdit && (
+                                    <button className="icon-btn edit-btn" onClick={() => onEdit(request)} title="Modifica richiesta">
+                                        <FaPencilAlt />
+                                    </button>
                                 )}
-                                {canBeCancelled && (
+
+                                {/* --- MODIFICA VISIBILITA' CESTINO --- */}
+                                {/* Bottone Cancella Richiesta: se 'pending' o 'not_assigned' */}
+                                {canCancelRequest && (
+                                    <button className="icon-btn delete-btn" onClick={() => onCancel(request.requestId)} title="Cancella richiesta">
+                                        <FaTrashAlt />
+                                    </button>
+                                )}
+
+                                {/* Bottone Annulla Assegnazione: se 'assigned' */}
+                                {canCancelAssignment && (
                                     <button className="icon-btn delete-btn" onClick={() => onCancelAssignment(request.requestId)} title="Annulla assegnazione">
                                         <FaTrashAlt />
                                     </button>

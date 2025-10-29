@@ -54,7 +54,7 @@ const MyRequestsPage = () => {
       setIsLoading(true);
       try {
         await callApi('cancelMultipleRequests', { requestIds });
-        forceDataRefresh();
+        forceDataRefresh(); // Ricarica i dati dopo la cancellazione
       } catch (err) {
         alert(`Errore: ${err.message}`);
       } finally {
@@ -86,10 +86,10 @@ const MyRequestsPage = () => {
           <h1>Le mie richieste</h1>
           <button 
             className="delete-selected-btn"
-            onClick={() => handleCancellations(selectedRequests, `Sei sicuro di voler cancellare ${selectedRequests.length} richiesta/e?`)}
+            onClick={() => handleCancellations(selectedRequests, `Sei sicuro di voler ${selectedRequests.length === 1 ? 'elaborare la richiesta selezionata' : `elaborare le ${selectedRequests.length} richieste selezionate`} (cancellare o annullare assegnazione)?`)} // Messaggio generico per selezione multipla
             disabled={selectedRequests.length === 0}
           >
-            Cancella Selezionati ({selectedRequests.length})
+            Elabora Selezionati ({selectedRequests.length}) {/* Cambiato testo bottone */}
           </button>
         </div>
 
@@ -100,19 +100,20 @@ const MyRequestsPage = () => {
             {myRequests.map(request => {
               const requestDate = new Date(request.requestedDate);
               const isPast = isBefore(requestDate, today);
+              const status = request.status; // Usiamo variabile per leggibilità
               
-              const isPending = request.status === 'pending' && !isPast;
-              const isAssigned = request.status === 'assigned' && !isPast;
-              const canBeCancelledOrSelected = isPending || isAssigned;
+              const isPending = status === 'pending' && !isPast;
+              const isAssigned = status === 'assigned' && !isPast;
+              const isNotAssignedFuture = status === 'not_assigned' && !isPast;
+              const canBeCancelledOrSelected = isPending || isAssigned || isNotAssignedFuture;
 
-              const statusText = getStatusText(request.status);
+              const statusText = getStatusText(status);
 
               return (
-                /* --- MODIFICA QUI --- */
-                <li key={request.requestId} className={`booking-card status-${request.status} ${selectedRequests.includes(request.requestId) ? 'selected' : ''}`}>
-                {/* --- FINE MODIFICA --- */}
+                <li key={request.requestId} className={`booking-card status-${status} ${selectedRequests.includes(request.requestId) ? 'selected' : ''}`}>
                     <div className="card-main-info">
-                        {canBeCancelledOrSelected && (
+                        {/* Mostra checkbox se non è passato e non è già cancellato dall'utente */}
+                        { !isPast && status !== 'cancelled_by_user' && (
                             <div className="checkbox-container">
                                 <input 
                                     type="checkbox" 
@@ -123,30 +124,33 @@ const MyRequestsPage = () => {
                                 <label htmlFor={`cb-${request.requestId}`}></label>
                             </div>
                         )}
-                        <div className="card-details" style={{ marginLeft: canBeCancelledOrSelected ? '0' : '50px' }}>
+                        {/* Sposta a sinistra se non c'è checkbox */}
+                        <div className="card-details" style={{ marginLeft: (!isPast && status !== 'cancelled_by_user') ? '0' : '50px' }}>
                             <span className="booking-date">{format(requestDate, 'dd/MM/yyyy')}</span>
                             <span className="booking-space">
                                 Stato: <strong>{statusText}</strong>
-                                {request.status === 'assigned' && ` - Parcheggio: ${request.assignedParkingSpaceNumber}`}
+                                {status === 'assigned' && ` - Parcheggio: ${request.assignedParkingSpaceNumber}`}
                             </span>
                         </div>
                     </div>
                     
                     <div className="card-actions">
-                        {isPending && (
+                        {isPending && ( // Modifica solo se pending
                           <button onClick={() => handleOpenEditModal(request)} className="icon-btn edit-btn" title="Modifica richiesta">
                               <FaPencilAlt />
                           </button>
                         )}
-                        {/* ICONA CESTINO VISIBILE SIA PER PENDING CHE PER ASSIGNED */}
+                        {/* ICONA CESTINO VISIBILE PER PENDING, ASSIGNED e NOT_ASSIGNED (futuri) */}
                         {canBeCancelledOrSelected && (
                             <button 
                                 onClick={() => handleCancellations(
                                     [request.requestId], 
-                                    isPending ? 'Sei sicuro di voler cancellare questa richiesta?' : 'Sei sicuro di voler annullare questa assegnazione?'
+                                    // Messaggio di conferma dinamico
+                                    `Sei sicuro di voler ${status === 'assigned' ? 'annullare questa assegnazione' : 'cancellare questa richiesta'}?`
                                 )} 
                                 className="icon-btn delete-btn" 
-                                title={isPending ? 'Cancella richiesta' : 'Annulla assegnazione'}
+                                // Titolo dinamico
+                                title={status === 'assigned' ? 'Annulla assegnazione' : 'Cancella richiesta'}
                             >
                                 <FaTrashAlt />
                             </button>

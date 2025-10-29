@@ -119,7 +119,7 @@ const HomePage = () => {
     if (window.confirm('Sei sicuro di voler cancellare questa richiesta?')) {
         setIsLoading(true);
         try {
-            await callApi('cancelRequest', { requestId });
+          await callApi('cancelMultipleRequests', { requestIds: [requestId] });
             setIsDayModalOpen(false);
             forceDataRefresh();
         } catch (err) {
