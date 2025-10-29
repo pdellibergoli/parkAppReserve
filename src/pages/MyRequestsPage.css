@@ -191,3 +191,60 @@
     margin-top: 0.5rem;
   }
 }
+
+/* --- STILI DI STATO AGGIUNTI --- */
+
+/* Stato: Assegnato (Sfondo Verde) */
+.booking-card.status-assigned {
+  background-color: var(--success-bg) !important;
+  border-color: var(--success-border) !important;
+}
+.booking-card.status-assigned .booking-date,
+.booking-card.status-assigned .booking-space,
+.booking-card.status-assigned .booking-space strong {
+  color: var(--success-text) !important;
+}
+
+/* Stato: Non Assegnato (Sfondo Rosso) */
+.booking-card.status-not_assigned {
+  background-color: var(--error-bg) !important;
+  border-color: var(--error-border) !important;
+}
+.booking-card.status-not_assigned .booking-date,
+.booking-card.status-not_assigned .booking-space,
+.booking-card.status-not_assigned .booking-space strong {
+  color: var(--error-text) !important;
+}
+
+/* Stato: Annullato (Sfondo Rosso + "Card Barrata") */
+.booking-card.status-cancelled_by_user {
+  background-color: var(--error-bg) !important;
+  border-color: var(--error-border) !important;
+  opacity: 0.8;
+  position: relative; /* Necessario per posizionare la linea */
+  overflow: hidden; /* Assicura che la linea non esca dai bordi arrotondati */
+}
+
+/* Disegniamo la linea sopra la card */
+.booking-card.status-cancelled_by_user::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -5%;
+  width: 110%;
+  height: 2px;
+  background-color: var(--error-text);
+  transform: rotate(-10deg);
+  opacity: 0.7;
+}
+
+.booking-card.status-cancelled_by_user .booking-date,
+.booking-card.status-cancelled_by_user .booking-space,
+.booking-card.status-cancelled_by_user .booking-space strong {
+  color: var(--error-text) !important;
+}
+
+/* Sovrascrivi lo stile 'selected' se è annullato (non dovrebbe essere selezionabile, ma per sicurezza) */
+.booking-card.status-cancelled_by_user.selected {
+  background-color: var(--error-bg) !important;
+}

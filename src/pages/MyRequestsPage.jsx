@@ -108,7 +108,9 @@ const MyRequestsPage = () => {
               const statusText = getStatusText(request.status);
 
               return (
-                <li key={request.requestId} className={`booking-card ${selectedRequests.includes(request.requestId) ? 'selected' : ''}`}>
+                /* --- MODIFICA QUI --- */
+                <li key={request.requestId} className={`booking-card status-${request.status} ${selectedRequests.includes(request.requestId) ? 'selected' : ''}`}>
+                {/* --- FINE MODIFICA --- */}
                     <div className="card-main-info">
                         {canBeCancelledOrSelected && (
                             <div className="checkbox-container">
