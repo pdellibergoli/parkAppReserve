@@ -105,6 +105,54 @@
   background-color: #fce8e6;
 }
 
+/* Stato: Assegnato (Sfondo Verde) */
+.booking-card.status-assigned {
+  background-color: var(--success-bg) !important;
+  border-color: var(--success-border) !important;
+}
+.booking-card.status-assigned .user-name,
+.booking-card.status-assigned .parking-spot {
+  color: var(--success-text) !important;
+}
+
+/* Stato: Non Assegnato (Sfondo Rosso) */
+.booking-card.status-not_assigned {
+  background-color: var(--error-bg) !important;
+  border-color: var(--error-border) !important;
+}
+.booking-card.status-not_assigned .user-name,
+.booking-card.status-not_assigned .parking-spot {
+  color: var(--error-text) !important;
+}
+
+/* Stato: Annullato (Sfondo Rosso + "Card Barrata") */
+.booking-card.status-cancelled_by_user {
+  background-color: var(--error-bg) !important;
+  border-color: var(--error-border) !important;
+  opacity: 0.8; /* Manteniamo la card leggermente opaca */
+  position: relative; /* Necessario per posizionare la linea */
+  overflow: hidden; /* Assicura che la linea non esca dai bordi arrotondati */
+}
+
+/* Disegniamo la linea sopra la card */
+.booking-card.status-cancelled_by_user::after {
+  content: '';
+  position: absolute;
+  top: 50%; /* Posizionata al centro verticalmente */
+  left: -5%; /* Inizia un po' prima per coprire tutto */
+  width: 110%; /* Larga per coprire tutta la diagonale */
+  height: 2px; /* Spessore della linea */
+  background-color: var(--error-text); /* Colore della linea (stesso del testo errore) */
+  transform: rotate(-10deg); /* Angolo della linea */
+  opacity: 0.7; /* Leggera trasparenza per non coprire troppo */
+}
+
+.booking-card.status-cancelled_by_user .user-name,
+.booking-card.status-cancelled_by_user .parking-spot {
+  color: var(--error-text) !important;
+  /* Rimuoviamo il text-decoration da qui */
+}
+
 /* --- SEZIONE MOBILE AGGIORNATA --- */
 @media (max-width: 768px) {
   .page-header {

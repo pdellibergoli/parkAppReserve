@@ -1,7 +1,6 @@
 import React from 'react';
 import Modal from './Modal';
 import { useAuth } from '../context/AuthContext';
-// MODIFICA: Rimuoviamo 'it'
 import { format, isBefore, startOfToday } from 'date-fns';
 import { getTextColor } from '../utils/colors';
 import { FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
@@ -23,7 +22,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
 
     if (!isOpen || !requests || requests.length === 0) return null;
 
-    // MODIFICA FORMATO DATA QUI
     const date = format(new Date(requests[0].requestedDate), 'dd/MM/yyyy');
 
     const getStatusText = (status) => {
@@ -53,7 +51,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
                     const statusText = getStatusText(request.status);
 
                     return (
-                        <div key={request.requestId} className="booking-card">
+                        <div key={request.requestId} className={`booking-card status-${request.status}`}>
                             <div className="card-main-info">
                                 {requestUser && <Avatar user={requestUser} />}
                                 <div className="card-details">
