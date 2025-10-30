@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { callApi } from '../services/api';
 import { subDays, subMonths, startOfDay, endOfDay, format } from 'date-fns';
 import { getTextColor } from '../utils/colors';
-import UserAssignmentsModal from '../components/UserAssignmentsModal'; // 1. Importa la nuova modale
+import UserAssignmentsModal from '../components/UserAssignmentsModal';
 import './StatsPage.css';
 
 // UserAvatar rimane invariato
@@ -27,7 +27,6 @@ const StatsPage = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // 2. Stati per la modale
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const [assignmentsForModal, setAssignmentsForModal] = useState([]);
@@ -39,7 +38,8 @@ const StatsPage = () => {
         setLoading(true);
         const [history, users, spaces] = await Promise.all([
           callApi('getAssignmentHistory'),
-          callApi('getUsers'),
+          // --- MODIFICA 1: Chiama la nuova funzione API ---
+          callApi('getUsersWithPriority'), 
           callApi('getParkingSpaces')
         ]);
         setAllData({ history, users, spaces });
@@ -65,13 +65,11 @@ const StatsPage = () => {
     setEndDate(dateValue); if(dateValue && !startDate) setStartDate(dateValue); setFilterType('custom');
   };
 
-  // 3. Mappa per i nomi dei parcheggi (spostata qui per passarla alla modale)
   const spaceMap = useMemo(() => new Map(allData.spaces.map(s => [s.id, s.number])), [allData.spaces]);
 
-  // Calcolo dati per le card (ora include le assegnazioni filtrate)
   const statsData = useMemo(() => {
     const { history, users } = allData;
-    if (!users.length || !spaceMap.size) return [];
+    if (!users.length) return []; // Non serve più spaceMap.size qui
 
     let filteredHistory = history;
     if (filterType !== 'all') {
@@ -86,27 +84,33 @@ const StatsPage = () => {
     }
     
     const userStats = users.map(user => {
-      const userAssignments = filteredHistory.filter(h => h.userId === user.id); // Lista assegnazioni per l'utente
+      // I conteggi sulla card (totalAssignments, parkingCounts)
+      // rispettano ancora i filtri di data selezionati dall'utente
+      const userAssignments = filteredHistory.filter(h => h.userId === user.id);
       const totalAssignments = userAssignments.length;
+      
       const parkingCounts = userAssignments.reduce((acc, curr) => {
+        // Assicurati che spaceMap sia pronto prima di usarlo
         const spaceName = spaceMap.get(curr.parkingSpaceId) || 'Sconosciuto';
         acc[spaceName] = (acc[spaceName] || 0) + 1;
         return acc;
       }, {});
       const sortedParkingCounts = Object.entries(parkingCounts).sort(([, a], [, b]) => b - a);
       
-      // Aggiungiamo userAssignments all'oggetto restituito
+      // user.successRate (da 0.0 a 1.0) è già calcolato dal backend (ultimi 30gg)
       return { user, totalAssignments, parkingCounts: sortedParkingCounts, userAssignments }; 
     })
-    .sort((a,b) => b.totalAssignments - a.totalAssignments);
+    // --- MODIFICA 2: Ordina per priorità (tasso successo crescente) ---
+    // Chi ha il tasso più basso (es. 0%) ha più probabilità e appare prima
+    .sort((a,b) => a.user.successRate - b.user.successRate);
 
     return userStats;
-  }, [allData, filterType, startDate, endDate, spaceMap]);
+  }, [allData, filterType, startDate, endDate, spaceMap]); // Aggiunto spaceMap alle dipendenze
 
-  // 4. Funzione per aprire la modale
   const handleOpenDetailsModal = (userData) => {
       setSelectedUserForModal(userData.user);
-      setAssignmentsForModal(userData.userAssignments); // Passa le assegnazioni filtrate
+      // Passiamo le assegnazioni filtrate dal periodo selezionato
+      setAssignmentsForModal(userData.userAssignments); 
       setIsDetailsModalOpen(true);
   };
 
@@ -114,11 +118,18 @@ const StatsPage = () => {
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
 
+  // Determina il testo del filtro data
+  let filterText = 'totali';
+  if (filterType === 'week') filterText = 'ultimi 7 giorni';
+  if (filterType === 'month') filterText = 'ultimo mese';
+  if (filterType === 'custom' && startDate && endDate) filterText = 'nel periodo';
+
+
   return (
     <>
       <div className="stats-container">
         <h1>Statistiche di Assegnazione</h1>
-        <p>Visualizza il numero totale di parcheggi assegnati a ogni utente e il dettaglio per singolo posto.</p>
+        <p>Visualizza le statistiche degli utenti. Le card sono ordinate per priorità di assegnazione (chi ha il tasso di successo più basso ha più probabilità).</p>
 
         {/* Filtri (invariati) */}
         <div className="filters-container">
@@ -135,27 +146,31 @@ const StatsPage = () => {
 
         {/* Griglia delle card */}
         <div className="stats-grid">
-          {/* 5. Aggiungi onClick alla card */}
           {statsData.map((userData) => (
             <div 
               key={userData.user.id} 
               className="user-stat-card" 
-              onClick={() => handleOpenDetailsModal(userData)} // Rendi cliccabile
-              style={{cursor: 'pointer'}} // Aggiungi cursore per indicare cliccabilità
+              onClick={() => handleOpenDetailsModal(userData)}
+              style={{cursor: 'pointer'}} 
             >
               <div className="card-header">
                 <UserAvatar user={userData.user} />
+                {/* --- MODIFICA 3: Mostra la priorità --- */}
                 <div className="user-info">
                   <span className="user-name">{userData.user.firstName} {userData.user.lastName}</span>
-                  <span className="total-bookings">{userData.totalAssignments} assegnazioni totali</span>
+                  <span className="user-priority-rate">
+                    Priorità (Tasso Successo 30gg): <strong>{`${(userData.user.successRate * 100).toFixed(0)}%`}</strong>
+                  </span>
+                  <span className="total-bookings">{userData.totalAssignments} assegnazioni ({filterText})</span>
                 </div>
+                {/* --- FINE MODIFICA 3 --- */}
               </div>
               <div className="card-body">
                 {userData.totalAssignments > 0 ? (
                   <ul className="parking-counts-list">
                     {userData.parkingCounts.map(([spaceName, count]) => (
                       <li key={spaceName}>
-                        <span>{spaceName}</span>
+                        <span>{spaceName || 'Sconosciuto'}</span>
                         <span className="count-badge">{count}</span>
                       </li>
                     ))}
@@ -169,13 +184,12 @@ const StatsPage = () => {
         </div>
       </div>
 
-      {/* 6. Renderizza la modale */}
       <UserAssignmentsModal
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         user={selectedUserForModal}
-        userAssignments={assignmentsForModal}
-        spaceMap={spaceMap} // Passa la mappa dei parcheggi
+        userAssignments={assignmentsForModal} // Passa le assegnazioni filtrate
+        spaceMap={spaceMap}
       />
     </>
   );

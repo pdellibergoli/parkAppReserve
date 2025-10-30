@@ -118,7 +118,6 @@
   font-size: 1.1rem;
 }
 
-/* --- NUOVI STILI PER I FILTRI --- */
 .filters-container {
   display: flex;
   justify-content: space-between;
@@ -173,11 +172,19 @@
   border: 1px solid #ccc;
   font-family: inherit;
 }
-/* --- FINE NUOVI STILI --- */
-
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
+}
+
+.card-header .user-priority-rate {
+  color: var(--text-color-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.card-header .user-priority-rate strong {
+  color: var(--primary-color); /* Evidenzia il tasso */
+  font-weight: 700;
 }
