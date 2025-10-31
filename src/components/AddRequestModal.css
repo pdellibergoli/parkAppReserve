@@ -271,3 +271,46 @@
   font-size: 0.85rem;
   font-weight: 500;
 }
+
+.quick-select-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: -0.5rem; /* Riduci lo spazio extra sopra */
+  margin-bottom: -0.5rem; /* Riduci lo spazio extra sotto */
+  flex-wrap: wrap; /* Permette ai bottoni di andare a capo se non c'è spazio */
+}
+
+.quick-select-btn {
+  /* Riusiamo lo stile dei bottoni principali ma più piccoli */
+  padding: 0.4rem 0.8rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color .2s;
+  min-height: auto !important; /* Sovrascrivi min-height */
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
+  border: none;
+  
+  /* --- MODIFICA QUI --- */
+  flex-grow: 1; /* Fai in modo che i bottoni crescano per riempire lo spazio */
+  flex-basis: 120px; /* Larghezza di base, si adatteranno */
+  text-align: center;
+  /* --- FINE MODIFICA --- */
+}
+.quick-select-btn:hover {
+  background-color: var(--primary-color-hover) !important;
+  color: var(--primary-text-color) !important;
+}
+
+/* Stile per il pulsante secondario (Deseleziona) */
+.quick-select-btn.secondary {
+  background-color: var(--secondary-color) !important;
+  color: var(--secondary-text-color) !important;
+}
+.quick-select-btn.secondary:hover {
+  background-color: var(--secondary-color-hover) !important;
+  color: var(--secondary-text-color) !important;
+}
