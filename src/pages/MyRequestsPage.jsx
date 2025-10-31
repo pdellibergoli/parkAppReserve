@@ -86,10 +86,10 @@ const MyRequestsPage = () => {
           <h1>Le mie richieste</h1>
           <button 
             className="delete-selected-btn"
-            onClick={() => handleCancellations(selectedRequests, `Sei sicuro di voler ${selectedRequests.length === 1 ? 'elaborare la richiesta selezionata' : `elaborare le ${selectedRequests.length} richieste selezionate`} (cancellare o annullare assegnazione)?`)} // Messaggio generico per selezione multipla
+            onClick={() => handleCancellations(selectedRequests, `Sei sicuro di voler ${selectedRequests.length === 1 ? 'cancellare la/le richiesta/e selezionata/e' : `elaborare le ${selectedRequests.length} richieste selezionate`} (cancellare o annullare assegnazione)?`)} // Messaggio generico per selezione multipla
             disabled={selectedRequests.length === 0}
           >
-            Elabora Selezionati ({selectedRequests.length}) {/* Cambiato testo bottone */}
+            Cancella Selezionati ({selectedRequests.length}) {/* Cambiato testo bottone */}
           </button>
         </div>
 
