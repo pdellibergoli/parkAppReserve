@@ -131,7 +131,7 @@
 }
 
 .filter-buttons {
-  background-color: var(--bg-color);
+  background-color: var(--bg-color--over);
   color: var(--text-color-secondary);
   display: flex;
   gap: 0.5rem;
@@ -148,8 +148,8 @@
 }
 
 .filter-buttons button:hover {
-  background-color: var(--primary-text-color);
-  color: var(--bg-color) !important;
+  background-color: var(--primary-color-hover);
+  color: #ffffff !important;
 }
 
 .filter-buttons button.active {
@@ -166,7 +166,7 @@
 
 .custom-date-filter input[type="date"] {
   background-color: var(--bg-color-hover);
-  color: var(--primary-text-color) !important;
+  color: var(--text-input-color) !important;
   padding: 0.5rem;
   border-radius: 4px;
   border: 1px solid #ccc;

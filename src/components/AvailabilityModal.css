@@ -1,33 +1,148 @@
-/* Stili per la lista di disponibilità scrollabile */
-.availability-list-container {
-    max-height: 200px; /* Altezza massima - puoi regolarla */
-    overflow-y: auto;  /* Scrollbar verticale */
-    padding-right: 10px; /* Spazio per scrollbar */
-    margin-top: 10px;   /* Spazio dalla label */
-    border: 1px solid #eee; /* Bordo leggero */
-    padding: 10px;        /* Padding interno */
-    border-radius: 4px;   /* Angoli arrotondati */
-  }
-  
-  /* Stile opzionale per ul dentro il container */
-  .availability-list-container .bookings-list {
-    padding: 0; /* Rimuove padding di default */
-  }
-  
-  /* Stili opzionali per la scrollbar (come prima) */
-  .availability-list-container::-webkit-scrollbar {
-    width: 8px;
-  }
-  .availability-list-container::-webkit-scrollbar-track {
-    background: #f1f1f1; 
-    border-radius: 4px;
-  }
-  .availability-list-container::-webkit-scrollbar-thumb {
-    background: #ccc; 
-    border-radius: 4px;
-  }
-  .availability-list-container::-webkit-scrollbar-thumb:hover {
-    background: #aaa; 
-  }
-  
-  /* Assicurati di importare questo file CSS in AvailabilityModal.jsx */
+/* Stili per il form e i bottoni (simili a AddRequestModal) */
+.availability-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  padding: 0.6rem 1.2rem !important;
+  font-weight: 500;
+  width: auto !important; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.cancel-btn {
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+}
+.cancel-btn:hover {
+  background-color: var(--secondary-color-hover);
+  color: var(--secondary-text-color);
+}
+
+.submit-btn {
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
+}
+.submit-btn:hover {
+  background-color: var(--primary-color-hover);
+}
+
+.submit-btn:disabled {
+    background-color: #555 !important; 
+    color: #aaa !important;
+}
+
+.error-message {
+  color: var(--error-text);
+  background-color: var(--error-bg);
+  border: 1px solid var(--error-border);
+  padding: 0.8rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
+/* --- STILI PER REACT-DAY-PICKER --- */
+/* (Copiati da AddRequestModal.css per coerenza) */
+
+.modal-calendar-container {
+  display: flex;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  background-color: var(--bg-color);
+}
+
+.modal-calendar-container .rdp {
+  /* Variabili CSS per DayPicker (si adattano al tema) */
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: var(--primary-color);
+  --rdp-background-color: var(--primary-color-hover);
+  --rdp-color: var(--text-color);
+  --rdp-background-color-disabled: var(--bg-color-hover);
+  --rdp-color-disabled: var(--text-color-light);
+}
+
+/* Colore testo intestazioni (Lun, Mar...) */
+.modal-calendar-container .rdp-head_cell {
+  color: var(--text-color-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Testo del mese (es. Ottobre 2025) */
+.modal-calendar-container .rdp-caption_label {
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+/* Stile bottoni navigazione mese */
+.modal-calendar-container .rdp-nav_button {
+  color: var(--text-color-secondary);
+  border-radius: 4px;
+}
+.modal-calendar-container .rdp-nav_button:hover {
+  background-color: var(--bg-color-hover);
+}
+
+/* Stile giorni SELEZIONATI (usiamo la nostra classe custom) */
+.modal-calendar-container .rdp-day_selected,
+.modal-calendar-container .rdp-day_selected:hover {
+  background-color: var(--primary-color) !important;
+  color: var(--primary-text-color) !important;
+  border-radius: 4px;
+}
+
+/* Stile giorno 'Oggi' */
+.modal-calendar-container .rdp-day_today:not(.rdp-day_selected) {
+  font-weight: bold;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  border-radius: 4px;
+}
+
+/* Stile hover per giorni selezionabili */
+.modal-calendar-container .rdp-day:not(.rdp-day_disabled):not(.rdp-day_selected):hover {
+  background-color: var(--bg-color-hover);
+  border-radius: 4px;
+}
+
+/* Stile giorni disabilitati (passato, weekend) */
+.modal-calendar-container .rdp-day_disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.modal-calendar-container .rdp-day_disabled:hover {
+  background-color: transparent !important;
+}

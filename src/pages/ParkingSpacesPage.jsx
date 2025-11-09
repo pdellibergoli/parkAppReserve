@@ -168,6 +168,7 @@ const ParkingSpacesPage = () => {
         isOpen={isAvailabilityModalOpen}
         onClose={() => setIsAvailabilityModalOpen(false)}
         space={selectedSpace}
+        onSave={fetchParkingSpaces}
       />
     </>
   );

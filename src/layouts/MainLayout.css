@@ -45,7 +45,7 @@
 .main-nav a span { display: inline; white-space: nowrap; }
 .main-nav a:hover {
   background-color: var(--primary-color-hover) !important;
-  color: var(--text-color);
+  color: #ffffff;
 }
 .main-nav a.active {
   background-color: var(--primary-color);

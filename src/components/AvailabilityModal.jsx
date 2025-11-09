@@ -1,120 +1,159 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { callApi } from '../services/api';
-import { format } from 'date-fns';
-import { FaPlus, FaTrash } from 'react-icons/fa';
-// Assicurati che il CSS importato sia corretto
-import './AvailabilityModal.css'; // O il nome del file CSS che stai usando
-// Potresti anche importare AddBookingModal.css se vuoi condividere stili
-// import './AddBookingModal.css';
+import { useLoading } from '../context/LoadingContext';
+import { format, isBefore, startOfToday, getDay, parseISO } from 'date-fns';
+import { it } from 'date-fns/locale';
 
-const AvailabilityModal = ({ isOpen, onClose, space }) => {
-  const [availabilities, setAvailabilities] = useState([]);
-  const [newDate, setNewDate] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
+import './AvailabilityModal.css'; // Useremo questo per gli stili del calendario
+
+// Funzione helper per formattare la data come chiave
+const formatDateKey = (date) => format(date, 'yyyy-MM-dd');
+
+const AvailabilityModal = ({ isOpen, onClose, space, onSave }) => {
+  const { setIsLoading } = useLoading();
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Stato per le date selezionate nel calendario (oggetti Date)
+  const [selectedDates, setSelectedDates] = useState([]);
+  
+  // Stato per memorizzare le disponibilità originali caricate (con ID)
+  // Formato: [{ id: 'avail_123', date: DateObject }, ...]
+  const [existingAvailabilities, setExistingAvailabilities] = useState([]);
+  
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const today = startOfToday();
 
+  // Carica le disponibilità esistenti quando la modale si apre
   useEffect(() => {
     if (isOpen && space) {
-      setNewDate(format(new Date(), 'yyyy-MM-dd'));
+      // Resetta gli stati
+      setError('');
+      setSubmitLoading(false);
+      setCurrentMonth(new Date());
+      setIsLoading(true);
+
+      const fetchAvailabilities = async () => {
+        try {
+          const data = await callApi('getTemporaryAvailabilities', { spaceId: space.id });
+          
+          // Converti le stringhe di data in oggetti Date
+          const availDates = data.map(avail => new Date(avail.availableDate));
+          
+          // Salva i dati originali (con ID) per il confronto al salvataggio
+          const availData = data.map(avail => ({
+            id: avail.availabilityId,
+            date: new Date(avail.availableDate)
+          }));
+          
+          setSelectedDates(availDates); // Imposta il calendario con le date esistenti
+          setExistingAvailabilities(availData); // Salva lo stato originale
+          
+        } catch (err) {
+          setError("Impossibile caricare le disponibilità esistenti.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
       fetchAvailabilities();
     }
-  }, [isOpen, space]);
+  }, [isOpen, space, setIsLoading]);
 
-  const fetchAvailabilities = async () => {
-    setLoading(true);
-    try {
-      const data = await callApi('getTemporaryAvailabilities', { spaceId: space.id });
-      setAvailabilities(data);
-    } catch (err) {
-      setError("Impossibile caricare le disponibilità.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdd = async (e) => {
+  // Gestione salvataggio
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setIsAdding(true);
+    setIsLoading(true);
+    setSubmitLoading(true);
+
     try {
-      await callApi('addTemporaryAvailability', { spaceId: space.id, date: newDate });
-      fetchAvailabilities();
+      // 1. Crea Set di stringhe 'yyyy-MM-dd' per un confronto facile
+      const originalDateSet = new Set(existingAvailabilities.map(a => formatDateKey(a.date)));
+      const newDateSet = new Set(selectedDates.map(formatDateKey));
+
+      // 2. Trova le date da AGGIUNGERE
+      // (Date che sono in newDateSet ma non in originalDateSet)
+      const datesToAdd = selectedDates.filter(date => !originalDateSet.has(formatDateKey(date)));
+
+      // 3. Trova le date da RIMUOVERE
+      // (Date che erano in originalDateSet ma non più in newDateSet)
+      // Abbiamo bisogno dei loro ID per l'API
+      const idsToRemove = existingAvailabilities
+        .filter(avail => !newDateSet.has(formatDateKey(avail.date)))
+        .map(a => a.id);
+
+      // 4. Esegui le chiamate API in parallelo
+      const addPromises = datesToAdd.map(date => 
+        callApi('addTemporaryAvailability', { 
+          spaceId: space.id, 
+          date: formatDateKey(date) // Invia come stringa
+        })
+      );
+      
+      const removePromises = idsToRemove.map(availabilityId => 
+        callApi('removeTemporaryAvailability', { availabilityId })
+      );
+
+      await Promise.all([...addPromises, ...removePromises]);
+
+      // Chiudi e aggiorna la pagina principale
+      onSave();
+      onClose();
+
     } catch (err) {
-      setError(err.message);
+      setError(`Errore durante il salvataggio: ${err.message}`);
     } finally {
-      setIsAdding(false);
+      setIsLoading(false);
+      setSubmitLoading(false);
     }
   };
 
-  const handleDelete = async (availabilityId) => {
-    if (window.confirm("Sei sicuro di voler rimuovere questa data di disponibilità?")) {
-      setError('');
-      try {
-        await callApi('removeTemporaryAvailability', { availabilityId });
-        fetchAvailabilities();
-      } catch (err) {
-        setError(err.message);
-      }
-    }
-  };
-
-  if (!space) return null;
+  // Definisci i giorni disabilitati (passato e weekend)
+  const disabledDays = [
+    { before: today }, 
+    { dayOfWeek: [0, 6] }
+  ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Disponibilità per ${space.number}`}>
-      <div className="add-booking-form"> {/* Potresti voler usare una classe più specifica qui se necessario */}
-        {/* Sezione Aggiungi Data */}
-        <form onSubmit={handleAdd} style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
-          <div className="form-group">
-            <label htmlFor="avail-date">Aggiungi data di disponibilità</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input 
-                type="date" 
-                id="avail-date" 
-                value={newDate} 
-                onChange={(e) => setNewDate(e.target.value)} 
-                min={format(new Date(), 'yyyy-MM-dd')}
-                style={{ flexGrow: 1 }}
-                required
-              />
-              <button type="submit" className="submit-btn" style={{ padding: '0 1rem', width: '50px' }} disabled={isAdding}>
-                {isAdding ? <div className="spinner-small"></div> : <FaPlus />}
-              </button>
-            </div>
-          </div>
-        </form>
-
-        {/* Sezione Lista Disponibilità */}
-        <div className="form-group">
-          <label>Date di disponibilità future</label>
-          {/* ---- MODIFICA QUI: Aggiungi il contenitore con la classe ---- */}
-          <div className="availability-list-container">
-            {loading ? (
-              <p>Caricamento...</p>
-            ) : availabilities.length === 0 ? (
-              <p>Nessuna disponibilità futura impostata per questo parcheggio.</p>
-            ) : (
-              <ul className="bookings-list" style={{ gap: '0.5rem', margin: 0 }}> {/* Rimuovi margine default ul se necessario */}
-                {availabilities.map(avail => (
-                  <li key={avail.availabilityId} className="booking-card" style={{ padding: '0.8rem 1rem' }}>
-                    <span style={{ flexGrow: 1 }}>{format(new Date(avail.availableDate), 'dd/MM/yyyy')}</span>
-                    <button onClick={() => handleDelete(avail.availabilityId)} className="icon-btn delete-btn" title="Rimuovi data">
-                      <FaTrash />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div> {/* ---- FINE CONTENITORE ---- */}
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Gestisci Disponibilità per ${space?.number || ''}`}>
+      <form onSubmit={handleSubmit} className="availability-form">
+        <p>Seleziona o deseleziona i giorni in cui questo parcheggio è disponibile.</p>
         
-        {error && <p className="error-message">{error}</p>}
-      </div>
-       <div className="modal-actions">
-            <button className="submit-btn" onClick={onClose}>Chiudi</button>
+        <div className="form-group">
+          <div className="modal-calendar-container">
+            <DayPicker
+              mode="multiple"
+              min={0}
+              selected={selectedDates}
+              onSelect={setSelectedDates}
+              locale={it}
+              disabled={disabledDays}
+              month={currentMonth}
+              onMonthChange={setCurrentMonth}
+              showOutsideDays
+              modifiersClassNames={{
+                selected: 'rdp-day_selected',
+                today: 'rdp-day_today'
+              }}
+            />
+          </div>
         </div>
+
+        {error && <p className="error-message" style={{ textAlign: 'center' }}>{error}</p>}
+        
+        <div className="modal-actions">
+          <button type="button" className="cancel-btn" onClick={onClose} disabled={submitLoading}>
+            Annulla
+          </button>
+          <button type="submit" className="submit-btn" disabled={submitLoading}>
+            {submitLoading ? <div className="spinner-small"></div> : 'Salva Modifiche'}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 };

@@ -133,6 +133,7 @@
 .rbc-button-link:hover{
   cursor: default;
   background-color: transparent;
+  color: var(--text-input-color) !important;
 }
 
 /* 3. Il contenitore degli indicatori ora è un figlio flex */
