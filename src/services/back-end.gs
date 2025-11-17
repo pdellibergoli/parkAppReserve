@@ -1,5 +1,5 @@
 // =================================================================
-// CONFIGURAZIONE GLOBALE
+// CONFIGURAZIONE GLOBALE 
 // =================================================================
 const CONFIG = {
   SHEETS: {
@@ -18,6 +18,14 @@ const CONFIG = {
   TOKEN_EXPIRY: 3600000, // 1 ora in millisecondi
   ASSIGNMENT_HOUR: 19 // Ora di assegnazione automatica
 };
+
+let clientLogs = [];
+
+function logToClient(message) {
+  const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm:ss.SSS");
+  clientLogs.push(`[GAS ${timestamp}] ${message}`);
+  Logger.log(message); // Manteniamo anche il log lato server per sicurezza
+}
 
 // =================================================================
 // GESTIONE HTTP
@@ -71,6 +79,7 @@ function routeAction(action, payload) {
     'getUsers': () => getSheetAsJSON(CONFIG.SHEETS.USERS),
     'getParkingSpaces': () => getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES),
     'getAssignmentHistory': () => getSheetAsJSON(CONFIG.SHEETS.ASSIGNMENT_HISTORY),
+    'getUsersWithPriority': () => getUsersWithPriority(),
     
     // Gestione utenti
     'updateUserProfile': () => updateUserProfile(payload),
@@ -101,7 +110,9 @@ function routeAction(action, payload) {
 }
 
 function createJsonResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
+  // Aggiungi i log raccolti alla risposta prima di inviarla
+  const responseData = { ...data, logs: clientLogs };
+  return ContentService.createTextOutput(JSON.stringify(responseData))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -375,6 +386,78 @@ function updateUserProfile(payload) {
   return updatedUser || {}; 
 }
 
+/**
+ * Recupera tutti gli utenti e calcola il loro tasso di successo (priorità)
+ * basato sugli ultimi 30 giorni, INCLUDENDO l'esito delle richieste per domani
+ * (se già processate).
+ */
+function getUsersWithPriority() {
+  const allUsers = getSheetAsJSON(CONFIG.SHEETS.USERS);
+  const history = getSheetAsJSON(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
+  const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
+
+  const today = normalizeDate(new Date());
+  
+  // Calcoliamo "domani" per includere le assegnazioni appena fatte
+  const tomorrow = new Date(today.getTime() + (24 * 60 * 60 * 1000));
+  
+  // La finestra temporale parte da DOMANI e va indietro di 30 giorni
+  // Esempio: Se domani è il 31, la finestra va dal 1 al 31.
+  const windowStartDate = new Date(tomorrow.getTime() - (30 * 24 * 60 * 60 * 1000)); 
+
+  // Filtriamo i dati una sola volta usando la nuova finestra (fino a domani)
+  const recentHistory = history.filter(h => {
+      const hDate = normalizeDate(h.assignmentDate);
+      return hDate >= windowStartDate && hDate <= tomorrow;
+  });
+  
+  const recentProcessedRequests = allRequests.filter(r => {
+    const reqDate = normalizeDate(r.requestedDate);
+    // Consideriamo richieste processate da 30 giorni fa fino a domani
+    return reqDate >= windowStartDate && reqDate <= tomorrow &&
+           (r.status === 'assigned' || r.status === 'not_assigned');
+  });
+
+  logToClient(`getUsersWithPriority: Calcolo priorità per ${allUsers.length} utenti (finestra fino a ${formatDate(tomorrow)})...`);
+
+  const usersWithPriority = allUsers.map(user => {
+    // Rimuoviamo dati sensibili
+    delete user.password;
+    delete user.salt;
+    delete user.verificationToken;
+    delete user.resetToken;
+    delete user.resetTokenExpiry;
+
+    const userId = user.id;
+
+    // Calcoliamo il tasso di successo
+    const userRecentAssignments = recentHistory.filter(h => h.userId === userId).length;
+    const userRecentProcessedRequests = recentProcessedRequests.filter(r => r.userId === userId).length;
+
+    let successRate = 1.0; // Default: priorità bassa (100%)
+
+    if (userRecentProcessedRequests > 0) {
+      successRate = userRecentAssignments / userRecentProcessedRequests;
+    } else {
+      // Priorità alta (0%) per nuovi utenti o chi non ha richieste processate recenti
+      successRate = 0.0;
+    }
+    
+    // Aggiungiamo il tasso di successo all'oggetto utente
+    user.successRate = successRate; // Questo è il valore che useremo per ordinare (0.0 - 1.0)
+    
+    // Aggiungiamo anche i conteggi se vogliamo mostrarli
+    user.recentAssignments = userRecentAssignments;
+    user.recentRequests = userRecentProcessedRequests;
+    
+    // logToClient(`Utente ${userId}: Tasso Successo ${successRate} (${userRecentAssignments}/${userRecentProcessedRequests})`);
+
+    return user;
+  });
+
+  return usersWithPriority;
+}
+
 // =================================================================
 // GESTIONE PARCHEGGI
 // =================================================================
@@ -633,38 +716,69 @@ function cancelMultipleRequests(payload) {
   const uniqueRequestIds = [...new Set(requestIds)];
   let processedCount = 0;
   let errors = [];
+  const requestsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS); // Ottieni lo sheet una sola volta
 
   uniqueRequestIds.forEach(reqId => {
     try {
+      // Usiamo lo sheet già ottenuto per efficienza
       const result = findRowByColumn(CONFIG.SHEETS.REQUESTS, 'requestId', reqId);
-      if (!result) return;
+      if (!result) {
+        logToClient(`Richiesta ${reqId} non trovata, saltata.`);
+        return; // Salta se la richiesta non esiste più
+      }
 
       const status = result.data[result.headers.indexOf('status')];
       const requestDate = normalizeDate(result.data[result.headers.indexOf('requestedDate')]);
       const today = normalizeDate(new Date());
 
-      if (requestDate < today) return;
+      // Non permettere cancellazioni di richieste passate
+      if (requestDate < today) {
+          logToClient(`Richiesta ${reqId} è passata (${formatDate(requestDate)}), non può essere elaborata.`);
+          return;
+      }
+      
+      // Non processare richieste già cancellate
+      if (status === 'cancelled_by_user') {
+          logToClient(`Richiesta ${reqId} è già cancellata, saltata.`);
+          return;
+      }
 
       if (status === 'pending') {
-        const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
-        sheet.deleteRow(result.row);
+        // Elimina solo le richieste 'pending'
+        requestsSheet.deleteRow(result.row);
+        logToClient(`Richiesta ${reqId} (stato: pending) eliminata.`);
+        processedCount++;
+      } else if (status === 'not_assigned') {
+        // Aggiorna lo stato a 'cancelled_by_user' per quelle 'not_assigned'
+        updateCell(requestsSheet, result.row, 'status', 'cancelled_by_user', result.headers);
+        logToClient(`Richiesta ${reqId} (stato: not_assigned) aggiornata a cancelled_by_user.`);
         processedCount++;
       } else if (status === 'assigned') {
+        // La logica per annullare assegnazioni rimane invariata (chiama l'altra funzione)
+        // Nota: cancelAssignmentAndReassign già aggiorna lo stato a cancelled_by_user
         cancelAssignmentAndReassign({ requestId: reqId });
+        logToClient(`Assegnazione per richiesta ${reqId} annullata (tramite cancelAssignmentAndReassign).`);
         processedCount++;
+      } else {
+        // Logga altri stati non gestiti direttamente qui
+        logToClient(`Richiesta ${reqId} con stato ${status} non gestita direttamente per la cancellazione multipla.`);
       }
+
     } catch (e) {
-      errors.push(`Errore processando ${reqId}: ${e.message}`);
+      const errorMsg = `Errore processando ${reqId}: ${e.message}`;
+      logToClient(errorMsg); // Logga l'errore anche per il client
+      errors.push(errorMsg);
     }
   });
 
-  if (processedCount === 0 && errors.length === 0) {
-    throw new Error("Nessuna delle richieste selezionate poteva essere processata.");
+  // Gestione messaggio finale (invariata)
+  if (processedCount === 0 && errors.length === 0 && uniqueRequestIds.length > 0) {
+     throw new Error("Nessuna delle richieste selezionate poteva essere processata (potrebbero essere passate o già annullate).");
   }
 
-  let message = `${processedCount} richieste sono state processate con successo.`;
+  let message = `${processedCount} richieste/assegnazioni sono state processate con successo.`;
   if (errors.length > 0) {
-    message += ` Errori: ${errors.join(', ')}`;
+    message += ` Errori riscontrati: ${errors.join('; ')}`;
   }
 
   return { message };
@@ -754,18 +868,66 @@ function getAvailableSpacesForDate(date) {
   return allPotentialSpaces.filter(space => !assignedSpaceIds.includes(space.id));
 }
 
+/**
+ * Calcola la priorità basandosi sul TASSO DI SUCCESSO degli ultimi 30 giorni.
+ * Chi ha un tasso di successo più basso (più rifiuti) ha priorità più alta.
+ */
 function calculatePriority(requests) {
+  // Abbiamo bisogno di entrambi i fogli per questa logica
   const history = getSheetAsJSON(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
+  const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS); 
   
+  const today = normalizeDate(new Date());
+  // Definiamo la nostra finestra temporale (es. 30 giorni fa)
+  const windowStartDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)); 
+  
+  // 1. Filtriamo lo storico delle ASSEGNAZIONI solo per gli ultimi 30 giorni
+  const recentHistory = history.filter(h => normalizeDate(h.assignmentDate) >= windowStartDate);
+  
+  // 2. Filtriamo lo storico delle RICHIESTE PROCESSATE (concluse) negli ultimi 30 giorni
+  const recentProcessedRequests = allRequests.filter(r => {
+    const reqDate = normalizeDate(r.requestedDate);
+    // Consideriamo solo le richieste passate (o oggi) che hanno avuto un esito
+    return reqDate >= windowStartDate && reqDate <= today &&
+           (r.status === 'assigned' || r.status === 'not_assigned');
+  });
+  
+  logToClient(`CalculatePriority (Tasso Successo): Trovate ${recentHistory.length} assegnazioni e ${recentProcessedRequests.length} richieste processate negli ultimi 30 giorni.`);
+
+  // 3. Calcoliamo il tasso di successo per ogni utente nella richiesta attuale
   return requests
-    .map(request => ({
-      ...request,
-      priority: history.filter(h => h.userId === request.userId).length
-    }))
-    .sort((a, b) => a.priority - b.priority || Math.random() - 0.5);
+    .map(request => {
+      const userId = request.userId;
+      
+      // Conteggio assegnazioni recenti per questo utente
+      const userRecentAssignments = recentHistory.filter(h => h.userId === userId).length;
+      
+      // Conteggio richieste processate recenti per questo utente
+      const userRecentProcessedRequests = recentProcessedRequests.filter(r => r.userId === userId).length;
+
+      let successRate = 1.0; // Default: 100% (priorità più bassa)
+      
+      if (userRecentProcessedRequests > 0) {
+        // Calcola il tasso di successo
+        successRate = userRecentAssignments / userRecentProcessedRequests;
+      } else {
+        // Se l'utente non ha richieste processate negli ultimi 30 giorni 
+        // (es. è un nuovo utente o torna dopo molto tempo), 
+        // gli diamo la priorità massima (tasso 0%).
+        successRate = 0.0; 
+      }
+      
+      logToClient(`CalculatePriority: Utente ${userId} - Assegnazioni=${userRecentAssignments}, Richieste=${userRecentProcessedRequests}, Tasso Successo (Priorità)=${successRate}`);
+
+      return {
+        ...request,
+        priority: successRate // La priorità è il tasso di successo
+      };
+    })
+    .sort((a, b) => a.priority - b.priority || Math.random() - 0.5); // Ordina per tasso crescente (0% vince)
 }
 
-function assignParking(request, space, recordInHistory = true) {
+function assignParking(request, space, recordInHistory) {
   updateRequestStatus(request.requestId, 'assigned', space.id, space.number);
 
   if (recordInHistory) {
@@ -915,16 +1077,27 @@ function removeFromHistory(userId, date) {
 
 function checkOverbookingForDate(date) {
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
+  const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES); // Prendiamo tutti i parcheggi
   const dateString = normalizeDate(date).toDateString();
-  
-  const activeRequests = allRequests.filter(r =>
-    normalizeDate(r.requestedDate).toDateString() === dateString &&
-    (r.status === 'pending' || r.status === 'assigned')
-  );
 
-  const availableSpaces = getAvailableSpacesForDate(date);
-  
-  return activeRequests.length > availableSpaces.length;
+  // Conta TUTTE le richieste per quel giorno che NON sono state cancellate dall'utente
+  const relevantRequestsCount = allRequests.filter(r =>
+    normalizeDate(r.requestedDate).toDateString() === dateString &&
+    r.status !== 'cancelled_by_user' // Includi pending, assigned, not_assigned
+  ).length;
+
+  // Calcola il numero TOTALE di posti potenzialmente disponibili per quel giorno (non solo quelli liberi ora)
+  const fixedSpaces = allSpaces.filter(space => space.isFixed === true);
+  const tempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
+    .filter(avail => normalizeDate(avail.availableDate).toDateString() === dateString);
+  // Usiamo un Set per contare gli ID unici dei posti temporanei (evita doppi conteggi se aggiunto più volte per errore)
+  const tempSpaceIds = new Set(tempAvail.map(avail => avail.parkingSpaceId));
+  const totalPotentialSpacesCount = fixedSpaces.length + tempSpaceIds.size; // Somma fissi + temporanei unici
+
+  logToClient(`checkOverbookingForDate (Total Logic) per ${dateString}: Richieste Rilevanti=${relevantRequestsCount}, Posti Totali Potenziali=${totalPotentialSpacesCount}`);
+
+  // Overbooking si verifica se il numero totale di richieste valide supera il numero totale di posti disponibili
+  return relevantRequestsCount > totalPotentialSpacesCount;
 }
 
 function findBestCandidate(date) {
@@ -957,15 +1130,41 @@ function addTemporaryAvailability(payload) {
   const newId = "avail_" + Utilities.getUuid();
   availSheet.appendRow([newId, spaceId, targetDate]);
 
-  // Controlla se l'aggiunta risolve l'overbooking
+  // Controlla se l'aggiunta risolve l'overbooking (logica invariata)
   const isOverbooking = checkOverbookingForDate(targetDate);
+
+  logToClient(`isOverbooking: ${isOverbooking}`);
   
   if (!isOverbooking) {
     Logger.log("L'aggiunta del posto ha risolto l'overbooking. Pulizia dello storico.");
     clearHistoryForDate(targetDate);
   }
 
-  // Riassegnazione immediata se dopo le 19:00 e per domani
+  // --- INIZIO NUOVA LOGICA PER ASSEGNAZIONE GIORNO STESSO ---
+  const today = normalizeDate(new Date());
+  if (targetDate.getTime() === today.getTime()) {
+    Logger.log("Disponibilità aggiunta per oggi. Tentativo di assegnazione immediata.");
+    
+    // Cerchiamo il miglior candidato per oggi
+    const candidate = findBestCandidate(targetDate); // Cerca 'not_assigned' o 'pending' per oggi
+    
+    if (candidate) {
+      logToClient(`Trovato candidato ${candidate.userId} per il posto.`);
+      Logger.log(`Trovato candidato ${candidate.userId} per il posto.`);
+      const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
+      const spaceDetails = allSpaces.find(s => s.id === spaceId);
+      
+      if (spaceDetails) {
+        // Assegna il parcheggio. Registra nello storico solo se c'era overbooking *prima* di questa assegnazione.
+        assignParking(candidate, spaceDetails, isOverbooking);
+      }
+    } else {
+      Logger.log("Nessun candidato 'not_assigned' o 'pending' trovato per oggi.");
+    }
+  }
+  // --- FINE NUOVA LOGICA ---
+
+  // Riassegnazione immediata se dopo le 19:00 e per domani (logica invariata)
   handleInstantReassignment(spaceId, targetDate, isOverbooking);
 
   return { availabilityId: newId, parkingSpaceId: spaceId, availableDate: targetDate };
@@ -1025,12 +1224,63 @@ function removeTemporaryAvailability(payload) {
   const { availabilityId } = payload;
   if (!availabilityId) throw new Error("ID della disponibilità non fornito.");
 
-  const result = findRowByColumn(CONFIG.SHEETS.TEMPORARY_AVAILABILITY, 'id', availabilityId);
+  const result = findRowByColumn(CONFIG.SHEETS.TEMPORARY_AVAILABILITY, 'availabilityId', availabilityId);
   if (!result) throw new Error("Disponibilità non trovata.");
-  
-  const sheet = SpreadsheetApp.getActiveSpreadsheet()
+
+  // Estrai i dati PRIMA di cancellare la riga
+  const spaceIdToRemove = result.data[result.headers.indexOf('parkingSpaceId')];
+  const targetDate = normalizeDate(result.data[result.headers.indexOf('availableDate')]);
+  const dateString = targetDate.toDateString();
+
+  // 1. Cancella la riga della disponibilità
+  const sheetAvail = SpreadsheetApp.getActiveSpreadsheet()
     .getSheetByName(CONFIG.SHEETS.TEMPORARY_AVAILABILITY);
-  sheet.deleteRow(result.row);
-  
-  return { message: "Disponibilità rimossa con successo." };
+  sheetAvail.deleteRow(result.row);
+  Logger.log(`Disponibilità ${availabilityId} per ${spaceIdToRemove} il ${dateString} rimossa.`);
+
+  //Annulla assegnazione collegata ---
+  const requestsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
+  const requestsData = requestsSheet.getDataRange().getValues();
+  const requestsHeaders = requestsData[0];
+  let cancelledAssignment = false;
+
+  // Cerca tra tutte le richieste se qualcuna aveva QUESTO posto assegnato in QUELLA data
+  for (let i = requestsData.length - 1; i >= 1; i--) {
+    const request = {};
+    requestsHeaders.forEach((header, index) => request[header] = requestsData[i][index]);
+
+    const requestDate = normalizeDate(request.requestedDate);
+
+    if (request.status === 'assigned' &&
+        request.assignedParkingSpaceId === spaceIdToRemove &&
+        requestDate.toDateString() === dateString) {
+
+      Logger.log(`Trovata richiesta ${request.requestId} assegnata al posto ${spaceIdToRemove} rimosso. Annullamento in corso...`);
+
+      // Annulla l'assegnazione
+      updateCell(requestsSheet, i + 1, 'status', 'not_assigned', requestsHeaders); // Torna a not_assigned
+      updateCell(requestsSheet, i + 1, 'assignedParkingSpaceId', '', requestsHeaders);
+      updateCell(requestsSheet, i + 1, 'assignedParkingSpaceNumber', '', requestsHeaders);
+
+      // Rimuovi l'utente dallo storico per questa data specifica
+      removeFromHistory(request.userId, targetDate);
+      cancelledAssignment = true;
+      Logger.log(`Assegnazione per ${request.userId} annullata e rimosso dallo storico per ${dateString}.`);
+      break; // Trovata e annullata, possiamo uscire dal ciclo
+    }
+  }
+
+  // Se abbiamo annullato un'assegnazione, rivalutiamo l'overbooking
+  // (Anche se rimuovere un posto di solito CAUSA overbooking, lo facciamo per coerenza)
+  if (cancelledAssignment) {
+    const isOverbookingNow = checkOverbookingForDate(targetDate);
+    if (!isOverbookingNow) {
+        Logger.log(`La rimozione della disponibilità e l'annullamento hanno risolto l'overbooking per ${dateString}. Pulizia storico (se necessario).`);
+        clearHistoryForDate(targetDate); // Pulisce lo storico SOLO se ora non c'è più overbooking
+    } else {
+        Logger.log(`Overbooking persiste per ${dateString} dopo la rimozione della disponibilità.`);
+    }
+  }
+
+  return { message: "Disponibilità rimossa con successo." + (cancelledAssignment ? " L'assegnazione collegata è stata annullata." : "") };
 }
