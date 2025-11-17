@@ -1,5 +1,5 @@
 // =================================================================
-// CONFIGURAZIONE GLOBALE 
+// CONFIGURAZIONE GLOBALE
 // =================================================================
 const CONFIG = {
   SHEETS: {
@@ -10,22 +10,30 @@ const CONFIG = {
     ASSIGNMENT_HISTORY: "AssignmentHistory",
     TEMPORARY_AVAILABILITY: "TemporaryAvailability"
   },
-  BASE_URL: "https://park-app-reserve.vercel.app/",
+  BASE_URL: "https.example.com/", // Sostituisci con il tuo URL
   EMAIL: {
     FROM_NAME: "Park app",
     REPLY_TO: "noreply@park-app.com"
   },
   TOKEN_EXPIRY: 3600000, // 1 ora in millisecondi
-  ASSIGNMENT_HOUR: 19 // Ora di assegnazione automatica
+  ASSIGNMENT_HOUR: 19, // Ora di assegnazione automatica
+  LOG_LEVEL: "DEBUG" // Per il logging
 };
 
+// =================================================================
+// GESTIONE LOGGING
+// =================================================================
 let clientLogs = [];
 
-function logToClient(message) {
+function logToClient(message, level = "DEBUG") {
+  if (level === "DEBUG" && CONFIG.LOG_LEVEL !== "DEBUG") {
+    return;
+  }
   const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm:ss.SSS");
   clientLogs.push(`[GAS ${timestamp}] ${message}`);
-  Logger.log(message); // Manteniamo anche il log lato server per sicurezza
+  Logger.log(message);
 }
+
 
 // =================================================================
 // GESTIONE HTTP
@@ -43,11 +51,16 @@ function doOptions(e) {
 }
 
 function doPost(e) {
+  clientLogs = [];
   try {
     const data = parseRequestData(e);
+    logToClient(`Azione ricevuta: ${data.action}`);
     const result = routeAction(data.action, data.payload);
+    logToClient(`Azione completata con successo.`);
     return createJsonResponse({ status: 'success', data: result });
   } catch (error) {
+    logToClient(`ERRORE: ${error.message}`);
+    Logger.log(`ERRORE: ${error.message} \n Stack: ${error.stack}`);
     return createJsonResponse({ status: 'error', message: error.message });
   }
 }
@@ -65,6 +78,12 @@ function parseRequestData(e) {
   return data;
 }
 
+function createJsonResponse(data) {
+  const responseData = { ...data, logs: clientLogs };
+  return ContentService.createTextOutput(JSON.stringify(responseData))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function routeAction(action, payload) {
   const routes = {
     // Autenticazione
@@ -79,7 +98,7 @@ function routeAction(action, payload) {
     'getUsers': () => getSheetAsJSON(CONFIG.SHEETS.USERS),
     'getParkingSpaces': () => getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES),
     'getAssignmentHistory': () => getSheetAsJSON(CONFIG.SHEETS.ASSIGNMENT_HISTORY),
-    'getUsersWithPriority': () => getUsersWithPriority(),
+    'getUsersWithPriority': () => getUsersWithPriority(), // Assumendo che questa sia la versione corretta
     
     // Gestione utenti
     'updateUserProfile': () => updateUserProfile(payload),
@@ -91,17 +110,21 @@ function routeAction(action, payload) {
     
     // Gestione richieste
     'getRequests': () => getRequestsForUser(payload),
-    'createNewRequest': () => createNewRequest(payload),
     'createBatchRequests': () => createBatchRequests(payload),
-    'cancelRequest': () => cancelRequest(payload),
     'cancelMultipleRequests': () => cancelMultipleRequests(payload),
     'updateRequestDate': () => updateRequestDate(payload),
     'cancelAssignmentAndReassign': () => cancelAssignmentAndReassign(payload),
+    'fulfillParkingRequest': () => fulfillParkingRequest(payload),
     
     // Disponibilità temporanee
     'addTemporaryAvailability': () => addTemporaryAvailability(payload),
     'getTemporaryAvailabilities': () => getTemporaryAvailabilities(payload),
-    'removeTemporaryAvailability': () => removeTemporaryAvailability(payload)
+    'removeTemporaryAvailability': () => removeTemporaryAvailability(payload),
+
+    // --- NUOVE AZIONI ADMIN ---
+    'adminCancelAllRequestsForDate': () => adminCancelAllRequestsForDate(payload),
+    'adminResetAssignmentsForDate': () => adminResetAssignmentsForDate(payload),
+    'adminManuallyAssignForDate': () => adminManuallyAssignForDate(payload) // Nome cambiato per chiarezza
   };
 
   const handler = routes[action];
@@ -109,15 +132,9 @@ function routeAction(action, payload) {
   return handler();
 }
 
-function createJsonResponse(data) {
-  // Aggiungi i log raccolti alla risposta prima di inviarla
-  const responseData = { ...data, logs: clientLogs };
-  return ContentService.createTextOutput(JSON.stringify(responseData))
-    .setMimeType(ContentService.MimeType.JSON);
-}
 
 // =================================================================
-// UTILITY FUNCTIONS
+// UTILITY FUNCTIONS (Invariate)
 // =================================================================
 
 function hashPassword(password, salt) {
@@ -151,10 +168,14 @@ function findRowByColumn(sheetName, columnName, value) {
   const headers = data[0];
   const colIndex = headers.indexOf(columnName);
   
-  if (colIndex === -1) throw new Error(`Colonna '${columnName}' non trovata`);
+  if (colIndex === -1) {
+    logToClient(`ERRORE CRITICO: Colonna '${columnName}' non trovata nello sheet '${sheetName}'`, "ERROR");
+    throw new Error(`Colonna '${columnName}' non trovata`);
+  }
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][colIndex] === value) {
+    // Tollerante per tipi (es. 123 vs "123")
+    if (data[i][colIndex] == value) {
       return { row: i + 1, data: data[i], headers };
     }
   }
@@ -163,7 +184,10 @@ function findRowByColumn(sheetName, columnName, value) {
 
 function updateCell(sheet, rowIndex, columnName, value, headers) {
   const colIndex = headers.indexOf(columnName);
-  if (colIndex === -1) throw new Error(`Colonna '${columnName}' non trovata`);
+  if (colIndex === -1) {
+    logToClient(`ERRORE CRITICO: Colonna '${columnName}' non trovata nello sheet '${sheet.getName()}'`, "ERROR");
+    throw new Error(`Colonna '${columnName}' non trovata`);
+  }
   sheet.getRange(rowIndex, colIndex + 1).setValue(value);
 }
 
@@ -788,53 +812,87 @@ function cancelMultipleRequests(payload) {
 // PROCESSO DI ASSEGNAZIONE
 // =================================================================
 
+/**
+ * Funzione triggerata dal timer (es. alle 19:00) per assegnare i posti per DOMANI.
+ */
 function processPendingRequests() {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowNorm = normalizeDate(tomorrow);
+  
+  logToClient(`AVVIO ASSEGNAZIONE AUTOMATICA (Trigger) per ${formatDate(tomorrowNorm)}`, "INFO");
+  processRequestsForDate(tomorrowNorm); // Chiama la funzione riutilizzabile
+}
+
+/**
+ * --- NUOVA FUNZIONE RIUTILIZZABILE ---
+ * Esegue la logica di assegnazione per una data specifica.
+ * Questa funzione è ora il motore principale dell'assegnazione.
+ * (Presa da una conversazione precedente)
+ */
+function processRequestsForDate(targetDate) {
+  const targetDateNorm = normalizeDate(targetDate);
+  logToClient(`ProcessRequestsForDate: Inizio per ${formatDate(targetDateNorm)}`);
 
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
-  const pendingForTomorrow = allRequests.filter(req =>
+  
+  // 1. Trova le richieste 'pending' per la data target
+  const pendingRequests = allRequests.filter(req =>
     req.status === 'pending' && 
-    normalizeDate(req.requestedDate).getTime() === tomorrowNorm.getTime()
+    normalizeDate(req.requestedDate).getTime() === targetDateNorm.getTime()
   );
 
-  if (pendingForTomorrow.length === 0) {
-    Logger.log("Nessuna richiesta in attesa per domani.");
-    return;
+  if (pendingRequests.length === 0) {
+    logToClient(`ProcessRequestsForDate: Nessuna richiesta 'pending' trovata per ${formatDate(targetDateNorm)}.`);
+    return { assigned: 0, failed: 0 };
   }
+  logToClient(`ProcessRequestsForDate: Trovate ${pendingRequests.length} richieste 'pending'.`);
 
-  const availableSpaces = getAvailableSpacesForDate(tomorrowNorm);
+  // 2. Trova i parcheggi disponibili per quella data
+  const availableSpaces = getAvailableSpacesForDate(targetDateNorm);
+  logToClient(`ProcessRequestsForDate: Trovati ${availableSpaces.length} parcheggi disponibili.`);
 
+  let assignedCount = 0;
+  let failedCount = 0;
+
+  // 3. Caso: NESSUN posto disponibile
   if (availableSpaces.length === 0) {
-    pendingForTomorrow.forEach(request => {
+    logToClient(`ProcessRequestsForDate: Nessun posto disponibile. Tutte le ${pendingRequests.length} richieste impostate a 'not_assigned'.`);
+    pendingRequests.forEach(request => {
       updateRequestStatus(request.requestId, 'not_assigned');
       sendFailureEmail(request.userId, request.requestedDate);
+      failedCount++;
     });
-    Logger.log("Nessun parcheggio disponibile. Tutte le richieste respinte.");
-    return;
+    return { assigned: assignedCount, failed: failedCount };
   }
 
-  if (pendingForTomorrow.length <= availableSpaces.length) {
-    // Caso normale: non registrare nello storico
-    Logger.log("Caso normale: assegnazione senza storico.");
-    pendingForTomorrow.forEach((request, index) => {
-      assignParking(request, availableSpaces[index], false);
-    });
-  } else {
-    // Overbooking: registra nello storico
-    Logger.log("Caso overbooking: registrazione nello storico.");
-    const requestsWithPriority = calculatePriority(pendingForTomorrow);
+  // 4. Determina se siamo in overbooking
+  const isOverbooking = pendingRequests.length > availableSpaces.length;
+  logToClient(`ProcessRequestsForDate: Overbooking? ${isOverbooking} (Richieste: ${pendingRequests.length}, Posti: ${availableSpaces.length})`);
+
+  // 5. Applica la logica di priorità
+  // (Usa la funzione calculatePriority già definita - es. Tasso di Successo)
+  const requestsToProcess = calculatePriority(pendingRequests); 
+  
+  // 6. Assegna i posti
+  for (let i = 0; i < requestsToProcess.length; i++) {
+    const request = requestsToProcess[i];
     
-    for (let i = 0; i < availableSpaces.length; i++) {
-      assignParking(requestsWithPriority[i], availableSpaces[i], true);
-    }
-
-    for (let i = availableSpaces.length; i < requestsWithPriority.length; i++) {
-      updateRequestStatus(requestsWithPriority[i].requestId, 'not_assigned');
-      sendFailureEmail(requestsWithPriority[i].userId, requestsWithPriority[i].requestedDate);
+    if (i < availableSpaces.length) {
+      // C'è un posto per questa richiesta
+      const space = availableSpaces[i];
+      assignParking(request, space, isOverbooking);
+      assignedCount++;
+    } else {
+      // Posti esauriti, questa richiesta fallisce
+      updateRequestStatus(request.requestId, 'not_assigned');
+      sendFailureEmail(request.userId, request.requestedDate);
+      failedCount++;
     }
   }
+  
+  logToClient(`ProcessRequestsForDate: Completato. Assegnati: ${assignedCount}, Non Assegnati: ${failedCount}.`);
+  return { assigned: assignedCount, failed: failedCount };
 }
 
 function getAvailableSpacesForDate(date) {
@@ -1283,4 +1341,102 @@ function removeTemporaryAvailability(payload) {
   }
 
   return { message: "Disponibilità rimossa con successo." + (cancelledAssignment ? " L'assegnazione collegata è stata annullata." : "") };
+}
+
+// ===================================================
+// --- FUNZIONI ADMIN PER MODALE CALENDARIO ---
+// ===================================================
+
+/**
+ * AZIONE ADMIN: Cancella tutte le richieste (pending, not_assigned) per un giorno.
+ * Le richieste 'assigned' vengono ignorate.
+ */
+function adminCancelAllRequestsForDate(payload) {
+  const { date } = payload;
+  if (!date) throw new Error("Data non fornita.");
+  
+  const targetDate = normalizeDate(date);
+  const dateString = targetDate.toDateString();
+  logToClient(`ADMIN ACTION: Cancellazione richieste per ${dateString}`, "INFO");
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  let deletedCount = 0;
+
+  // Scorri all'indietro per eliminare le righe in sicurezza
+  for (let i = data.length - 1; i >= 1; i--) {
+    const row = data[i];
+    const requestDate = normalizeDate(row[headers.indexOf('requestedDate')]);
+    const status = row[headers.indexOf('status')];
+    
+    if (requestDate.toDateString() === dateString) {
+      if (status === 'pending' || status === 'not_assigned') {
+        sheet.deleteRow(i + 1);
+        deletedCount++;
+      }
+    }
+  }
+  
+  logToClient(`ADMIN ACTION: Eliminate ${deletedCount} richieste (pending/not_assigned) per ${dateString}.`);
+  return { message: `Sono state eliminate ${deletedCount} richieste (in attesa o non assegnate) per il ${formatDate(targetDate)}.` };
+}
+
+/**
+ * AZIONE ADMIN: Resetta tutte le assegnazioni (le porta in 'pending')
+ * e cancella lo storico per quel giorno.
+ */
+function adminResetAssignmentsForDate(payload) {
+  const { date } = payload;
+  if (!date) throw new Error("Data non fornita.");
+  
+  const targetDate = normalizeDate(date);
+  const dateString = targetDate.toDateString();
+  logToClient(`ADMIN ACTION: Reset assegnazioni per ${dateString}`, "INFO");
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  let resetCount = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const requestDate = normalizeDate(row[headers.indexOf('requestedDate')]);
+    const status = row[headers.indexOf('status')];
+    
+    if (requestDate.toDateString() === dateString && status === 'assigned') {
+      updateCell(sheet, i + 1, 'status', 'pending', headers);
+      updateCell(sheet, i + 1, 'assignedParkingSpaceId', '', headers);
+      updateCell(sheet, i + 1, 'assignedParkingSpaceNumber', '', headers);
+      resetCount++;
+    }
+  }
+  
+  if (resetCount > 0) {
+    logToClient(`ADMIN ACTION: ${resetCount} richieste resettate a 'pending'. Pulizia storico...`);
+    clearHistoryForDate(targetDate);
+  } else {
+    logToClient(`ADMIN ACTION: Nessuna richiesta 'assigned' trovata per il reset.`);
+  }
+
+  return { message: `${resetCount} assegnazioni sono state resettate allo stato 'In attesa' per il ${formatDate(targetDate)}.` };
+}
+
+/**
+ * AZIONE ADMIN: Fa partire manualmente l'assegnazione per un giorno specifico.
+ */
+function adminManuallyAssignForDate(payload) {
+  const { date } = payload;
+  if (!date) throw new Error("Data non fornita.");
+  
+  const targetDate = normalizeDate(date);
+  logToClient(`ADMIN ACTION: Avvio assegnazione manuale per ${formatDate(targetDate)}`, "INFO");
+
+  // Chiama la funzione di assegnazione riutilizzabile
+  const result = processRequestsForDate(targetDate);
+  
+  return { 
+    message: `Processo di assegnazione manuale completato per il ${formatDate(targetDate)}. 
+Risultati: ${result.assigned} assegnati, ${result.failed} non assegnati.` 
+  };
 }

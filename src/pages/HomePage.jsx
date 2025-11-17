@@ -199,6 +199,7 @@ const HomePage = () => {
         onCancel={handleCancelRequest}
         onEdit={handleEditRequest}
         onCancelAssignment={handleCancelAssignment}
+        onRefreshData={forceDataRefresh}
       />
     </>
   );

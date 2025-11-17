@@ -180,3 +180,89 @@
     font-size: 0.85rem;
   }
 }
+
+.admin-controls-wrapper {
+  background-color: var(--bg-color-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-panel-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+  border: none;
+}
+.admin-panel-toggle:hover {
+  background-color: var(--secondary-color-hover) !important;
+}
+.admin-panel-toggle.active {
+  background-color: #f0ad4e; /* Giallo/Arancio per indicare 'attivo' */
+  color: #fff;
+}
+.admin-panel-toggle.active:hover {
+  background-color: #ec9b3b !important;
+}
+
+.admin-panel {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap; /* Va a capo su schermi piccoli */
+}
+
+.admin-action-btn {
+  padding: 0.5rem 0.8rem !important;
+  font-size: 0.9rem !important;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: auto !important;
+  color: #fff !important;
+  border: none;
+  flex-grow: 1;
+  flex-basis: 150px;
+}
+
+.admin-action-btn.cancel {
+  background-color: var(--primary-color) !important;
+}
+.admin-action-btn.cancel:hover {
+  background-color: var(--primary-color-hover) !important;
+}
+
+.admin-action-btn.reset {
+  background-color: #f0ad4e !important;
+}
+.admin-action-btn.reset:hover {
+  background-color: #ec9b3b !important;
+}
+
+.admin-action-btn.assign {
+  background-color: var(--success-text) !important; /* Verde */
+}
+.admin-action-btn.assign:hover {
+  background-color: #1a7431 !important;
+}
+
+.admin-action-btn:disabled {
+  background-color: #555 !important;
+  color: #aaa !important;
+}
+
+/* Spinner dentro i bottoni admin */
+.admin-action-btn .spinner-small {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
