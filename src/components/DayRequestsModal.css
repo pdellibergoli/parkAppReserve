@@ -11,20 +11,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #e8e8e8 !important;
+  background-color: var(--bg-color-hover) !important;
   padding: 1rem;
   border-radius: 8px;
-  border: 1px solid #afafaf !important;
+  border: 1px solid var(--border-color) !important;
   gap: 1rem;
+  position: relative; /* Per la linea barrata */
+  overflow: hidden; /* Per la linea barrata */
 }
 
 .card-main-info {
   display: flex;
   align-items: center;
   gap: 1rem;
-  /* Occupa lo spazio disponibile, spingendo le azioni a destra */
   flex-grow: 1;
-  /* Evita che il testo vada a capo se lo spazio è poco */
   min-width: 0;
 }
 
@@ -37,7 +37,7 @@
   align-items: center;
   font-weight: bold;
   font-size: 1rem;
-  flex-shrink: 0; /* Impedisce all'avatar di rimpicciolirsi */
+  flex-shrink: 0; 
 }
 
 .card-details {
@@ -50,24 +50,25 @@
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; /* Aggiunge i puntini se il nome è troppo lungo */
+  text-overflow: ellipsis; 
+  color: var(--text-color);
 }
 .card-details .parking-spot {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-color-secondary);
 }
 
 .card-actions {
   display: flex;
   gap: 0.5rem;
-  flex-shrink: 0; /* Impedisce ai pulsanti di rimpicciolirsi */
+  flex-shrink: 0; 
 }
 
 /* Stile comune per i pulsanti-icona */
 .icon-btn {
     background: none;
     border: none;
-    color: #777;
+    color: var(--text-color-secondary);
     cursor: pointer;
     padding: 0.5rem;
     border-radius: 50%;
@@ -86,26 +87,36 @@
 
 /* Colori specifici al passaggio del mouse */
 .icon-btn.edit-btn {
-    color: #f0f0f0;
-    background-color: #4a4a4a;
+    color: var(--secondary-text-color);
+    background-color: var(--secondary-color);
 }
-
 .icon-btn.delete-btn {
     color: #fce8e6;
     background-color: var(--primary-color);
 }
 
 .icon-btn.edit-btn:hover {
-  color: #4a4a4a !important;
-  background-color: #f0f0f0;
+  color: var(--secondary-color) !important;
+  background-color: var(--bg-color-hover);
 }
-
 .icon-btn.delete-btn:hover {
   color: var(--primary-color) !important;
-  background-color: #fce8e6;
+  background-color: rgba(222, 31, 60, 0.1);
 }
 
-/* Stato: Assegnato (Sfondo Verde) */
+/* --- SEZIONE MOBILE (invariata) --- */
+@media (max-width: 768px) {
+  /* ... (stili mobile invariati) ... */
+  .booking-card {
+    padding: 0.8rem 1rem;
+    gap: 0.8rem;
+  }
+  .card-main-info {
+    gap: 0.8rem;
+  }
+}
+
+/* --- STILI DI STATO (invariati) --- */
 .booking-card.status-assigned {
   background-color: var(--success-bg) !important;
   border-color: var(--success-border) !important;
@@ -115,7 +126,6 @@
   color: var(--success-text) !important;
 }
 
-/* Stato: Non Assegnato (Sfondo Rosso) */
 .booking-card.status-not_assigned {
   background-color: var(--error-bg) !important;
   border-color: var(--error-border) !important;
@@ -125,62 +135,29 @@
   color: var(--error-text) !important;
 }
 
-/* Stato: Annullato (Sfondo Rosso + "Card Barrata") */
 .booking-card.status-cancelled_by_user {
   background-color: var(--error-bg) !important;
   border-color: var(--error-border) !important;
-  opacity: 0.8; /* Manteniamo la card leggermente opaca */
-  position: relative; /* Necessario per posizionare la linea */
-  overflow: hidden; /* Assicura che la linea non esca dai bordi arrotondati */
+  opacity: 0.8;
 }
-
-/* Disegniamo la linea sopra la card */
 .booking-card.status-cancelled_by_user::after {
   content: '';
   position: absolute;
-  top: 50%; /* Posizionata al centro verticalmente */
-  left: -5%; /* Inizia un po' prima per coprire tutto */
-  width: 110%; /* Larga per coprire tutta la diagonale */
-  height: 2px; /* Spessore della linea */
-  background-color: var(--error-text); /* Colore della linea (stesso del testo errore) */
-  transform: rotate(-10deg); /* Angolo della linea */
-  opacity: 0.7; /* Leggera trasparenza per non coprire troppo */
+  top: 50%;
+  left: -5%;
+  width: 110%;
+  height: 2px;
+  background-color: var(--error-text);
+  transform: rotate(-10deg);
+  opacity: 0.7;
 }
-
 .booking-card.status-cancelled_by_user .user-name,
 .booking-card.status-cancelled_by_user .parking-spot {
   color: var(--error-text) !important;
-  /* Rimuoviamo il text-decoration da qui */
 }
 
-/* --- SEZIONE MOBILE AGGIORNATA --- */
-@media (max-width: 768px) {
-  .page-header {
-    align-items: flex-start;
-  }
-  .delete-selected-btn {
-    width: 100%;
-  }
 
-  /* Modifichiamo la card per ridurre gli spazi */
-  .booking-card {
-    padding: 0.8rem 1rem;
-    gap: 0.8rem;
-  }
-
-  .card-main-info {
-    gap: 0.8rem; /* Riduciamo lo spazio tra checkbox e testo */
-  }
-
-  /* Riduciamo un po' i font per guadagnare spazio */
-  .booking-date {
-    font-size: 0.9rem;
-  }
-  .booking-space {
-    font-size: 0.85rem;
-  }
-}
-
+/* --- NUOVI STILI ADMIN --- */
 .admin-controls-wrapper {
   background-color: var(--bg-color-hover);
   border: 1px solid var(--border-color);
@@ -199,6 +176,13 @@
   background-color: var(--secondary-color);
   color: var(--secondary-text-color);
   border: none;
+  /* Riusiamo stili bottone generico */
+  padding: .6rem 1.2rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color .2s;
+  min-height: 42px;
 }
 .admin-panel-toggle:hover {
   background-color: var(--secondary-color-hover) !important;
@@ -230,8 +214,13 @@
   min-height: auto !important;
   color: #fff !important;
   border: none;
-  flex-grow: 1;
-  flex-basis: 150px;
+  flex-grow: 1; /* Occupa spazio disponibile */
+  flex-basis: 150px; /* Larghezza minima */
+  /* Riusiamo stili bottone generico */
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color .2s;
 }
 
 .admin-action-btn.cancel {
@@ -265,4 +254,5 @@
   width: 16px;
   height: 16px;
   border-width: 2px;
+  /* Eredita colore da .spinner-small in index.css */
 }

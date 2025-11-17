@@ -37,13 +37,12 @@ const MainLayout = () => {
     const handleSuccess = () => {
         forceDataRefresh();
         setIsAddModalOpen(false);
-        setIsEditModalOpen(false); // Assicurati di chiudere anche la modale di modifica
+        setIsEditModalOpen(false);
         setRequestToEdit(null);
     };
 
-    // 4. FUNZIONI PER GESTIRE LA MODALE DI MODIFICA
-    const handleOpenEditModal = (request) => {
-        setRequestToEdit(request);
+    const handleOpenEditModal = (request, actorId = null) => {
+        setRequestToEdit({ ...request, actorId: actorId });
         setIsEditModalOpen(true);
     };
 

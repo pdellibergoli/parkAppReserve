@@ -34,7 +34,7 @@ const HomePage = () => {
   const [error, setError] = useState('');
 
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null); // Questo è il giorno cliccato
   const [date, setDate] = useState(new Date());
 
   const fetchData = useCallback(async () => {
@@ -58,13 +58,12 @@ const HomePage = () => {
   }, [fetchData, refreshKey]);
   
   const handleDayClick = (date) => {
-    const requestsOnDay = allRequests.filter(r => r.requestedDate && areDatesOnSameDay(new Date(r.requestedDate), date));
-    if (requestsOnDay.length > 0) {
-        setSelectedDate(date);
-        setIsDayModalOpen(true);
-    }
+    setSelectedDate(date); // Salva il giorno cliccato
+    setIsDayModalOpen(true);
+    // Non filtriamo più qui, la modale riceverà tutte le richieste
   };
   
+  // Passiamo TUTTE le richieste alla modale, che poi filtrerà
   const requestsForSelectedDay = useMemo(() => {
     if (!selectedDate || !allRequests) return [];
     
@@ -77,6 +76,7 @@ const HomePage = () => {
       });
   }, [selectedDate, allRequests, users]);
   
+  // CustomDateCellWrapper (invariato)
   const CustomDateCellWrapper = ({ children, value }) => {
     const requestsOnDay = useMemo(() => 
       allRequests.filter(r => r.requestedDate && areDatesOnSameDay(new Date(r.requestedDate), value)),
@@ -115,39 +115,10 @@ const HomePage = () => {
     );
   };
   
-  const handleCancelRequest = async (requestId) => {
-    if (window.confirm('Sei sicuro di voler cancellare questa richiesta?')) {
-        setIsLoading(true);
-        try {
-          await callApi('cancelMultipleRequests', { requestIds: [requestId] });
-            setIsDayModalOpen(false);
-            forceDataRefresh();
-        } catch (err) {
-            alert(`Errore: ${err.message}`);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-  };
-
-  const handleCancelAssignment = async (requestId) => {
-    if (window.confirm('Sei sicuro di voler annullare questa assegnazione e cedere il tuo posto?')) {
-        setIsLoading(true);
-        try {
-            await callApi('cancelAssignmentAndReassign', { requestId });
-            setIsDayModalOpen(false);
-            forceDataRefresh();
-        } catch (err) {
-            alert(`Errore durante l'annullamento: ${err.message}`);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-  };
-
-  const handleEditRequest = (request) => {
+  // --- MODIFICA: Passa l'actorId a handleOpenEditModal ---
+  const handleEditRequest = (request, actorId = null) => {
     setIsDayModalOpen(false);
-    handleOpenEditModal(request);
+    handleOpenEditModal(request, actorId); // Passa l'actorId
   };
 
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
@@ -172,7 +143,6 @@ const HomePage = () => {
         />
       </div>
 
-      {/* --- 1. AGGIUNTA DELLA LEGENDA --- */}
       <div className="calendar-legend">
         <div className="legend-item">
           <FaCar className="my-request-icon status-assigned" />
@@ -187,19 +157,19 @@ const HomePage = () => {
           <span>Richiesta Non Assegnata</span>
         </div>
       </div>
-      {/* --- FINE AGGIUNTA --- */}
 
       <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Invia richiesta</button>
       
+      {/* --- MODIFICA: Semplifica le props --- */}
       <DayRequestsModal
         isOpen={isDayModalOpen}
         onClose={() => setIsDayModalOpen(false)}
-        requests={requestsForSelectedDay}
+        requests={requestsForSelectedDay} // Passa solo le richieste del giorno
+        selectedDate={selectedDate} // Passa la data cliccata
         users={users}
-        onCancel={handleCancelRequest}
-        onEdit={handleEditRequest}
-        onCancelAssignment={handleCancelAssignment}
-        onRefreshData={forceDataRefresh}
+        onEdit={handleEditRequest} // Passa la funzione modificata
+        onRefreshData={forceDataRefresh} // Passa la funzione per ricaricare
+        // onCancel e onCancelAssignment sono rimossi (gestiti internamente alla modale)
       />
     </>
   );

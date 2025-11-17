@@ -36,10 +36,13 @@ const EditRequestModal = ({ isOpen, onClose, onRequestUpdated, requestData }) =>
     setLoading(true);
 
     try {
+      // --- MODIFICA QUI: Aggiungi actorId al payload ---
       await callApi('updateRequestDate', {
         requestId: requestData.requestId,
         newDate: selectedDate,
+        actorId: requestData.actorId || null // Invia l'actorId se esiste
       });
+      // --- FINE MODIFICA ---
       onRequestUpdated(); // Questo ricaricherà i dati e chiuderà la modale
     } catch (err) {
       setError(err.message);

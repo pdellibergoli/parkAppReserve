@@ -1,16 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Modal from './Modal';
 import { useAuth } from '../context/AuthContext';
-import { useLoading } from '../context/LoadingContext'; // Import useLoading
-import { callApi } from '../services/api'; // Import callApi
-// Importa le funzioni date-fns necessarie
+import { useLoading } from '../context/LoadingContext';
+import { callApi } from '../services/api';
 import { format, isBefore, startOfToday, isToday, isTomorrow } from 'date-fns';
 import { getTextColor } from '../utils/colors';
 import { FaPencilAlt, FaTrashAlt, FaLock, FaWrench } from 'react-icons/fa';
 import './DayRequestsModal.css';
 
+// Componente Avatar (invariato)
 const Avatar = ({ user }) => {
-    // ... (codice Avatar invariato)
     const getInitials = () => {
         if (!user) return '...';
         if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`;
@@ -21,12 +20,14 @@ const Avatar = ({ user }) => {
     return <div className="day-booking-avatar" style={{ backgroundColor, color: textColor }}>{getInitials()}</div>;
 };
 
+// --- Componente per i bottoni Admin ---
 const AdminActions = ({ selectedDate, onAdminAction, isLoading, hasPendingRequests }) => {
-    // ... (Componente AdminActions invariato)
+    
     const now = new Date();
     const isTodaySelected = isToday(selectedDate);
     const isTomorrowSelected = isTomorrow(selectedDate);
     
+    // Visibile se: (è domani OPPURE è oggi prima delle 9) E ci sono richieste in attesa
     const showAssignButton = (isTomorrowSelected || (isTodaySelected && now.getHours() < 9)) && hasPendingRequests;
 
     const handleAction = async (actionType) => {
@@ -80,9 +81,8 @@ const AdminActions = ({ selectedDate, onAdminAction, isLoading, hasPendingReques
 };
 
 
-const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, onCancelAssignment, onRefreshData }) => {
-    
-    // --- TUTTI GLI HOOK VANNO QUI, ALL'INIZIO ---
+// --- Componente Modale Principale ---
+const DayRequestsModal = ({ isOpen, onClose, requests, selectedDate, users, onEdit, onRefreshData }) => {
     const { user: loggedInUser } = useAuth();
     const { setIsLoading } = useLoading();
     
@@ -96,41 +96,16 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
         }
     }, [isOpen]);
 
-    // Spostato prima dei return anticipati
+    // Calcola se ci sono richieste in attesa (per il bottone Admin)
     const hasPendingRequests = useMemo(() => {
-        if (!requests) return false; // Aggiunto controllo di sicurezza
+        if (!requests) return false;
         return requests.some(r => r.status === 'pending');
     }, [requests]);
-    // --- FINE BLOCCO HOOK ---
 
-
-    // --- I RETURN ANTICIPATI VANNO DOPO GLI HOOK ---
-    if (!isOpen || !requests) return null; 
-
-    // Gestione caso modale aperta ma senza richieste
-    if (requests.length === 0) {
-         // NOTA: 'date' non è definito qui. Per risolverlo, HomePage dovrebbe passare
-         // la 'selectedDate' (il giorno cliccato) come prop separata.
-         // Per ora, usiamo un titolo generico.
-         return (
-             <Modal isOpen={isOpen} onClose={onClose} title={`Richieste`}>
-                 <p>Nessuna richiesta trovata per questo giorno.</p>
-                 {/* L'admin potrebbe voler assegnare anche se non ci sono richieste? Per ora no. */}
-             </Modal>
-         );
-    }
-    // --- FINE RETURN ANTICIPATI ---
-
-    // Tutta la logica restante va qui, sicuri che 'requests' esista
-    const requestDateObj = new Date(requests[0].requestedDate);
-    const date = format(requestDateObj, 'dd/MM/yyyy');
-    const today = startOfToday();
-    
-    // Funzione per chiamare le API Admin (invariata)
-    const handleAdminAction = async (actionType, selectedDate) => {
+    // Gestione API Admin
+    const handleAdminAction = async (actionType, date) => {
         setAdminLoading(true);
-        setIsLoading(true); 
-        
+        setIsLoading(true);
         let apiAction = '';
         let successMessage = '';
         
@@ -145,18 +120,57 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
         }
         
         try {
-            const response = await callApi(apiAction, { date: format(selectedDate, 'yyyy-MM-dd') });
+            const response = await callApi(apiAction, { date: format(date, 'yyyy-MM-dd') });
             alert(response.message || successMessage);
-            onRefreshData(); 
+            onRefreshData(); // Forza l'aggiornamento dei dati
         } catch (err) {
             alert(`Errore: ${err.message}`);
         } finally {
             setAdminLoading(false);
-            setIsLoading(false); 
+            setIsLoading(false);
         }
     };
 
-    // getStatusText (invariata)
+    // --- NUOVA GESTIONE API INTERNA ---
+    const handleCancelClick = (request) => {
+        const isAssigned = request.status === 'assigned';
+        const confirmMsg = `Sei sicuro di voler ${isAssigned ? 'annullare questa assegnazione' : 'cancellare questa richiesta'}?`;
+        
+        if (window.confirm(confirmMsg)) {
+            setIsLoading(true);
+            
+            // Prepariamo il payload
+            const payload = { 
+                requestIds: [request.requestId] 
+            };
+            
+            // Aggiungiamo l'actorId solo se l'admin è in modalità modifica
+            // e sta modificando la richiesta di qualcun altro
+            if (isAdminMode && request.userId !== loggedInUser.id) {
+                payload.actorId = loggedInUser.id;
+            }
+
+            callApi('cancelMultipleRequests', payload)
+                .then(() => {
+                    onRefreshData(); // Aggiorna
+                })
+                .catch(err => {
+                    alert(`Errore: ${err.message}`);
+                })
+                .finally(() => {
+                    setIsLoading(false);
+                });
+        }
+    };
+
+    const handleEditClick = (request) => {
+        // Passiamo l'actorId solo se l'admin è in modalità modifica
+        const actorId = isAdminMode ? loggedInUser.id : null;
+        onEdit(request, actorId);
+    };
+    // --- FINE NUOVA GESTIONE API ---
+
+
     const getStatusText = (status) => {
         switch (status) {
             case 'pending': return 'In attesa';
@@ -167,9 +181,46 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
         }
     };
 
-    // JSX return (invariato)
+    const today = startOfToday();
+    const dateTitle = selectedDate ? format(selectedDate, 'dd/MM/yyyy') : "Richieste";
+
+    // Gestione modale vuota (se l'utente clicca un giorno senza richieste)
+    if (!requests || requests.length === 0) {
+         return (
+             <Modal isOpen={isOpen} onClose={onClose} title={`Richieste del ${dateTitle}`}>
+                 <p style={{textAlign: 'center', margin: '1rem 0'}}>Nessuna richiesta trovata per questo giorno.</p>
+                 
+                 {/* L'Admin può comunque vedere i bottoni se la data è valida */}
+                 {loggedInUser.isAdmin === true && selectedDate && (
+                    <div className="admin-controls-wrapper">
+                        {!isAdminMode ? (
+                            <button className="admin-panel-toggle" onClick={() => setIsAdminMode(true)}>
+                                <FaWrench /> Abilita Modifiche Admin
+                            </button>
+                        ) : (
+                            <button className="admin-panel-toggle active" onClick={() => setIsAdminMode(false)}>
+                                <FaLock /> Disabilita Modifiche Admin
+                            </button>
+                        )}
+                        {isAdminMode && (
+                            <AdminActions 
+                                selectedDate={selectedDate}
+                                onAdminAction={handleAdminAction}
+                                isLoading={adminLoading}
+                                hasPendingRequests={false} // Ovviamente false
+                            />
+                        )}
+                    </div>
+                 )}
+             </Modal>
+         );
+    }
+    
+    // Se ci sono richieste, usa l'oggetto data dalla prima richiesta
+    const requestDateObj = new Date(requests[0].requestedDate);
+
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Richieste del ${date}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`Richieste del ${dateTitle}`}>
             
             {/* --- PANNELLO ADMIN --- */}
             {loggedInUser.isAdmin === true && (
@@ -210,9 +261,9 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
                     const isPast = isBefore(requestDate, today);
                     const status = request.status;
 
+                    // Logica visibilità
                     const canEdit = status === 'pending' && !isPast;
-                    const canCancelRequest = (status === 'pending' || status === 'not_assigned') && !isPast;
-                    const canCancelAssignment = status === 'assigned' && !isPast;
+                    const canCancel = (status === 'pending' || status === 'not_assigned' || status === 'assigned') && !isPast;
                     
                     const statusText = getStatusText(status);
 
@@ -230,20 +281,16 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
                             </div>
 
                             <div className="card-actions">
+                                {/* Bottone Modifica: Se (SONO IO E posso) O (ADMIN E posso) */}
                                 {((isMyRequest && canEdit) || (isAdminMode && canEdit)) && (
-                                    <button className="icon-btn edit-btn" onClick={() => onEdit(request)} title="Modifica richiesta">
+                                    <button className="icon-btn edit-btn" onClick={() => handleEditClick(request)} title="Modifica richiesta">
                                         <FaPencilAlt />
                                     </button>
                                 )}
                                 
-                                {((isMyRequest && canCancelRequest) || (isAdminMode && canCancelRequest)) && (
-                                    <button className="icon-btn delete-btn" onClick={() => onCancel(request.requestId)} title="Cancella richiesta">
-                                        <FaTrashAlt />
-                                    </button>
-                                )}
-                                
-                                {((isMyRequest && canCancelAssignment) || (isAdminMode && canCancelAssignment)) && (
-                                    <button className="icon-btn delete-btn" onClick={() => onCancelAssignment(request.requestId)} title="Annulla assegnazione">
+                                {/* Bottone Cancella/Annulla: Se (SONO IO E posso) O (ADMIN E posso) */}
+                                {((isMyRequest && canCancel) || (isAdminMode && canCancel)) && (
+                                    <button className="icon-btn delete-btn" onClick={() => handleCancelClick(request)} title={status === 'assigned' ? 'Annulla assegnazione' : 'Cancella richiesta'}>
                                         <FaTrashAlt />
                                     </button>
                                 )}
