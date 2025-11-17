@@ -130,7 +130,7 @@ const StatsPage = () => {
       <div className="stats-container">
         <h1>Statistiche di Assegnazione</h1>
         <p>Visualizza le statistiche degli utenti. Le card sono ordinate per priorità di assegnazione (chi ha il tasso di successo più basso ha più probabilità).
-          <b> Le assegnazioni si riferiscono alle giornate di hoverbooking.</b>
+          <b> Le assegnazioni si riferiscono alle giornate di overbooking e cosiderano le assegnazioni fatte negli utlimi 30 giorni.</b>
         </p>
 
         {/* Filtri (invariati) */}
