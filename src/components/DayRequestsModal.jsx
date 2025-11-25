@@ -78,7 +78,7 @@ const AdminActions = ({ selectedDate, onAdminAction, isLoading, hasPendingReques
 };
 
 
-const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, onCancelAssignment, onRefreshData }) => {
+const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEdit, onCancel, onRefreshData }) => { // Rimosso onCancelAssignment dalle props in quanto non usato qui
     const { user: loggedInUser } = useAuth();
     const { setIsLoading } = useLoading();
     
@@ -96,29 +96,26 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
         return requests.some(r => r.status === 'pending');
     }, [requests]);
 
-    // --- NUOVA LOGICA DI ORDINAMENTO ---
-    // Ordina le richieste per priorità (tasso di successo crescente)
+    // --- ORDINAMENTO RICHIESTE (Più probabili in alto) ---
     const sortedRequests = useMemo(() => {
         if (!requests || !users) return [];
         
-        // Creiamo una copia per non mutare l'array originale
         return [...requests].sort((a, b) => {
-            // 1. Mettiamo le assegnate in cima per chiarezza visiva
+            // 1. Assegnate sempre in cima
             if (a.status === 'assigned' && b.status !== 'assigned') return -1;
             if (a.status !== 'assigned' && b.status === 'assigned') return 1;
 
-            // 2. Per le altre (pending/not_assigned), ordiniamo per successRate
+            // 2. Ordinamento per probabilità di assegnazione (inversa al tasso di successo storico)
+            // Chi ha tasso basso (0.1) ha alta probabilità -> deve venire PRIMA
             const userA = users.find(u => u.id === a.userId);
             const userB = users.find(u => u.id === b.userId);
             
-            // Se il successRate non è disponibile, consideriamolo "alto" (bassa priorità - 1)
             const rateA = userA?.successRate ?? 1;
             const rateB = userB?.successRate ?? 1;
 
-            return rateA - rateB; // Crescente: chi ha % più bassa viene prima (ha più priorità)
+            return rateA - rateB; // Crescente: 0.0 (Alta Probabilità) -> 1.0 (Bassa Probabilità)
         });
     }, [requests, users]);
-    // --- FINE NUOVA LOGICA ---
 
     // --- GESTIONE CANCELLAZIONE INTERNA ---
     const handleCancelClick = (request) => {
@@ -195,16 +192,36 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
 
     if (!isOpen) return null; 
 
-    // Usa 'requests' originale per estrarre la data, se disponibile
-    const requestDateObj = (requests && requests.length > 0) ? new Date(requests[0].requestedDate) : new Date();
-    const dateTitle = format(requestDateObj, 'dd/MM/yyyy');
+    const dateTitle = selectedDate ? format(selectedDate, 'dd/MM/yyyy') : "Richieste";
     const today = startOfToday();
+    const requestDateObj = selectedDate || (requests && requests.length > 0 ? new Date(requests[0].requestedDate) : new Date());
 
     if (!requests || requests.length === 0) {
          return (
-             <Modal isOpen={isOpen} onClose={onClose} title={`Richieste`}>
-                 <p style={{textAlign: 'center', margin: '1rem 0'}}>Nessuna richiesta per questo giorno.</p>
-                 {/* ... (Logica admin per modale vuota rimossa per semplicità, ma ripristinabile se serve) ... */}
+             <Modal isOpen={isOpen} onClose={onClose} title={`Richieste del ${dateTitle}`}>
+                 <p style={{textAlign: 'center', margin: '1rem 0'}}>Nessuna richiesta trovata per questo giorno.</p>
+                 
+                 {loggedInUser.isAdmin === true && selectedDate && (
+                    <div className="admin-controls-wrapper">
+                        {!isAdminMode ? (
+                            <button className="admin-panel-toggle" onClick={() => setIsAdminMode(true)}>
+                                <FaWrench /> Abilita Modifiche Admin
+                            </button>
+                        ) : (
+                            <button className="admin-panel-toggle active" onClick={() => setIsAdminMode(false)}>
+                                <FaLock /> Disabilita Modifiche Admin
+                            </button>
+                        )}
+                        {isAdminMode && (
+                            <AdminActions 
+                                selectedDate={selectedDate}
+                                onAdminAction={handleAdminAction}
+                                isLoading={adminLoading}
+                                hasPendingRequests={false} 
+                            />
+                        )}
+                    </div>
+                 )}
              </Modal>
          );
     }
@@ -212,7 +229,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Richieste del ${dateTitle}`}>
             
-            {/* --- PANNELLO ADMIN --- */}
             {loggedInUser.isAdmin === true && (
                 <div className="admin-controls-wrapper">
                     {!isAdminMode ? (
@@ -243,7 +259,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
             )}
             
             <div className="day-bookings-list">
-                {/* --- USA sortedRequests INVECE DI requests --- */}
                 {sortedRequests.map(request => {
                     const requestUser = users.find(u => u.id === request.userId);
                     const isMyRequest = requestUser && loggedInUser.id === requestUser.id;
@@ -259,8 +274,12 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
 
                     const statusText = getStatusText(status);
 
-                    // Visualizza probabilità se è domani e pending
+                    // --- VISUALIZZAZIONE PROBABILITÀ ---
+                    // Mostriamo la probabilità solo se è "domani" ed è "pending"
+                    // Calcolo INVERSO: 100% - SuccessRate
                     const showProbability = isTomorrow(requestDate) && status === 'pending' && requestUser?.successRate !== undefined;
+                    const probabilityPercent = requestUser?.successRate !== undefined ? ((1 - requestUser.successRate) * 100).toFixed(0) : 0;
+                    // -----------------------------------
 
                     return (
                         <div key={request.requestId} className={`booking-card status-${status}`}>
@@ -273,12 +292,13 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, onEdit, onCancel, 
                                         {status === 'assigned' && ` - Posto: ${request.assignedParkingSpaceNumber}`}
                                     </span>
                                     
-                                    {/* Visualizzazione probabilità */}
+                                    {/* --- MODIFICA QUI --- */}
                                     {showProbability && (
                                         <span className="probability-text">
-                                            Probabilità di assegnazione: <strong>{(requestUser.successRate * 100).toFixed(0)}%</strong>
+                                            Probabilità di assegnazione: <strong>{probabilityPercent}%</strong>
                                         </span>
                                     )}
+                                    {/* --- FINE MODIFICA --- */}
                                 </div>
                             </div>
 
