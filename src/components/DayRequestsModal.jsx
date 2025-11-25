@@ -176,32 +176,38 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
 
     if (!isOpen) return null; 
 
-    // Logica per il titolo personalizzato nell'header
     const dateTitle = selectedDate ? format(selectedDate, 'dd/MM/yyyy') : "Richieste";
     
+    // --- MODIFICA QUI: Titolo Custom con logica di caricamento ---
     const customTitle = (
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-            {/* Testo più piccolo come richiesto */}
             <span style={{ fontSize: '1.1rem' }}>Richieste del {dateTitle}</span>
             
-            {/* Totale parcheggi disponibili di fianco */}
-            {parkingStatus && (
-                <div className="status-item" style={{ flexDirection: 'row', gap: '5px', alignItems: 'center' }}>
-                    <span className="label" style={{ marginBottom: 0 }}>Totale parcheggi disponibili:</span>
+            <div className="status-item" style={{ flexDirection: 'row', gap: '5px', alignItems: 'center' }}>
+                <span className="label" style={{ marginBottom: 0 }}>Totale parcheggi disponibili:</span>
+                
+                {/* Se parkingStatus esiste mostra il numero, altrimenti spinner */}
+                {parkingStatus ? (
                     <span className="value" style={{ fontSize: '1rem' }}>{parkingStatus.total}</span>
-                </div>
-            )}
+                ) : (
+                    <div className="spinner-small" style={{ 
+                        width: '14px', 
+                        height: '14px', 
+                        borderColor: '#666', 
+                        borderTopColor: 'transparent', 
+                        borderWidth: '2px' 
+                    }}></div>
+                )}
+            </div>
         </div>
     );
+    // --- FINE MODIFICA ---
 
     const today = startOfToday();
     const requestDateObj = selectedDate || new Date();
 
     return (
-        // Passiamo customTitle invece della stringa semplice
         <Modal isOpen={isOpen} onClose={onClose} title={customTitle}>
-            
-            {/* Abbiamo rimosso il div parking-status-header da qui */}
 
             {loggedInUser.isAdmin === true && (
                 <div className="admin-controls-wrapper">
