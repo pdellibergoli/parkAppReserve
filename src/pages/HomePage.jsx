@@ -42,7 +42,9 @@ const HomePage = () => {
     try {
       const [requestsData, usersData] = await Promise.all([
         callApi('getRequests', {}),
-        callApi('getUsers'),
+        // --- MODIFICA QUI: Usiamo getUsersWithPriority per avere il successRate ---
+        callApi('getUsersWithPriority'), 
+        // --- FINE MODIFICA ---
       ]);
       setAllRequests(requestsData);
       setUsers(usersData);
@@ -60,10 +62,8 @@ const HomePage = () => {
   const handleDayClick = (date) => {
     setSelectedDate(date); // Salva il giorno cliccato
     setIsDayModalOpen(true);
-    // Non filtriamo più qui, la modale riceverà tutte le richieste
   };
   
-  // Passiamo TUTTE le richieste alla modale, che poi filtrerà
   const requestsForSelectedDay = useMemo(() => {
     if (!selectedDate || !allRequests) return [];
     
@@ -76,7 +76,6 @@ const HomePage = () => {
       });
   }, [selectedDate, allRequests, users]);
   
-  // CustomDateCellWrapper (invariato)
   const CustomDateCellWrapper = ({ children, value }) => {
     const requestsOnDay = useMemo(() => 
       allRequests.filter(r => r.requestedDate && areDatesOnSameDay(new Date(r.requestedDate), value)),
@@ -115,7 +114,6 @@ const HomePage = () => {
     );
   };
   
-  // --- MODIFICA: Passa l'actorId a handleOpenEditModal ---
   const handleEditRequest = (request, actorId = null) => {
     setIsDayModalOpen(false);
     handleOpenEditModal(request, actorId); // Passa l'actorId
@@ -160,16 +158,14 @@ const HomePage = () => {
 
       <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Invia richiesta</button>
       
-      {/* --- MODIFICA: Semplifica le props --- */}
       <DayRequestsModal
         isOpen={isDayModalOpen}
         onClose={() => setIsDayModalOpen(false)}
-        requests={requestsForSelectedDay} // Passa solo le richieste del giorno
-        selectedDate={selectedDate} // Passa la data cliccata
+        requests={requestsForSelectedDay} 
+        selectedDate={selectedDate}
         users={users}
-        onEdit={handleEditRequest} // Passa la funzione modificata
-        onRefreshData={forceDataRefresh} // Passa la funzione per ricaricare
-        // onCancel e onCancelAssignment sono rimossi (gestiti internamente alla modale)
+        onEdit={handleEditRequest}
+        onRefreshData={forceDataRefresh}
       />
     </>
   );

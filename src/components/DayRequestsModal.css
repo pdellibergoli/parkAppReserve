@@ -58,6 +58,19 @@
   color: var(--text-color-secondary);
 }
 
+/* --- STILE PER PROBABILITÀ --- */
+.probability-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+}
+
+.probability-text strong {
+    color: var(--primary-color);
+}
+/* --- FINE STILE --- */
+
 .card-actions {
   display: flex;
   gap: 0.5rem;
