@@ -269,3 +269,40 @@
   border-width: 2px;
   /* Eredita colore da .spinner-small in index.css */
 }
+
+.parking-status-header {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: var(--bg-color-hover);
+    padding: 0.8rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.status-item .label {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+    margin-bottom: 2px;
+}
+
+.status-item .value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.status-item.available .value {
+    color: var(--success-text); /* Verde se ci sono posti */
+}
+
+.status-item.full .value {
+    color: var(--error-text); /* Rosso se 0 posti */
+}

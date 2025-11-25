@@ -120,6 +120,7 @@ function routeAction(action, payload) {
     'addTemporaryAvailability': () => addTemporaryAvailability(payload),
     'getTemporaryAvailabilities': () => getTemporaryAvailabilities(payload),
     'removeTemporaryAvailability': () => removeTemporaryAvailability(payload),
+    'getParkingStatusForDate': () => getParkingStatusForDate(payload),
 
     // Azioni Admin
     'adminCancelAllRequestsForDate': () => adminCancelAllRequestsForDate(payload),
@@ -564,6 +565,49 @@ function updateParkingSpaceFixedStatus(payload) {
   updateCell(sheet, result.row, 'isFixed', isFixed, result.headers);
   
   return { spaceId, isFixed };
+}
+
+/**
+ * Restituisce lo stato dei parcheggi per una data specifica:
+ * - Totale posti (Fissi + Temporanei)
+ * - Posti assegnati
+ * - Posti disponibili
+ */
+function getParkingStatusForDate(payload) {
+  const { date } = payload;
+  if (!date) throw new Error("Data non fornita.");
+
+  const targetDate = normalizeDate(date);
+  const dateString = targetDate.toDateString();
+
+  const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
+  const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
+
+  // 1. Conta Posti Fissi
+  const fixedSpacesCount = allSpaces.filter(space => space.isFixed === true).length;
+
+  // 2. Conta Posti Temporanei per la data
+  const tempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
+    .filter(avail => normalizeDate(avail.availableDate).toDateString() === dateString);
+  // Usa Set per evitare duplicati
+  const tempSpaceIds = new Set(tempAvail.map(avail => avail.parkingSpaceId));
+  const tempSpacesCount = tempSpaceIds.size;
+
+  const totalSpaces = fixedSpacesCount + tempSpacesCount;
+
+  // 3. Conta Assegnazioni confermate per la data
+  const assignedCount = allRequests.filter(req => 
+    normalizeDate(req.requestedDate).toDateString() === dateString &&
+    req.status === 'assigned'
+  ).length;
+
+  const availableSpaces = Math.max(0, totalSpaces - assignedCount);
+
+  return {
+    total: totalSpaces,
+    assigned: assignedCount,
+    available: availableSpaces
+  };
 }
 
 // =================================================================
