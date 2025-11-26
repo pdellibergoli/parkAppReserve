@@ -38,7 +38,6 @@ const StatsPage = () => {
         setLoading(true);
         const [history, users, spaces] = await Promise.all([
           callApi('getAssignmentHistory'),
-          // --- MODIFICA 1: Chiama la nuova funzione API ---
           callApi('getUsersWithPriority'), 
           callApi('getParkingSpaces')
         ]);
@@ -69,7 +68,7 @@ const StatsPage = () => {
 
   const statsData = useMemo(() => {
     const { history, users } = allData;
-    if (!users.length) return []; // Non serve più spaceMap.size qui
+    if (!users.length) return []; 
 
     let filteredHistory = history;
     if (filterType !== 'all') {
@@ -84,32 +83,26 @@ const StatsPage = () => {
     }
     
     const userStats = users.map(user => {
-      // I conteggi sulla card (totalAssignments, parkingCounts)
-      // rispettano ancora i filtri di data selezionati dall'utente
       const userAssignments = filteredHistory.filter(h => h.userId === user.id);
       const totalAssignments = userAssignments.length;
       
       const parkingCounts = userAssignments.reduce((acc, curr) => {
-        // Assicurati che spaceMap sia pronto prima di usarlo
         const spaceName = spaceMap.get(curr.parkingSpaceId) || 'Sconosciuto';
         acc[spaceName] = (acc[spaceName] || 0) + 1;
         return acc;
       }, {});
       const sortedParkingCounts = Object.entries(parkingCounts).sort(([, a], [, b]) => b - a);
       
-      // user.successRate (da 0.0 a 1.0) è già calcolato dal backend (ultimi 30gg)
       return { user, totalAssignments, parkingCounts: sortedParkingCounts, userAssignments }; 
     })
-    // --- MODIFICA 2: Ordina per priorità (tasso successo crescente) ---
-    // Chi ha il tasso più basso (es. 0%) ha più probabilità e appare prima
+    // Ordina per priorità (successRate crescente = 0.0 prima = Alta priorità)
     .sort((a,b) => a.user.successRate - b.user.successRate);
 
     return userStats;
-  }, [allData, filterType, startDate, endDate, spaceMap]); // Aggiunto spaceMap alle dipendenze
+  }, [allData, filterType, startDate, endDate, spaceMap]);
 
   const handleOpenDetailsModal = (userData) => {
       setSelectedUserForModal(userData.user);
-      // Passiamo le assegnazioni filtrate dal periodo selezionato
       setAssignmentsForModal(userData.userAssignments); 
       setIsDetailsModalOpen(true);
   };
@@ -118,7 +111,6 @@ const StatsPage = () => {
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
 
-  // Determina il testo del filtro data
   let filterText = 'totali';
   if (filterType === 'week') filterText = 'ultimi 7 giorni';
   if (filterType === 'month') filterText = 'ultimo mese';
@@ -129,11 +121,8 @@ const StatsPage = () => {
     <>
       <div className="stats-container">
         <h1>Statistiche di Assegnazione</h1>
-        <p>Visualizza le statistiche degli utenti. Le card sono ordinate per priorità di assegnazione (chi ha il tasso di successo più basso ha più probabilità).
-          <b> Le assegnazioni si riferiscono alle giornate di overbooking e cosiderano le assegnazioni fatte negli utlimi 30 giorni.</b>
-        </p>
+        <p>Visualizza le statistiche degli utenti. Le card sono ordinate per priorità di assegnazione (chi ha una probabilità più alta appare per primo).</p>
 
-        {/* Filtri (invariati) */}
         <div className="filters-container">
             <div className="filter-buttons">
             <button onClick={() => setFilterType('all')} className={filterType === 'all' ? 'active' : ''}>Sempre</button>
@@ -146,43 +135,51 @@ const StatsPage = () => {
             </div>
         </div>
 
-        {/* Griglia delle card */}
         <div className="stats-grid">
-          {statsData.map((userData) => (
-            <div 
-              key={userData.user.id} 
-              className="user-stat-card" 
-              onClick={() => handleOpenDetailsModal(userData)}
-              style={{cursor: 'pointer'}} 
-            >
-              <div className="card-header">
-                <UserAvatar user={userData.user} />
-                {/* --- MODIFICA 3: Mostra la priorità --- */}
-                <div className="user-info">
-                  <span className="user-name">{userData.user.firstName} {userData.user.lastName}</span>
-                  <span className="user-priority-rate">
-                    Priorità (Tasso Successo 30gg): <strong>{`${(userData.user.successRate * 100).toFixed(0)}%`}</strong>
-                  </span>
-                  <span className="total-bookings">{userData.totalAssignments} assegnazioni ({filterText})</span>
+          {statsData.map((userData) => {
+            // --- MODIFICA QUI: Calcolo della Probabilità Inversa ---
+            // 1 - successRate ci dà la "sfortuna", che equivale alla priorità futura.
+            // Esempio: Tasso storico 0.2 (20%) -> Priorità 0.8 (80%)
+            const probabilityPercent = ((1 - userData.user.successRate) * 100).toFixed(0);
+            // ------------------------------------------------------
+
+            return (
+              <div 
+                key={userData.user.id} 
+                className="user-stat-card" 
+                onClick={() => handleOpenDetailsModal(userData)}
+                style={{cursor: 'pointer'}} 
+              >
+                <div className="card-header">
+                  <UserAvatar user={userData.user} />
+                  <div className="user-info">
+                    <span className="user-name">{userData.user.firstName} {userData.user.lastName}</span>
+                    
+                    {/* Visualizzazione aggiornata */}
+                    <span className="user-priority-rate">
+                      Probabilità di assegnazione: <strong>{probabilityPercent}%</strong>
+                    </span>
+                    
+                    <span className="total-bookings">{userData.totalAssignments} assegnazioni ({filterText})</span>
+                  </div>
                 </div>
-                {/* --- FINE MODIFICA 3 --- */}
+                <div className="card-body">
+                  {userData.totalAssignments > 0 ? (
+                    <ul className="parking-counts-list">
+                      {userData.parkingCounts.map(([spaceName, count]) => (
+                        <li key={spaceName}>
+                          <span>{spaceName || 'Sconosciuto'}</span>
+                          <span className="count-badge">{count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="no-bookings-message">Nessuna assegnazione trovata in questo periodo.</p>
+                  )}
+                </div>
               </div>
-              <div className="card-body">
-                {userData.totalAssignments > 0 ? (
-                  <ul className="parking-counts-list">
-                    {userData.parkingCounts.map(([spaceName, count]) => (
-                      <li key={spaceName}>
-                        <span>{spaceName || 'Sconosciuto'}</span>
-                        <span className="count-badge">{count}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="no-bookings-message">Nessuna assegnazione trovata in questo periodo.</p>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -190,7 +187,7 @@ const StatsPage = () => {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         user={selectedUserForModal}
-        userAssignments={assignmentsForModal} // Passa le assegnazioni filtrate
+        userAssignments={assignmentsForModal}
         spaceMap={spaceMap}
       />
     </>
