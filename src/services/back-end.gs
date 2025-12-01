@@ -554,6 +554,26 @@ function cancelFutureAssignmentsForSpace(spaceId, fromDate) {
   }
 }
 
+function sendRequestCreatedEmail(userId, dates, actorId) {
+  try {
+    const users = getSheetAsJSON(CONFIG.SHEETS.USERS);
+    const user = users.find(u => u.id === userId);
+    const actor = users.find(u => u.id === actorId); // Chi ha fatto l'azione
+    
+    if (user && actor) {
+      const formattedDates = dates.map(d => formatDate(d)).join(', ');
+      logToClient(`Invio email creazione richiesta a ${user.mail}`);
+      sendEmail(
+        user.mail,
+        "Nuova Richiesta Parcheggio Inserita",
+        `Ciao ${user.firstName},\n\nL'amministratore ${actor.firstName} ${actor.lastName} ha inserito delle richieste di parcheggio a tuo nome per le seguenti date:\n\n${formattedDates}\n\nRiceverai una conferma quando il posto verrà assegnato.\n\nBuona giornata!`
+      );
+    }
+  } catch (e) {
+    logToClient(`Errore invio email creazione richiesta: ${e.message}`, "ERROR");
+  }
+}
+
 function updateParkingSpaceFixedStatus(payload) {
   const { spaceId, isFixed } = payload;
   if (!spaceId) throw new Error("ID del parcheggio non fornito.");
@@ -768,49 +788,55 @@ function updateRequestDate(payload) {
 }
 
 function createBatchRequests(payload) {
-  const { userId, dates } = payload;
+  const { userId, dates, actorId } = payload; // Aggiunto actorId
   if (!userId || !dates || !Array.isArray(dates) || dates.length === 0) {
-    throw new Error("ID utente e un array di date sono obbligatori.");
+    throw new Error("Dati mancanti.");
   }
 
   const requestsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
   const userRequests = allRequests.filter(req => req.userId === userId);
 
-  const validDates = dates
-    .map(dateStr => normalizeDate(dateStr))
-    .filter(date => isWeekday(date))
-    .filter(date => {
-      const dateString = date.toDateString();
-      const hasExisting = userRequests.some(req => 
-        normalizeDate(req.requestedDate).toDateString() === dateString
-      );
-      if (hasExisting) {
-        throw new Error(`Hai già una richiesta esistente per il giorno ${formatDate(date)}.`);
-      }
-      return true;
-    });
-
-  if (validDates.length === 0) {
-    throw new Error("Nessun giorno lavorativo valido selezionato.");
-  }
-
-  // Rimuovi duplicati
-  const uniqueDates = validDates.filter((date, index, self) =>
-    index === self.findIndex(d => d.getTime() === date.getTime())
-  );
-
   const createdRequestIds = [];
-  uniqueDates.forEach(date => {
+  const skippedDates = [];
+  const today = normalizeDate(new Date());
+
+  dates.forEach(dateStr => {
+    const targetDate = normalizeDate(dateStr);
+    
+    if (!isWeekday(targetDate) || targetDate < today) {
+      skippedDates.push(formatDate(targetDate));
+      return;
+    }
+    
+    const dateString = targetDate.toDateString();
+    const hasExisting = userRequests.some(req => 
+      normalizeDate(req.requestedDate).toDateString() === dateString &&
+      req.status !== 'cancelled_by_user'
+    );
+    
+    if (hasExisting) {
+      skippedDates.push(formatDate(targetDate));
+      return;
+    }
+
     const requestId = "req_" + Utilities.getUuid();
-    requestsSheet.appendRow([requestId, userId, date, 'pending', '', '']);
-    createdRequestIds.push({ requestId, date });
+    requestsSheet.appendRow([requestId, userId, targetDate, 'pending', '', '']);
+    createdRequestIds.push({ requestId, date: targetDate });
   });
 
-  // Assegnazione istantanea se dopo le 19:00 per oggi
+  if (createdRequestIds.length === 0 && skippedDates.length > 0) {
+    throw new Error(`Nessuna richiesta creata.`);
+  }
+
+  if (actorId && actorId !== userId && createdRequestIds.length > 0) {
+      const datesList = createdRequestIds.map(r => r.date);
+      sendRequestCreatedEmail(userId, datesList, actorId);
+  }
+
   handleInstantAssignmentForToday(createdRequestIds, userId);
 
-  return { message: `Sono state create con successo ${uniqueDates.length} richieste.` };
+  return { message: `Create ${createdRequestIds.length} richieste.` };
 }
 
 function handleInstantAssignmentForToday(createdRequests, userId) {

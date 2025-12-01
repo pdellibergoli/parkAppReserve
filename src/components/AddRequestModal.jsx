@@ -15,7 +15,6 @@ import 'react-day-picker/dist/style.css';
 
 import './AddRequestModal.css'; 
 
-// Funzione helper per formattare la data
 const formatDateKey = (date) => format(date, 'yyyy-MM-dd');
 
 const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
@@ -27,11 +26,16 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
   
   const [existingRequestDates, setExistingRequestDates] = useState(new Set());
   
+  // --- STATI PER ADMIN ---
+  const [usersList, setUsersList] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false); // Nuovo stato caricamento utenti
+  const [targetUserId, setTargetUserId] = useState('');
+  // ----------------------
+
   const { user } = useAuth();
   const { setIsLoading } = useLoading();
   const today = startOfToday();
 
-  // Reset e caricamento dati (invariato)
   useEffect(() => {
     if (isOpen) {
       setSelectedDates([]);
@@ -39,25 +43,48 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
       setMessage('');
       setSubmitLoading(false);
       setCurrentMonth(new Date());
-      
-      const fetchExistingRequests = async () => {
+      setTargetUserId(user.id);
+
+      const fetchData = async () => {
         try {
-          const requests = await callApi('getRequests', { userId: user.id });
-          const activeRequestDates = requests
-            .filter(req => req.status !== 'cancelled_by_user')
-            .map(req => formatDateKey(new Date(req.requestedDate)));
-            
-          setExistingRequestDates(new Set(activeRequestDates));
+          // Se admin, carica lista utenti
+          if (user.isAdmin) {
+            setUsersLoading(true); // Inizia caricamento
+            const allUsers = await callApi('getUsers');
+            setUsersList(allUsers.sort((a, b) => a.firstName.localeCompare(b.firstName)));
+            setUsersLoading(false); // Fine caricamento
+          }
+
+          await fetchExistingRequestsForUser(user.id);
         } catch (err) {
-          console.error("Errore caricamento richieste esistenti:", err);
+          console.error("Errore caricamento dati:", err);
+          setUsersLoading(false);
         }
       };
       
-      fetchExistingRequests();
+      fetchData();
     }
-  }, [isOpen, user.id]);
+  }, [isOpen, user.id, user.isAdmin]);
 
-  // Gestione invio form (invariato)
+  const fetchExistingRequestsForUser = async (userId) => {
+    try {
+      const requests = await callApi('getRequests', { userId: userId });
+      const activeRequestDates = requests
+        .filter(req => req.status !== 'cancelled_by_user')
+        .map(req => formatDateKey(new Date(req.requestedDate)));
+      setExistingRequestDates(new Set(activeRequestDates));
+    } catch (err) {
+      console.error("Errore caricamento richieste esistenti:", err);
+    }
+  };
+
+  const handleUserChange = async (e) => {
+    const newUserId = e.target.value;
+    setTargetUserId(newUserId);
+    setSelectedDates([]); 
+    await fetchExistingRequestsForUser(newUserId); 
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -79,11 +106,8 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
     });
 
     if (newDatesToSend.length === 0 && alreadyRequested.length > 0) {
-        setError(`Hai già una richiesta attiva per: ${alreadyRequested.join(', ')}. Deselezionale per continuare.`);
+        setError(`Richieste già attive per: ${alreadyRequested.join(', ')}.`);
         return;
-    }
-    if (alreadyRequested.length > 0) {
-        alert(`Le richieste per ${alreadyRequested.join(', ')} sono state ignorate perché già esistenti.`);
     }
     
     if (newDatesToSend.length === 0) {
@@ -98,8 +122,9 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
 
     try {
       const response = await callApi('createBatchRequests', {
-        userId: user.id,
+        userId: targetUserId, 
         dates: newDatesToSend, 
+        actorId: user.id 
       });
       setMessage(response.message);
       setExistingRequestDates(prevSet => new Set([...prevSet, ...newDatesToSend]));
@@ -117,7 +142,6 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
       onClose();
   }
 
-  // Messaggio di avviso (invariato)
   const showLateRequestWarning = useMemo(() => {
     const now = new Date();
     if (now.getHours() < 19) return false;
@@ -125,58 +149,42 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
     return selectedDates.some(date => formatDateKey(date) === todayString);
   }, [selectedDates]);
   
-  // Funzione helper per validare un singolo giorno (invariata)
   const isDayValid = (date) => {
     const dayOfWeek = getDay(date);
     const isPast = isBefore(date, today);
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isAlreadyRequested = existingRequestDates.has(formatDateKey(date));
-    
     return !isPast && !isWeekend && !isAlreadyRequested;
   };
 
-  // Funzione selezione settimana (invariata)
   const handleSelectCurrentWeekWorkdays = () => {
     const monday = startOfWeek(today, { locale: it }); 
     const weekWorkdays = [];
-    
     for (let i = 0; i < 5; i++) { 
       const day = addDays(monday, i);
-      if (isDayValid(day)) { 
-        weekWorkdays.push(day);
-      }
+      if (isDayValid(day)) weekWorkdays.push(day);
     }
-
     const currentKeys = selectedDates.map(formatDateKey);
     const newKeys = weekWorkdays.map(formatDateKey);
     const allKeys = new Set([...currentKeys, ...newKeys]);
-    
     setSelectedDates(Array.from(allKeys).map(key => parseISO(key)));
   };
 
-  // Funzione selezione mese (invariata)
   const handleSelectAllWorkdays = () => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     const daysInMonth = eachDayOfInterval({ start, end });
-    
     const validDaysToAdd = daysInMonth.filter(isDayValid);
-    
     const currentKeys = selectedDates.map(formatDateKey);
     const newKeys = validDaysToAdd.map(formatDateKey);
     const allKeys = new Set([...currentKeys, ...newKeys]);
-    
     setSelectedDates(Array.from(allKeys).map(key => parseISO(key)));
   };
 
-  // --- MODIFICA QUI ---
-  // Funzione per deselezionare TUTTO
   const handleDeselectAll = () => {
-    setSelectedDates([]); // Svuota l'array
+    setSelectedDates([]);
   };
-  // --- FINE MODIFICA ---
 
-  // Modificatori (invariati)
   const modifiers = {
     requested: (date) => existingRequestDates.has(formatDateKey(date)) && !selectedDates.some(selDate => format(selDate, 'yyyy-MM-dd') === formatDateKey(date)),
     disabled: [
@@ -197,32 +205,35 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="add-booking-form">
-          <p>Clicca sui giorni per selezionarli. I giorni con pallino ⚪ sono già richiesti.</p>
+          
+          {/* --- SEZIONE SELEZIONE UTENTE COMPATTA --- */}
+          {user.isAdmin && (
+            <div className="admin-user-selector">
+              <label htmlFor="targetUser">Prenota per:</label>
+              {usersLoading ? (
+                <div className="user-loading-indicator">Caricamento utenti...</div>
+              ) : (
+                <select 
+                  id="targetUser" 
+                  value={targetUserId} 
+                  onChange={handleUserChange}
+                  className="user-select-compact"
+                >
+                  {usersList.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.firstName} {u.lastName} {u.id === user.id ? '(Tu)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+          {/* ----------------------------------------- */}
           
           <div className="quick-select-buttons">
-            <button 
-              type="button" 
-              className="quick-select-btn"
-              onClick={handleSelectCurrentWeekWorkdays}
-            >
-              Questa Settimana
-            </button>
-            <button 
-              type="button" 
-              className="quick-select-btn"
-              onClick={handleSelectAllWorkdays}
-            >
-              Questo Mese
-            </button>
-            {/* --- MODIFICA TESTO PULSANTE --- */}
-            <button 
-              type="button" 
-              className="quick-select-btn secondary"
-              onClick={handleDeselectAll}
-            >
-              Deseleziona Tutto
-            </button>
-            {/* --- FINE MODIFICA --- */}
+            <button type="button" className="quick-select-btn" onClick={handleSelectCurrentWeekWorkdays}>Questa Settimana</button>
+            <button type="button" className="quick-select-btn" onClick={handleSelectAllWorkdays}>Questo Mese</button>
+            <button type="button" className="quick-select-btn secondary" onClick={handleDeselectAll}>Deseleziona Tutto</button>
           </div>
 
           <div className="form-group">
@@ -266,7 +277,7 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
 
           {showLateRequestWarning && (
             <p className="warning-message" style={{ textAlign: 'center' }}>
-              Attenzione: L'assegnazione principale per oggi è già avvenuta. La tua richiesta per oggi verrà messa in lista d'attesa.
+              Attenzione: L'assegnazione principale per oggi è già avvenuta.
             </p>
           )}
 

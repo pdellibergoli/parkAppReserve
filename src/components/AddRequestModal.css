@@ -1,36 +1,57 @@
 .add-booking-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem; /* Ridotto il gap generale */
 }
+
+/* --- STILI SELETTORE UTENTE COMPATTO --- */
+.admin-user-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--bg-color-hover);
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.admin-user-selector label {
+  font-weight: bold;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.user-select-compact {
+  flex-grow: 1;
+  padding: 0.4rem; /* Padding ridotto */
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.user-select-compact:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.user-loading-indicator {
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+}
+/* -------------------------------------- */
 
 .form-group {
   display: flex;
   flex-direction: column;
 }
 
-.form-group label {
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.form-group input,
-.form-group select {
-  padding: 0.8rem;
-  border: 1px solid var(--border-color-input); 
-  background-color: var(--input-bg);
-  border-radius: 4px;
-  color: var(--text-input-color); 
-  font-size: 1rem;
-}
-
-.form-group select:disabled {
-  background-color: var(--bg-color-hover); 
-  cursor: not-allowed;
-}
-
 .modal-actions {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
@@ -71,7 +92,6 @@
 .rdp-day_button{
   background-color: #fff !important;
   border-color: #000000 !important;
-  
 }
 
 .rdp-day_button:hover{
@@ -79,7 +99,7 @@
   color: var(--primary-color) !important;
 }
 
-/* --- Colori giorni richiesti --- */
+/* Colori giorni richiesti */
 .rdp-day.rdp-disabled.rdp-day_requested .rdp-day_button{
   background-color: var(--primary-color) !important; 
   color: rgb(255, 255, 255) !important;
@@ -94,8 +114,6 @@
 .rdp-disabled {
   opacity: 1;
 }
-
-
 
 .warning-message {
   color: var(--warning-text);
@@ -119,8 +137,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* --- NUOVI STILI PER REACT-DAY-PICKER --- */
-
+/* --- STILI REACT-DAY-PICKER --- */
 .modal-calendar-container {
   display: flex;
   justify-content: center;
@@ -131,10 +148,6 @@
 }
 
 .modal-calendar-container .rdp {
-  margin: 0 auto; /* Centra il calendario */
-  width: 100%;
-  
-  /* Variabili CSS per DayPicker (si adattano al tema) */
   --rdp-cell-size: 40px;
   --rdp-accent-color: var(--primary-color);
   --rdp-background-color: var(--primary-color-hover);
@@ -143,20 +156,17 @@
   --rdp-color-disabled: var(--text-color-light);
 }
 
-/* Colore testo intestazioni (Lun, Mar...) */
 .modal-calendar-container .rdp-head_cell {
   color: var(--text-color-secondary);
   font-weight: 500;
   font-size: 0.9rem;
 }
 
-/* Testo del mese (es. Ottobre 2025) */
 .modal-calendar-container .rdp-caption_label {
   font-weight: bold;
   color: var(--text-color);
 }
 
-/* Stile bottoni navigazione mese */
 .rdp-chevron{
   fill: var(--primary-color) !important;
   border-radius: 4px;
@@ -174,7 +184,7 @@
   border-color: #000000 !important;
   color: var(--text-color) !important;
 }
-/* Stile giorni SELEZIONATI (usiamo la nostra classe custom) */
+
 .modal-calendar-container .rdp-day_selected,
 .modal-calendar-container .rdp-day_selected:hover {
   background-color: var(--primary-color) !important;
@@ -182,7 +192,6 @@
   border-radius: 30px;
 }
 
-/* Stile giorno 'Oggi' */
 .modal-calendar-container .rdp-day_today:not(.rdp-day_selected) {
   font-weight: bold;
   color: var(--primary-color) !important;
@@ -197,35 +206,29 @@
   border-radius: 30px;
 }
 
-/* Stile hover per giorni selezionabili */
 .modal-calendar-container .rdp-day:not(.rdp-day_disabled):not(.rdp-day_selected):hover {
   background-color: var(--bg-color-hover);
   border-radius: 4px;
 }
 
-/* --- NUOVI STILI PER GIORNI GIÀ RICHIESTI --- */
-
 /* Stile per il giorno 'richiesto' */
 .modal-calendar-container .rdp-day_requested {
   position: relative;
-  /* Colore testo normale, non selezionato */
   color: var(--text-color);
 }
 
-/* Creiamo il pallino usando ::after */
 .modal-calendar-container .rdp-day_requested::after {
   content: '';
   position: absolute;
-  bottom: 6px; /* Posizione del pallino */
+  bottom: 6px; 
   left: 50%;
   transform: translateX(-50%);
-  width: 8px; /* Dimensione pallino */
-  height: 8px; /* Dimensione pallino */
+  width: 8px; 
+  height: 8px; 
   border-radius: 50%;
   background-color: #ffffff;
 }
 
-/* Stile giorni disabilitati (passato, weekend E GIA' RICHIESTI) */
 .modal-calendar-container .rdp-day_disabled {
   opacity: 0.2;
   cursor: not-allowed;
@@ -234,14 +237,11 @@
   background-color: transparent !important;
 }
 
-/* Se un giorno è SIA richiesto CHE disabilitato (perché lo abbiamo impostato così),
-   ci assicuriamo che il pallino usi un colore "spento" */
 .modal-calendar-container .rdp-day_disabled.rdp-day_requested::after {
-    background-color: var(--text-color-light); /* Pallino grigio per giorni disabilitati */
+    background-color: var(--text-color-light); 
 }
 
-
-/* Stile per il riepilogo delle date selezionate (invariato) */
+/* Stile riepilogo date */
 .selected-dates-summary {
   font-size: 0.9rem;
 }
@@ -252,7 +252,7 @@
 }
 
 .dates-list-scroll {
-  max-height: 80px; /* Altezza massima, poi scroll */
+  max-height: 80px; 
   overflow-y: auto;
   background-color: var(--bg-color-hover);
   border: 1px solid var(--border-color);
@@ -272,40 +272,37 @@
   font-weight: 500;
 }
 
+/* Stili pulsanti selezione rapida */
 .quick-select-buttons {
   display: flex;
   gap: 0.5rem;
   justify-content: center;
-  margin-top: -0.5rem; /* Riduci lo spazio extra sopra */
-  margin-bottom: -0.5rem; /* Riduci lo spazio extra sotto */
-  flex-wrap: wrap; /* Permette ai bottoni di andare a capo se non c'è spazio */
+  margin-top: -0.5rem; 
+  margin-bottom: -0.5rem; 
+  flex-wrap: wrap; 
 }
 
 .quick-select-btn {
-  /* Riusiamo lo stile dei bottoni principali ma più piccoli */
   padding: 0.4rem 0.8rem !important;
   font-size: 0.85rem !important;
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color .2s;
-  min-height: auto !important; /* Sovrascrivi min-height */
+  min-height: auto !important; 
   background-color: var(--primary-color);
   color: var(--primary-text-color);
   border: none;
   
-  /* --- MODIFICA QUI --- */
-  flex-grow: 1; /* Fai in modo che i bottoni crescano per riempire lo spazio */
-  flex-basis: 120px; /* Larghezza di base, si adatteranno */
+  flex-grow: 1; 
+  flex-basis: 120px; 
   text-align: center;
-  /* --- FINE MODIFICA --- */
 }
 .quick-select-btn:hover {
   background-color: var(--primary-color-hover) !important;
   color: var(--primary-text-color) !important;
 }
 
-/* Stile per il pulsante secondario (Deseleziona) */
 .quick-select-btn.secondary {
   background-color: var(--secondary-color) !important;
   color: var(--secondary-text-color) !important;
