@@ -8,7 +8,8 @@ const CONFIG = {
     PARKING_SPACES: "ParkingSpaces",
     REQUESTS: "ParkingRequests",
     ASSIGNMENT_HISTORY: "AssignmentHistory",
-    TEMPORARY_AVAILABILITY: "TemporaryAvailability"
+    TEMPORARY_AVAILABILITY: "TemporaryAvailability",
+    COMMUNICATIONS: "Communications"
   },
   BASE_URL: "https.park-app-reserve.vercel.app/", // URL Vercel corretto
   EMAIL: {
@@ -127,7 +128,8 @@ function routeAction(action, payload) {
     'adminResetAssignmentsForDate': () => adminResetAssignmentsForDate(payload),
     'adminManuallyAssignForDate': () => adminManuallyAssignForDate(payload),
     'sendAdminCommunication': () => sendAdminCommunication(payload),
-    'getActiveCommunication': () => getActiveCommunication()
+    'getActiveCommunication': () => getActiveCommunication(),
+    'deleteCommunication': () => deleteCommunication(payload)
   };
 
   const handler = routes[action];
@@ -863,6 +865,109 @@ function handleInstantAssignmentForToday(createdRequests, userId) {
   }
 }
 
+function fulfillParkingRequest(payload) {
+  const { requestId, donorUserId } = payload;
+  if (!requestId || !donorUserId) throw new Error("Dati insufficienti per cedere il parcheggio.");
+
+  logToClient(`Tentativo di cessione da ${donorUserId} per la richiesta ${requestId}`);
+  
+  const result = findRowByColumn(CONFIG.SHEETS.REQUESTS, 'requestId', requestId);
+  if (!result) throw new Error("Richiesta non trovata.");
+  
+  const request = {};
+  result.headers.forEach((header, index) => request[header] = result.data[index]);
+
+  const requestDate = normalizeDate(request.requestedDate);
+  const today = normalizeDate(new Date());
+
+  if (requestDate.getTime() !== today.getTime()) {
+    throw new Error("Questo link di cessione è valido solo per il giorno stesso.");
+  }
+  
+  if (request.status === 'assigned') {
+    throw new Error("Questa richiesta ha già un parcheggio assegnato.");
+  }
+
+  if (request.status === 'cancelled_by_user') {
+    throw new Error("Questa richiesta è stata annullata dall'utente.");
+  }
+
+  // 1. Trova il parcheggio del donatore
+  const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
+  const dateString = requestDate.toDateString();
+  
+  const donorRequest = allRequests.find(r => 
+      r.userId === donorUserId &&
+      normalizeDate(r.requestedDate).toDateString() === dateString &&
+      r.status === 'assigned'
+  );
+  
+  if (!donorRequest) {
+    throw new Error("Non è stato trovato un parcheggio assegnato al donatore per oggi.");
+  }
+
+  // --- MODIFICA: Controllo se il posto è ancora valido ---
+  const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
+  const spaceId = donorRequest.assignedParkingSpaceId;
+  const spaceObj = allSpaces.find(s => s.id === spaceId);
+  
+  // Verifica disponibilità temporanea (nel caso fosse un posto disattivato ma reso disponibile oggi)
+  const tempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
+    .some(avail => avail.parkingSpaceId === spaceId && normalizeDate(avail.availableDate).toDateString() === dateString);
+
+  // Il posto è valido se esiste nel DB E (è attivo/fisso OPPURE ha una disponibilità temporanea oggi)
+  const isValidSpace = spaceObj && (spaceObj.isFixed === true || tempAvail === true);
+
+  if (!isValidSpace) {
+    throw new Error("Il parcheggio che si sta tentando di cedere non è più disponibile o è stato disattivato dall'amministratore.");
+  }
+  // --- FINE MODIFICA ---
+
+  // 2. Annulla l'assegnazione del donatore
+  logToClient(`Trovato donatore. Annullamento sua assegnazione (ID: ${donorRequest.requestId}).`);
+  const donorResult = findRowByColumn(CONFIG.SHEETS.REQUESTS, 'requestId', donorRequest.requestId);
+  
+  const requestsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
+  updateCell(requestsSheet, donorResult.row, 'status', 'cancelled_by_user', donorResult.headers);
+  updateCell(requestsSheet, donorResult.row, 'assignedParkingSpaceId', '', donorResult.headers);
+  updateCell(requestsSheet, donorResult.row, 'assignedParkingSpaceNumber', '', donorResult.headers);
+  
+  // 3. Rimuovi il donatore dallo storico
+  removeFromHistory(donorUserId, requestDate);
+
+  // 4. Assegna il posto liberato al ricevente
+  const freedSpace = { 
+    id: donorRequest.assignedParkingSpaceId, 
+    number: donorRequest.assignedParkingSpaceNumber 
+  };
+  
+  logToClient(`Assegnazione del posto ${freedSpace.number} alla richiesta ${requestId}.`);
+  
+  const isOverbooking = checkOverbookingForDate(requestDate);
+  assignParking(request, freedSpace, isOverbooking);
+
+  // 5. Pulisci lo storico se necessario
+  if (!checkOverbookingForDate(requestDate)) {
+    logToClient("Overbooking risolto dopo la cessione. Pulizia storico.");
+    clearHistoryForDate(requestDate);
+  }
+
+  // 6. Invia email
+  const users = getSheetAsJSON(CONFIG.SHEETS.USERS);
+  const donorUser = users.find(u => u.id === donorUserId);
+  const recipientUser = users.find(u => u.id === request.userId);
+  
+  if (donorUser) {
+    sendEmail(
+      donorUser.mail,
+      "Conferma Cessione Parcheggio",
+      `Ciao ${donorUser.firstName},\n\nGrazie! Il tuo parcheggio (${freedSpace.number}) per oggi (${formatDate(requestDate)}) è stato ceduto con successo a ${recipientUser.firstName} ${recipientUser.lastName}.\n\nBuona giornata!`
+    );
+  }
+
+  return { message: `Grazie! Il parcheggio è stato ceduto con successo a ${recipientUser.firstName} ${recipientUser.lastName}.` };
+}
+
 /**
  * Cancella o annulla un elenco di richieste.
  * Accetta un 'actorId' per notificare gli utenti se la modifica è fatta da un admin.
@@ -1180,7 +1285,7 @@ function sendFailureEmail(userId, date) {
  * Annulla un'assegnazione, riassegna E gestisce l'actorId.
  */
 function cancelAssignmentAndReassign(payload) {
-  const { requestId, actorId } = payload; // Accetta actorId
+  const { requestId, actorId } = payload;
   if (!requestId) throw new Error("ID della richiesta non fornito.");
 
   const result = findRowByColumn(CONFIG.SHEETS.REQUESTS, 'requestId', requestId);
@@ -1197,7 +1302,7 @@ function cancelAssignmentAndReassign(payload) {
 
   const cancelledSpaceId = requestToCancel.assignedParkingSpaceId;
   const cancelledSpaceNumber = requestToCancel.assignedParkingSpaceNumber;
-  const cancellingUserId = requestToCancel.userId; // Proprietario
+  const cancellingUserId = requestToCancel.userId;
 
   logToClient(`Annullamento assegnazione per ${cancellingUserId} (Req: ${requestId}) in data ${formatDate(requestDate)}`);
 
@@ -1210,23 +1315,45 @@ function cancelAssignmentAndReassign(payload) {
   updateCell(requestsSheet, result.row, 'assignedParkingSpaceId', '', result.headers);
   updateCell(requestsSheet, result.row, 'assignedParkingSpaceNumber', '', result.headers);
   
-  // (L'email di notifica viene già inviata da cancelMultipleRequests prima di chiamare questa funzione)
+  // --- MODIFICA: Controllo più robusto ---
+  const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
   
-  // 3. Tenta la riassegnazione
+  // Trova il posto specifico
+  const spaceObj = allSpaces.find(s => s.id === cancelledSpaceId);
+  
+  // Verifica anche le disponibilità temporanee per quel giorno (se il posto fosse fisso ma condiviso)
+  const dateString = requestDate.toDateString();
+  const tempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
+    .some(avail => avail.parkingSpaceId === cancelledSpaceId && normalizeDate(avail.availableDate).toDateString() === dateString);
+
+  // Un posto è "riassegnabile" se:
+  // 1. Esiste nel DB
+  // 2. E (NON è fisso OPPURE è fisso ma è stato reso temporaneamente disponibile per oggi)
+  const isReassignable = spaceObj && (spaceObj.isFixed === false || tempAvail === true);
+  
   let reassigned = false;
-  const newRecipient = findBestCandidate(requestDate); 
   
-  if (newRecipient) {
-    const isOverbookingBeforeReassign = checkOverbookingForDate(requestDate); 
+  if (isReassignable) {
+    // 3. Tenta la riassegnazione
+    const newRecipient = findBestCandidate(requestDate); 
     
-    logToClient(`Riassegnazione posto ${cancelledSpaceNumber} a ${newRecipient.userId}. Overbooking: ${isOverbookingBeforeReassign}`);
-    assignParking(
-      newRecipient, 
-      { id: cancelledSpaceId, number: cancelledSpaceNumber }, 
-      isOverbookingBeforeReassign
-    );
-    reassigned = true;
+    if (newRecipient) {
+      const isOverbookingBeforeReassign = checkOverbookingForDate(requestDate); 
+      
+      logToClient(`Riassegnazione posto ${cancelledSpaceNumber} a ${newRecipient.userId}. Overbooking: ${isOverbookingBeforeReassign}`);
+      assignParking(
+        newRecipient, 
+        { id: cancelledSpaceId, number: cancelledSpaceNumber }, 
+        isOverbookingBeforeReassign
+      );
+      reassigned = true;
+    } else {
+       logToClient(`Posto ${cancelledSpaceNumber} liberato, ma nessun candidato in attesa.`);
+    }
+  } else {
+    logToClient(`Il posto ${cancelledSpaceNumber} non è riassegnabile automaticamente (È fisso o rimosso).`);
   }
+  // --- FINE MODIFICA ---
 
   // 4. RIVALUTA LO STATO FINALE
   const finalIsOverbooking = checkOverbookingForDate(requestDate);
@@ -1237,7 +1364,18 @@ function cancelAssignmentAndReassign(payload) {
       clearHistoryForDate(requestDate);
   }
 
-  return { message: "La tua assegnazione è stata annullata" + (reassigned ? " e il posto è stato riassegnato." : ".") };
+  let message = "La tua assegnazione è stata annullata";
+  if (reassigned) {
+    message += " e il posto è stato riassegnato.";
+  } else if (!spaceObj) {
+    message += ". Il posto è stato rimosso dal sistema.";
+  } else if (!isReassignable) {
+    message += ". Il posto è ora riservato (fisso), quindi non è stato riassegnato.";
+  } else {
+    message += ".";
+  }
+
+  return { message };
 }
 
 function removeFromHistory(userId, date) {
@@ -1635,20 +1773,21 @@ function sendAdminCommunication(payload) {
 }
 
 /**
- * Recupera il messaggio attivo per OGGI da mostrare in Home.
+ * Recupera TUTTI i messaggi attivi per OGGI da mostrare in Home.
  */
 function getActiveCommunication() {
   const commSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.COMMUNICATIONS);
-  if (!commSheet) return null; // Foglio non ancora creato
+  if (!commSheet) return []; // Ritorna array vuoto
   
   const data = commSheet.getDataRange().getValues();
-  if (data.length < 2) return null; // Solo intestazioni
+  if (data.length < 2) return []; 
   
   const headers = data.shift();
   const today = normalizeDate(new Date()).getTime();
   
-  // Cerca l'ultima comunicazione valida
-  // Scorriamo al contrario per trovare la più recente
+  const activeMessages = []; // Array per accumulare i messaggi
+
+  // Scorriamo al contrario per avere i più recenti per primi
   for (let i = data.length - 1; i >= 0; i--) {
     const row = data[i];
     const isPersistent = row[headers.indexOf('isPersistent')];
@@ -1658,13 +1797,32 @@ function getActiveCommunication() {
       const endDate = normalizeDate(row[headers.indexOf('endDate')]).getTime();
       
       if (today >= startDate && today <= endDate) {
-        return {
+        // Invece di ritornare, aggiungiamo all'array
+        activeMessages.push({
           message: row[headers.indexOf('message')],
           id: row[headers.indexOf('id')]
-        };
+        });
       }
     }
   }
   
-  return null; // Nessuna comunicazione attiva oggi
+  return activeMessages; // Restituisce l'array completo
+}
+
+/**
+ * AZIONE ADMIN: Cancella una comunicazione specifica.
+ */
+function deleteCommunication(payload) {
+  const { id } = payload;
+  if (!id) throw new Error("ID comunicazione mancante.");
+  
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.COMMUNICATIONS);
+  const result = findRowByColumn(CONFIG.SHEETS.COMMUNICATIONS, 'id', id);
+  
+  if (!result) throw new Error("Comunicazione non trovata.");
+  
+  sheet.deleteRow(result.row);
+  logToClient(`Comunicazione ${id} eliminata.`);
+  
+  return { message: "Comunicazione cancellata con successo." };
 }
