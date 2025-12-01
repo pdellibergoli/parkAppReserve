@@ -10,10 +10,12 @@ import './HomePage.css';
 
 import { useOutletContext } from 'react-router-dom';
 import DayRequestsModal from '../components/DayRequestsModal';
+import SendCommunicationModal from '../components/SendCommunicationModal';
 import { callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
 import { useAuth } from '../context/AuthContext';
-import { FaCar } from 'react-icons/fa';
+// --- MODIFICA: Aggiunta FaTimes ---
+import { FaCar, FaBullhorn, FaInfoCircle, FaTimes } from 'react-icons/fa';
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -34,20 +36,31 @@ const HomePage = () => {
   const [error, setError] = useState('');
 
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null); // Questo è il giorno cliccato
+  const [selectedDate, setSelectedDate] = useState(null);
   const [date, setDate] = useState(new Date());
+
+  const [activeBanners, setActiveBanners] = useState([]);
+  const [isCommModalOpen, setIsCommModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [requestsData, usersData] = await Promise.all([
+      const [requestsData, usersData, bannersData] = await Promise.all([
         callApi('getRequests', {}),
-        // --- MODIFICA QUI: Usiamo getUsersWithPriority per avere il successRate ---
-        callApi('getUsersWithPriority'), 
-        // --- FINE MODIFICA ---
+        callApi('getUsersWithPriority'),
+        callApi('getActiveCommunication')
       ]);
       setAllRequests(requestsData);
       setUsers(usersData);
+      
+      if (Array.isArray(bannersData)) {
+          setActiveBanners(bannersData);
+      } else if (bannersData) {
+          setActiveBanners([bannersData]);
+      } else {
+          setActiveBanners([]);
+      }
+
     } catch (err) {
       setError('Impossibile caricare i dati. Riprova più tardi.');
     } finally {
@@ -60,9 +73,25 @@ const HomePage = () => {
   }, [fetchData, refreshKey]);
   
   const handleDayClick = (date) => {
-    setSelectedDate(date); // Salva il giorno cliccato
+    setSelectedDate(date); 
     setIsDayModalOpen(true);
   };
+
+  // --- NUOVA FUNZIONE: Cancella Banner ---
+  const handleDeleteBanner = async (bannerId) => {
+    if (window.confirm("Sei sicuro di voler cancellare questa comunicazione?")) {
+      setIsLoading(true);
+      try {
+        await callApi('deleteCommunication', { id: bannerId });
+        forceDataRefresh(); // Ricarica la pagina per rimuovere il banner
+      } catch (err) {
+        alert(`Errore: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+  // -------------------------------------
   
   const requestsForSelectedDay = useMemo(() => {
     if (!selectedDate || !allRequests) return [];
@@ -116,7 +145,7 @@ const HomePage = () => {
   
   const handleEditRequest = (request, actorId = null) => {
     setIsDayModalOpen(false);
-    handleOpenEditModal(request, actorId); // Passa l'actorId
+    handleOpenEditModal(request, actorId);
   };
 
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
@@ -124,6 +153,31 @@ const HomePage = () => {
 
   return (
     <>
+      {activeBanners.length > 0 && (
+        <div className="banners-wrapper">
+          {activeBanners.map(banner => (
+            /* --- MODIFICA: Layout Banner con bottone cancella --- */
+            <div key={banner.id} className="communication-banner">
+              <div className="banner-content">
+                <FaInfoCircle className="banner-icon" />
+                <span>{banner.message}</span>
+              </div>
+              
+              {user && user.isAdmin && (
+                <button 
+                  className="banner-close-btn" 
+                  onClick={() => handleDeleteBanner(banner.id)}
+                  title="Cancella comunicazione"
+                >
+                  <FaTimes />
+                </button>
+              )}
+            </div>
+            /* --- FINE MODIFICA --- */
+          ))}
+        </div>
+      )}
+      
       <div className="calendar-container">
         <Calendar
           localizer={localizer}
@@ -158,14 +212,25 @@ const HomePage = () => {
 
       <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Invia richiesta</button>
       
+      {user && user.isAdmin && (
+        <button className="admin-comm-btn" onClick={() => setIsCommModalOpen(true)} title="Invia Comunicazione">
+            <FaBullhorn />
+        </button>
+      )}
+
       <DayRequestsModal
         isOpen={isDayModalOpen}
         onClose={() => setIsDayModalOpen(false)}
-        requests={requestsForSelectedDay} 
+        requests={requestsForSelectedDay}
         selectedDate={selectedDate}
         users={users}
         onEdit={handleEditRequest}
         onRefreshData={forceDataRefresh}
+      />
+
+      <SendCommunicationModal 
+        isOpen={isCommModalOpen} 
+        onClose={() => setIsCommModalOpen(false)} 
       />
     </>
   );

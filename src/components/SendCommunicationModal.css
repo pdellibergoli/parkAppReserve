@@ -1,0 +1,41 @@
+.comm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .comm-textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    resize: vertical;
+  }
+  
+  .checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .dates-row {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .dates-row .form-group {
+    flex: 1;
+  }
+  
+  .error-text {
+    color: var(--error-text);
+    text-align: center;
+  }
+  
+  .success-text {
+    color: var(--success-text);
+    text-align: center;
+    font-weight: bold;
+  }

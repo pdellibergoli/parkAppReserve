@@ -293,3 +293,103 @@
     font-size: 0.85rem;
   }
 }
+
+/* --- STILI BANNER COMUNICAZIONE --- */
+.communication-banner {
+  background-color: #e3f2fd; /* Azzurro chiaro */
+  color: #0d47a1; /* Blu scuro */
+  border: 1px solid #90caf9;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.communication-banner svg {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* --- STILE BOTTONE ADMIN FLUTTUANTE --- */
+.admin-comm-btn {
+  position: fixed;
+  bottom: 30px;
+  left: 30px; /* A sinistra, opposto a Invia Richiesta */
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #f0ad4e; /* Arancione per differenziare */
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  z-index: 10;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.admin-comm-btn:hover {
+  background-color: #ec9b3b;
+  transform: scale(1.05);
+}
+
+/* Contenitore opzionale se vuoi distanziare il blocco banner dal calendario */
+.banners-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.communication-banner {
+  background-color: #e3f2fd; 
+  color: #0d47a1; 
+  border: 1px solid #90caf9;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  /* Flexbox per separare contenuto e bottone X */
+  display: flex;
+  justify-content: space-between; 
+  align-items: flex-start; /* Allinea in alto se il testo è lungo */
+  gap: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  flex-grow: 1; /* Occupa tutto lo spazio disponibile */
+}
+
+.banner-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.banner-close-btn {
+  background: none;
+  border: none;
+  color: #0d47a1;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.banner-close-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  color: #d32f2f; /* Rosso al passaggio del mouse */
+}

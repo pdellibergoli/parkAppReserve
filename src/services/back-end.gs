@@ -125,7 +125,9 @@ function routeAction(action, payload) {
     // Azioni Admin
     'adminCancelAllRequestsForDate': () => adminCancelAllRequestsForDate(payload),
     'adminResetAssignmentsForDate': () => adminResetAssignmentsForDate(payload),
-    'adminManuallyAssignForDate': () => adminManuallyAssignForDate(payload)
+    'adminManuallyAssignForDate': () => adminManuallyAssignForDate(payload),
+    'sendAdminCommunication': () => sendAdminCommunication(payload),
+    'getActiveCommunication': () => getActiveCommunication()
   };
 
   const handler = routes[action];
@@ -1578,4 +1580,91 @@ function adminManuallyAssignForDate(payload) {
     message: `Processo di assegnazione manuale completato per il ${formatDate(targetDate)}. 
 Risultati: ${result.assigned} assegnati, ${result.failed} non assegnati.` 
   };
+}
+
+/**
+ * Invia una comunicazione a TUTTI gli utenti e opzionalmente salva un banner.
+ */
+function sendAdminCommunication(payload) {
+  const { message, isPersistent, startDate, endDate } = payload;
+  
+  if (!message) throw new Error("Il messaggio non può essere vuoto.");
+  if (isPersistent && (!startDate || !endDate)) throw new Error("Data inizio e fine obbligatorie per messaggi persistenti.");
+
+  // 1. Invia email a TUTTI gli utenti
+  const allUsers = getSheetAsJSON(CONFIG.SHEETS.USERS);
+  let emailCount = 0;
+  
+  // Utilizziamo un ciclo semplice. Per grandi numeri, considerare BCC o quote.
+  allUsers.forEach(user => {
+    if (user.mail && user.isVerified) {
+      try {
+        MailApp.sendEmail({
+          to: user.mail,
+          subject: "Comunicazione di Servizio - Park App",
+          body: `Ciao ${user.firstName},\n\n${message}\n\nCordiali saluti,\nL'Amministrazione`,
+          name: CONFIG.EMAIL.FROM_NAME,
+          replyTo: CONFIG.EMAIL.REPLY_TO
+        });
+        emailCount++;
+      } catch (e) {
+        logToClient(`Errore invio a ${user.mail}: ${e.message}`, "ERROR");
+      }
+    }
+  });
+  
+  logToClient(`Email inviata a ${emailCount} utenti.`);
+
+  // 2. Se persistente, salva nel database
+  if (isPersistent) {
+    const commSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.COMMUNICATIONS);
+    const id = "comm_" + new Date().getTime();
+    
+    commSheet.appendRow([
+      id, 
+      message, 
+      true, 
+      normalizeDate(startDate), 
+      normalizeDate(endDate), 
+      new Date()
+    ]);
+    logToClient(`Comunicazione persistente salvata.`);
+  }
+
+  return { message: `Comunicazione inviata a ${emailCount} utenti.` };
+}
+
+/**
+ * Recupera il messaggio attivo per OGGI da mostrare in Home.
+ */
+function getActiveCommunication() {
+  const commSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.COMMUNICATIONS);
+  if (!commSheet) return null; // Foglio non ancora creato
+  
+  const data = commSheet.getDataRange().getValues();
+  if (data.length < 2) return null; // Solo intestazioni
+  
+  const headers = data.shift();
+  const today = normalizeDate(new Date()).getTime();
+  
+  // Cerca l'ultima comunicazione valida
+  // Scorriamo al contrario per trovare la più recente
+  for (let i = data.length - 1; i >= 0; i--) {
+    const row = data[i];
+    const isPersistent = row[headers.indexOf('isPersistent')];
+    
+    if (isPersistent === true) {
+      const startDate = normalizeDate(row[headers.indexOf('startDate')]).getTime();
+      const endDate = normalizeDate(row[headers.indexOf('endDate')]).getTime();
+      
+      if (today >= startDate && today <= endDate) {
+        return {
+          message: row[headers.indexOf('message')],
+          id: row[headers.indexOf('id')]
+        };
+      }
+    }
+  }
+  
+  return null; // Nessuna comunicazione attiva oggi
 }
