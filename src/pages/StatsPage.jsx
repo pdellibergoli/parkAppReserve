@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { callApi } from '../services/api';
-import { subDays, subMonths, startOfDay, endOfDay, format } from 'date-fns';
 import { getTextColor } from '../utils/colors';
 import UserAssignmentsModal from '../components/UserAssignmentsModal';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { FaTrophy, FaCalendarCheck, FaChartLine } from 'react-icons/fa';
 import './StatsPage.css';
 
-// UserAvatar rimane invariato
 const UserAvatar = ({ user }) => {
   const getInitials = () => {
     if (!user) return '?';
@@ -17,31 +17,27 @@ const UserAvatar = ({ user }) => {
   return <div className="stat-avatar" style={{ backgroundColor, color: textColor }}>{getInitials()}</div>;
 };
 
-
 const StatsPage = () => {
-  const [allData, setAllData] = useState({ history: [], users: [], spaces: [] });
+  const [allData, setAllData] = useState({ history: [], users: [], spaces: [], requests: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const [filterType, setFilterType] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const [assignmentsForModal, setAssignmentsForModal] = useState([]);
 
-
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        const [history, users, spaces] = await Promise.all([
+        // Recuperiamo tutto: storico, utenti, spazi E richieste (per il nuovo KPI)
+        const [history, users, spaces, requests] = await Promise.all([
           callApi('getAssignmentHistory'),
           callApi('getUsersWithPriority'), 
-          callApi('getParkingSpaces')
+          callApi('getParkingSpaces'),
+          callApi('getRequests', {}) // Recupera tutte le richieste per il KPI "Giorno Record"
         ]);
-        setAllData({ history, users, spaces });
+        setAllData({ history, users, spaces, requests });
       } catch (err) {
         setError("Impossibile caricare i dati delle statistiche.");
       } finally {
@@ -50,40 +46,17 @@ const StatsPage = () => {
     };
     fetchInitialData();
   }, []);
-  
-  // Gestione date range (invariata)
-  useEffect(() => {
-    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-      const tempStart = startDate; setStartDate(endDate); setEndDate(tempStart);
-    }
-  }, [startDate, endDate]);
-  const handleStartDateChange = (dateValue) => {
-    setStartDate(dateValue); if (dateValue && !endDate) setEndDate(dateValue); setFilterType('custom');
-  };
-  const handleEndDateChange = (dateValue) => {
-    setEndDate(dateValue); if(dateValue && !startDate) setStartDate(dateValue); setFilterType('custom');
-  };
 
   const spaceMap = useMemo(() => new Map(allData.spaces.map(s => [s.id, s.number])), [allData.spaces]);
 
-  const statsData = useMemo(() => {
-    const { history, users } = allData;
-    if (!users.length) return []; 
+  // --- ELABORAZIONE DATI ---
+  const { userStats, kpiData, chartData } = useMemo(() => {
+    const { history, users, requests } = allData;
+    if (!users.length) return { userStats: [], kpiData: {}, chartData: [] };
 
-    let filteredHistory = history;
-    if (filterType !== 'all') {
-      let start, end; const today = new Date();
-      if (filterType === 'week') { start = startOfDay(subDays(today, 7)); end = endOfDay(today); }
-      else if (filterType === 'month') { start = startOfDay(subMonths(today, 1)); end = endOfDay(today); }
-      else if (filterType === 'custom' && startDate && endDate) { start = startOfDay(new Date(startDate)); end = endOfDay(new Date(endDate)); }
-      if (start && end) {
-        if (start > end) [start, end] = [end, start];
-        filteredHistory = history.filter(h => { const d = new Date(h.assignmentDate); return d >= start && d <= end; });
-      }
-    }
-    
-    const userStats = users.map(user => {
-      const userAssignments = filteredHistory.filter(h => h.userId === user.id);
+    // 1. Calcolo statistiche per utente (Card + Grafico)
+    const stats = users.map(user => {
+      const userAssignments = history.filter(h => h.userId === user.id);
       const totalAssignments = userAssignments.length;
       
       const parkingCounts = userAssignments.reduce((acc, curr) => {
@@ -93,13 +66,52 @@ const StatsPage = () => {
       }, {});
       const sortedParkingCounts = Object.entries(parkingCounts).sort(([, a], [, b]) => b - a);
       
-      return { user, totalAssignments, parkingCounts: sortedParkingCounts, userAssignments }; 
-    })
-    // Ordina per priorità (successRate crescente = 0.0 prima = Alta priorità)
-    .sort((a,b) => a.user.successRate - b.user.successRate);
+      return { 
+        user, 
+        totalAssignments, 
+        parkingCounts: sortedParkingCounts, 
+        userAssignments,
+        fullName: `${user.firstName} ${user.lastName || ''}`.trim()
+      }; 
+    });
 
-    return userStats;
-  }, [allData, filterType, startDate, endDate, spaceMap]);
+    const sortedForCards = [...stats].sort((a,b) => a.user.successRate - b.user.successRate);
+
+    const sortedForChart = [...stats]
+      .sort((a, b) => b.totalAssignments - a.totalAssignments)
+      .slice(0, 5);
+
+    // 3. Calcolo KPI (Indicatori Chiave)
+    const totalAssignmentsOverall = history.length;
+    const topUser = sortedForChart.length > 0 ? sortedForChart[0] : null;
+    
+    // --- MODIFICA KPI: Giorno con più RICHIESTE (non assegnazioni) ---
+    const dayCounts = requests.reduce((acc, curr) => {
+        // Contiamo le richieste attive (escludiamo solo quelle cancellate dall'utente)
+        if (curr.status !== 'cancelled_by_user') {
+            const dateStr = new Date(curr.requestedDate).toLocaleDateString();
+            acc[dateStr] = (acc[dateStr] || 0) + 1;
+        }
+        return acc;
+    }, {});
+    
+    const busiestDateEntry = Object.entries(dayCounts).reduce((a, b) => a[1] > b[1] ? a : b, ["N/D", 0]);
+    // -----------------------------------------------------------------
+
+    return {
+        userStats: sortedForCards,
+        chartData: sortedForChart,
+        kpiData: {
+            total: totalAssignmentsOverall,
+            topUser: topUser ? topUser.fullName : 'Nessuno',
+            topUserCount: topUser ? topUser.totalAssignments : 0,
+            busiestDay: busiestDateEntry[0],
+            busiestDayCount: busiestDateEntry[1]
+        }
+    };
+
+  }, [allData, spaceMap]);
+
 
   const handleOpenDetailsModal = (userData) => {
       setSelectedUserForModal(userData.user);
@@ -107,41 +119,78 @@ const StatsPage = () => {
       setIsDetailsModalOpen(true);
   };
 
-
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
-
-  let filterText = 'totali';
-  if (filterType === 'week') filterText = 'ultimi 7 giorni';
-  if (filterType === 'month') filterText = 'ultimo mese';
-  if (filterType === 'custom' && startDate && endDate) filterText = 'nel periodo';
-
 
   return (
     <>
       <div className="stats-container">
-        <h1>Statistiche di Assegnazione</h1>
-        <p>Visualizza le statistiche degli utenti. Le card sono ordinate per priorità di assegnazione (chi ha una probabilità più alta appare per primo).</p>
-
-        <div className="filters-container">
-            <div className="filter-buttons">
-            <button onClick={() => setFilterType('all')} className={filterType === 'all' ? 'active' : ''}>Sempre</button>
-            <button onClick={() => setFilterType('week')} className={filterType === 'week' ? 'active' : ''}>Ultimi 7 giorni</button>
-            <button onClick={() => setFilterType('month')} className={filterType === 'month' ? 'active' : ''}>Ultimo mese</button>
+        <h1>Statistiche Generali</h1>
+        
+        <div className="kpi-grid">
+            <div className="kpi-card">
+                <div className="kpi-icon blue"><FaChartLine /></div>
+                <div className="kpi-content">
+                    <h3>Totale Assegnazioni</h3>
+                    <p>{kpiData.total}</p>
+                    <span>dall'inizio dei tempi</span>
+                </div>
             </div>
-            <div className="custom-date-filter">
-            <span>Dal </span><input type="date" value={startDate} onChange={e => handleStartDateChange(e.target.value)} />
-            <span>Al </span><input type="date" value={endDate} onChange={e => handleEndDateChange(e.target.value)} />
+            <div className="kpi-card">
+                <div className="kpi-icon gold"><FaTrophy /></div>
+                <div className="kpi-content">
+                    <h3>Utente più Attivo</h3>
+                    <p className="small-text">{kpiData.topUser}</p>
+                    <span>con {kpiData.topUserCount} parcheggi assegnati</span>
+                </div>
+            </div>
+            <div className="kpi-card">
+                <div className="kpi-icon green"><FaCalendarCheck /></div>
+                <div className="kpi-content">
+                    <h3>Giorno Record (Richieste)</h3>
+                    <p className="small-text">{kpiData.busiestDay}</p>
+                    <span>{kpiData.busiestDayCount} richieste inviate</span>
+                </div>
             </div>
         </div>
 
+        <div className="chart-section">
+            <h2>Top 5 Utenti per Utilizzo</h2>
+            <div className="chart-wrapper">
+                <ResponsiveContainer width="100%" height={300}>
+                    <BarChart
+                        data={chartData}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                        <XAxis type="number" hide />
+                        <YAxis 
+                            dataKey="fullName" 
+                            type="category" 
+                            width={120} 
+                            tick={{fontSize: 12}} 
+                        />
+                        <Tooltip 
+                            cursor={{fill: 'transparent'}}
+                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        />
+                        <Bar dataKey="totalAssignments" name="Assegnazioni" barSize={20} radius={[0, 10, 10, 0]}>
+                             {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={index === 0 ? '#DE1F3C' : '#555'} />
+                             ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+
+        <h2>Dettaglio per Utente (Ordinato per Priorità)</h2>
+        <p className="subtitle">Chi ha una probabilità più alta appare per primo.</p>
+        
         <div className="stats-grid">
-          {statsData.map((userData) => {
-            // --- MODIFICA QUI: Calcolo della Probabilità Inversa ---
-            // 1 - successRate ci dà la "sfortuna", che equivale alla priorità futura.
-            // Esempio: Tasso storico 0.2 (20%) -> Priorità 0.8 (80%)
+          {userStats.map((userData) => {
             const probabilityPercent = ((1 - userData.user.successRate) * 100).toFixed(0);
-            // ------------------------------------------------------
 
             return (
               <div 
@@ -154,28 +203,15 @@ const StatsPage = () => {
                   <UserAvatar user={userData.user} />
                   <div className="user-info">
                     <span className="user-name">{userData.user.firstName} {userData.user.lastName}</span>
-                    
-                    {/* Visualizzazione aggiornata */}
                     <span className="user-priority-rate">
-                      Probabilità di assegnazione: <strong>{probabilityPercent}%</strong>
+                      Probabilità: <strong>{probabilityPercent}%</strong>
                     </span>
-                    
-                    <span className="total-bookings">{userData.totalAssignments} assegnazioni ({filterText})</span>
+                    <span className="total-bookings">{userData.totalAssignments} totali</span>
                   </div>
                 </div>
+                
                 <div className="card-body">
-                  {userData.totalAssignments > 0 ? (
-                    <ul className="parking-counts-list">
-                      {userData.parkingCounts.map(([spaceName, count]) => (
-                        <li key={spaceName}>
-                          <span>{spaceName || 'Sconosciuto'}</span>
-                          <span className="count-badge">{count}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="no-bookings-message">Nessuna assegnazione trovata in questo periodo.</p>
-                  )}
+                  <p className="click-details-text">Clicca per i dettagli</p>
                 </div>
               </div>
             );

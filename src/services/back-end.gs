@@ -219,6 +219,48 @@ function isWeekday(date) {
   return day !== 0 && day !== 6;
 }
 
+function getDynamicWindowSize() {
+  const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
+  const tempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY);
+  
+  const today = normalizeDate(new Date());
+
+  // 1. Identifica i posti non fissi che hanno disponibilità future
+  // Creiamo un Set di ID per evitare duplicati e rendere la ricerca veloce
+  const spacesWithFutureAvailability = new Set(
+    tempAvail
+      .filter(avail => normalizeDate(avail.availableDate).getTime() >= today.getTime())
+      .map(avail => avail.parkingSpaceId)
+  );
+
+  // 2. Calcola la capacità totale attiva
+  // Un posto conta se è FISSO (true) OPPURE se ha disponibilità future
+  const activeSpaces = allSpaces.filter(space => 
+    space.isFixed === true || spacesWithFutureAvailability.has(space.id)
+  );
+
+  const totalCapacity = activeSpaces.length;
+
+  if (totalCapacity === 0) return 30; // Fallback di sicurezza
+
+  let days = 30;
+  
+  // < 2 posti: Finestra BREVE (7 gg) -> Alta rotazione
+  // 2 - 3 posti: Finestra MEDIA (15 gg)
+  // > 3 posti: Finestra LUNGA (30 gg) -> Bassa rotazione
+  
+  if (totalCapacity < 2) {
+    days = 7;
+  } else if (totalCapacity <= 3) {
+    days = 15;
+  } else {
+    days = 30;
+  }
+  
+  logToClient(`Finestra dinamica: ${totalCapacity} posti -> ${days} giorni.`);
+  return days;
+}
+
 // =================================================================
 // AUTENTICAZIONE
 // =================================================================
@@ -422,67 +464,23 @@ function getUsersWithPriority() {
   const allUsers = getSheetAsJSON(CONFIG.SHEETS.USERS);
   const history = getSheetAsJSON(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
-
+  
   const today = normalizeDate(new Date());
+  const tomorrow = new Date(today.getTime() + 86400000);
   
-  // Calcoliamo "domani" per includere le assegnazioni appena fatte
-  const tomorrow = new Date(today.getTime() + (24 * 60 * 60 * 1000));
+  const lookBackDays = getDynamicWindowSize(); // <-- Dinamico
+  const windowStartDate = new Date(tomorrow.getTime() - (lookBackDays * 86400000));
   
-  // La finestra temporale parte da DOMANI e va indietro di 30 giorni
-  // Esempio: Se domani è il 31, la finestra va dal 1 al 31.
-  const windowStartDate = new Date(tomorrow.getTime() - (30 * 24 * 60 * 60 * 1000)); 
-
-  // Filtriamo i dati una sola volta usando la nuova finestra (fino a domani)
-  const recentHistory = history.filter(h => {
-      const hDate = normalizeDate(h.assignmentDate);
-      return hDate >= windowStartDate && hDate <= tomorrow;
-  });
+  const recentHistory = history.filter(h => { const d = normalizeDate(h.assignmentDate); return d >= windowStartDate && d <= tomorrow; });
+  const recentReqs = allRequests.filter(r => { const d = normalizeDate(r.requestedDate); return d >= windowStartDate && d <= tomorrow && (r.status === 'assigned' || r.status === 'not_assigned'); });
   
-  const recentProcessedRequests = allRequests.filter(r => {
-    const reqDate = normalizeDate(r.requestedDate);
-    // Consideriamo richieste processate da 30 giorni fa fino a domani
-    return reqDate >= windowStartDate && reqDate <= tomorrow &&
-           (r.status === 'assigned' || r.status === 'not_assigned');
+  return allUsers.map(u => {
+    const userAssigns = recentHistory.filter(h => h.userId === u.id).length;
+    const userReqs = recentReqs.filter(r => r.userId === u.id).length;
+    u.successRate = userReqs > 0 ? userAssigns / userReqs : 0.0;
+    delete u.password; delete u.salt;
+    return u;
   });
-
-  logToClient(`getUsersWithPriority: Calcolo priorità per ${allUsers.length} utenti (finestra fino a ${formatDate(tomorrow)})...`);
-
-  const usersWithPriority = allUsers.map(user => {
-    // Rimuoviamo dati sensibili
-    delete user.password;
-    delete user.salt;
-    delete user.verificationToken;
-    delete user.resetToken;
-    delete user.resetTokenExpiry;
-
-    const userId = user.id;
-
-    // Calcoliamo il tasso di successo
-    const userRecentAssignments = recentHistory.filter(h => h.userId === userId).length;
-    const userRecentProcessedRequests = recentProcessedRequests.filter(r => r.userId === userId).length;
-
-    let successRate = 1.0; // Default: priorità bassa (100%)
-
-    if (userRecentProcessedRequests > 0) {
-      successRate = userRecentAssignments / userRecentProcessedRequests;
-    } else {
-      // Priorità alta (0%) per nuovi utenti o chi non ha richieste processate recenti
-      successRate = 0.0;
-    }
-    
-    // Aggiungiamo il tasso di successo all'oggetto utente
-    user.successRate = successRate; // Questo è il valore che useremo per ordinare (0.0 - 1.0)
-    
-    // Aggiungiamo anche i conteggi se vogliamo mostrarli
-    user.recentAssignments = userRecentAssignments;
-    user.recentRequests = userRecentProcessedRequests;
-    
-    // logToClient(`Utente ${userId}: Tasso Successo ${successRate} (${userRecentAssignments}/${userRecentProcessedRequests})`);
-
-    return user;
-  });
-
-  return usersWithPriority;
 }
 
 // =================================================================
@@ -1173,58 +1171,23 @@ function getAvailableSpacesForDate(date) {
  * Chi ha un tasso di successo più basso (più rifiuti) ha priorità più alta.
  */
 function calculatePriority(requests) {
-  // Abbiamo bisogno di entrambi i fogli per questa logica
   const history = getSheetAsJSON(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS); 
-  
   const today = normalizeDate(new Date());
-  // Definiamo la nostra finestra temporale (es. 30 giorni fa)
-  const windowStartDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)); 
   
-  // 1. Filtriamo lo storico delle ASSEGNAZIONI solo per gli ultimi 30 giorni
+  const lookBackDays = getDynamicWindowSize(); // <-- Dinamico
+  const windowStartDate = new Date(today.getTime() - (lookBackDays * 86400000));
+  
   const recentHistory = history.filter(h => normalizeDate(h.assignmentDate) >= windowStartDate);
+  const recentReqs = allRequests.filter(r => { const d = normalizeDate(r.requestedDate); return d >= windowStartDate && d <= today && (r.status === 'assigned' || r.status === 'not_assigned'); });
   
-  // 2. Filtriamo lo storico delle RICHIESTE PROCESSATE (concluse) negli ultimi 30 giorni
-  const recentProcessedRequests = allRequests.filter(r => {
-    const reqDate = normalizeDate(r.requestedDate);
-    // Consideriamo solo le richieste passate (o oggi) che hanno avuto un esito
-    return reqDate >= windowStartDate && reqDate <= today &&
-           (r.status === 'assigned' || r.status === 'not_assigned');
-  });
-  
-  logToClient(`CalculatePriority (Tasso Successo): Trovate ${recentHistory.length} assegnazioni e ${recentProcessedRequests.length} richieste processate negli ultimi 30 giorni.`);
-
-  // 3. Calcoliamo il tasso di successo per ogni utente nella richiesta attuale
-  return requests
-    .map(request => {
-      const userId = request.userId;
-      
-      // Conteggio assegnazioni recenti per questo utente
-      const userRecentAssignments = recentHistory.filter(h => h.userId === userId).length;
-      
-      // Conteggio richieste processate recenti per questo utente
-      const userRecentProcessedRequests = recentProcessedRequests.filter(r => r.userId === userId).length;
-
-      let successRate = 1.0; // Default: 100% (priorità più bassa)
-      
-      if (userRecentProcessedRequests > 0) {
-        // Calcola il tasso di successo
-        successRate = userRecentAssignments / userRecentProcessedRequests;
-      } else {
-        // Se l'utente non ha richieste processate negli ultimi 30 giorni 
-        // (es. è un nuovo utente o torna dopo molto tempo), 
-        // gli diamo la priorità massima (tasso 0%).
-        successRate = 0.0; 
-      }
-      
-      logToClient(`CalculatePriority: Utente ${userId} - Assegnazioni=${userRecentAssignments}, Richieste=${userRecentProcessedRequests}, Tasso Successo (Priorità)=${successRate}`);
-
-      return {
-        ...request,
-        priority: successRate // La priorità è il tasso di successo
-      };
-    })
-    .sort((a, b) => a.priority - b.priority || Math.random() - 0.5); // Ordina per tasso crescente (0% vince)
+  return requests.map(request => {
+    const userId = request.userId;
+    const userAssigns = recentHistory.filter(h => h.userId === userId).length;
+    const userReqs = recentReqs.filter(r => r.userId === userId).length;
+    const successRate = userReqs > 0 ? userAssigns / userReqs : 0.0;
+    return { ...request, priority: successRate };
+  }).sort((a, b) => a.priority - b.priority || Math.random() - 0.5);
 }
 
 function assignParking(request, space, recordInHistory) {
@@ -1329,7 +1292,7 @@ function cancelAssignmentAndReassign(payload) {
   // Un posto è "riassegnabile" se:
   // 1. Esiste nel DB
   // 2. E (NON è fisso OPPURE è fisso ma è stato reso temporaneamente disponibile per oggi)
-  const isReassignable = spaceObj && (spaceObj.isFixed === false || tempAvail === true);
+  const isReassignable = spaceObj && (spaceObj.isFixed === true || tempAvail === true);
   
   let reassigned = false;
   
