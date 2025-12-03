@@ -3,7 +3,7 @@ import { callApi } from '../services/api';
 import { getTextColor } from '../utils/colors';
 import UserAssignmentsModal from '../components/UserAssignmentsModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { FaTrophy, FaCalendarCheck, FaChartLine } from 'react-icons/fa';
+import { FaTrophy, FaCalendarCheck, FaChartLine, FaInfoCircle } from 'react-icons/fa';
 import './StatsPage.css';
 
 const UserAvatar = ({ user }) => {
@@ -30,12 +30,11 @@ const StatsPage = () => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        // Recuperiamo tutto: storico, utenti, spazi E richieste (per il nuovo KPI)
         const [history, users, spaces, requests] = await Promise.all([
           callApi('getAssignmentHistory'),
           callApi('getUsersWithPriority'), 
           callApi('getParkingSpaces'),
-          callApi('getRequests', {}) // Recupera tutte le richieste per il KPI "Giorno Record"
+          callApi('getRequests', {})
         ]);
         setAllData({ history, users, spaces, requests });
       } catch (err) {
@@ -49,12 +48,19 @@ const StatsPage = () => {
 
   const spaceMap = useMemo(() => new Map(allData.spaces.map(s => [s.id, s.number])), [allData.spaces]);
 
+  // Recupera la finestra temporale dal primo utente (è uguale per tutti)
+  const priorityWindowDays = useMemo(() => {
+      if (allData.users && allData.users.length > 0) {
+          return allData.users[0].windowDays || 30;
+      }
+      return 30;
+  }, [allData.users]);
+
   // --- ELABORAZIONE DATI ---
   const { userStats, kpiData, chartData } = useMemo(() => {
     const { history, users, requests } = allData;
     if (!users.length) return { userStats: [], kpiData: {}, chartData: [] };
 
-    // 1. Calcolo statistiche per utente (Card + Grafico)
     const stats = users.map(user => {
       const userAssignments = history.filter(h => h.userId === user.id);
       const totalAssignments = userAssignments.length;
@@ -81,13 +87,10 @@ const StatsPage = () => {
       .sort((a, b) => b.totalAssignments - a.totalAssignments)
       .slice(0, 5);
 
-    // 3. Calcolo KPI (Indicatori Chiave)
     const totalAssignmentsOverall = history.length;
     const topUser = sortedForChart.length > 0 ? sortedForChart[0] : null;
     
-    // --- MODIFICA KPI: Giorno con più RICHIESTE (non assegnazioni) ---
     const dayCounts = requests.reduce((acc, curr) => {
-        // Contiamo le richieste attive (escludiamo solo quelle cancellate dall'utente)
         if (curr.status !== 'cancelled_by_user') {
             const dateStr = new Date(curr.requestedDate).toLocaleDateString();
             acc[dateStr] = (acc[dateStr] || 0) + 1;
@@ -96,7 +99,6 @@ const StatsPage = () => {
     }, {});
     
     const busiestDateEntry = Object.entries(dayCounts).reduce((a, b) => a[1] > b[1] ? a : b, ["N/D", 0]);
-    // -----------------------------------------------------------------
 
     return {
         userStats: sortedForCards,
@@ -127,6 +129,7 @@ const StatsPage = () => {
       <div className="stats-container">
         <h1>Statistiche Generali</h1>
         
+        {/* ... KPI GRID ... */}
         <div className="kpi-grid">
             <div className="kpi-card">
                 <div className="kpi-icon blue"><FaChartLine /></div>
@@ -141,7 +144,7 @@ const StatsPage = () => {
                 <div className="kpi-content">
                     <h3>Utente più Attivo</h3>
                     <p className="small-text">{kpiData.topUser}</p>
-                    <span>con {kpiData.topUserCount} parcheggi assegnati</span>
+                    <span>con {kpiData.topUserCount} parcheggi</span>
                 </div>
             </div>
             <div className="kpi-card">
@@ -154,6 +157,7 @@ const StatsPage = () => {
             </div>
         </div>
 
+        {/* ... CHART ... */}
         <div className="chart-section">
             <h2>Top 5 Utenti per Utilizzo</h2>
             <div className="chart-wrapper">
@@ -165,16 +169,8 @@ const StatsPage = () => {
                     >
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                         <XAxis type="number" hide />
-                        <YAxis 
-                            dataKey="fullName" 
-                            type="category" 
-                            width={120} 
-                            tick={{fontSize: 12}} 
-                        />
-                        <Tooltip 
-                            cursor={{fill: 'transparent'}}
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                        />
+                        <YAxis dataKey="fullName" type="category" width={120} tick={{fontSize: 12}} />
+                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                         <Bar dataKey="totalAssignments" name="Assegnazioni" barSize={20} radius={[0, 10, 10, 0]}>
                              {chartData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={index === 0 ? '#DE1F3C' : '#555'} />
@@ -185,12 +181,26 @@ const StatsPage = () => {
             </div>
         </div>
 
-        <h2>Dettaglio per Utente (Ordinato per Priorità)</h2>
-        <p className="subtitle">Chi ha una probabilità più alta appare per primo.</p>
+        <h2>Dettaglio Priorità</h2>
+        
+        {/* --- MODIFICA: Info Finestra Temporale --- */}
+        <div className="priority-info-banner">
+             <FaInfoCircle />
+             <p>
+                La classifica qui sotto determina chi avrà priorità per le future assegnazioni. 
+                Il calcolo si basa sul <strong>tasso di successo</strong> negli ultimi <strong>{priorityWindowDays} giorni</strong> (Finestra Dinamica). 
+                Chi ha ottenuto meno parcheggi rispetto alle richieste fatte, ha una probabilità più alta.
+             </p>
+        </div>
+        {/* ---------------------------------------- */}
         
         <div className="stats-grid">
           {userStats.map((userData) => {
             const probabilityPercent = ((1 - userData.user.successRate) * 100).toFixed(0);
+            
+            // Dati per il dettaglio
+            const recentReqs = userData.user.recentRequests || 0;
+            const recentAssigns = userData.user.recentAssignments || 0;
 
             return (
               <div 
@@ -206,12 +216,24 @@ const StatsPage = () => {
                     <span className="user-priority-rate">
                       Probabilità: <strong>{probabilityPercent}%</strong>
                     </span>
-                    <span className="total-bookings">{userData.totalAssignments} totali</span>
                   </div>
                 </div>
                 
+                {/* --- MODIFICA: Dettagli Calcolo --- */}
+                <div className="card-priority-details">
+                    <div className="priority-row">
+                        <span>Richieste (ultimi {priorityWindowDays}gg):</span>
+                        <strong>{recentReqs}</strong>
+                    </div>
+                    <div className="priority-row">
+                        <span>Assegnati (ultimi {priorityWindowDays}gg):</span>
+                        <strong>{recentAssigns}</strong>
+                    </div>
+                </div>
+                {/* --------------------------------- */}
+
                 <div className="card-body">
-                  <p className="click-details-text">Clicca per i dettagli</p>
+                  <p className="click-details-text">Clicca per storico completo</p>
                 </div>
               </div>
             );

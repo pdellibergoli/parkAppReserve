@@ -457,8 +457,6 @@ function updateUserProfile(payload) {
 
 /**
  * Recupera tutti gli utenti e calcola il loro tasso di successo (priorità)
- * basato sugli ultimi 30 giorni, INCLUDENDO l'esito delle richieste per domani
- * (se già processate).
  */
 function getUsersWithPriority() {
   const allUsers = getSheetAsJSON(CONFIG.SHEETS.USERS);
@@ -468,17 +466,45 @@ function getUsersWithPriority() {
   const today = normalizeDate(new Date());
   const tomorrow = new Date(today.getTime() + 86400000);
   
-  const lookBackDays = getDynamicWindowSize(); // <-- Dinamico
+  // Calcolo dinamico della finestra
+  const lookBackDays = getDynamicWindowSize(); 
   const windowStartDate = new Date(tomorrow.getTime() - (lookBackDays * 86400000));
   
-  const recentHistory = history.filter(h => { const d = normalizeDate(h.assignmentDate); return d >= windowStartDate && d <= tomorrow; });
-  const recentReqs = allRequests.filter(r => { const d = normalizeDate(r.requestedDate); return d >= windowStartDate && d <= tomorrow && (r.status === 'assigned' || r.status === 'not_assigned'); });
+  logToClient(`getUsersWithPriority: Finestra di ${lookBackDays} giorni.`);
+
+  const recentHistory = history.filter(h => { 
+      const d = normalizeDate(h.assignmentDate); 
+      return d >= windowStartDate && d <= tomorrow; 
+  });
+  
+  const recentReqs = allRequests.filter(r => { 
+      const d = normalizeDate(r.requestedDate); 
+      return d >= windowStartDate && d <= tomorrow && (r.status === 'assigned' || r.status === 'not_assigned'); 
+  });
   
   return allUsers.map(u => {
-    const userAssigns = recentHistory.filter(h => h.userId === u.id).length;
-    const userReqs = recentReqs.filter(r => r.userId === u.id).length;
-    u.successRate = userReqs > 0 ? userAssigns / userReqs : 0.0;
-    delete u.password; delete u.salt;
+    const userId = u.id;
+    const userRecentAssignments = recentHistory.filter(h => h.userId === userId).length;
+    const userRecentProcessedRequests = recentReqs.filter(r => r.userId === userId).length;
+
+    let successRate = 1.0; 
+    if (userRecentProcessedRequests > 0) {
+      successRate = userRecentAssignments / userRecentProcessedRequests;
+    } else {
+      successRate = 0.0;
+    }
+    
+    u.successRate = successRate;
+    u.recentAssignments = userRecentAssignments; 
+    u.recentRequests = userRecentProcessedRequests; 
+    u.windowDays = lookBackDays;
+    
+    delete u.password; 
+    delete u.salt;
+    delete u.verificationToken;
+    delete u.resetToken;
+    delete u.resetTokenExpiry;
+    
     return u;
   });
 }

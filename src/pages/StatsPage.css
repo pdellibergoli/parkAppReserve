@@ -196,3 +196,51 @@ h2 {
     font-size: 0.9rem;
     text-align: center;
 }
+
+.priority-info-banner {
+  background-color: #fff3cd; /* Giallo chiaro */
+  color: #856404;
+  border: 1px solid #ffeeba;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.priority-info-banner svg {
+  font-size: 1.2rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* --- DETTAGLI PRIORITÀ NELLA CARD --- */
+.card-priority-details {
+    background-color: var(--bg-color-hover);
+    border-radius: 6px;
+    padding: 0.8rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+}
+
+.priority-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    color: var(--text-color-secondary);
+}
+.priority-row:last-child {
+    margin-bottom: 0;
+}
+.priority-row strong {
+    color: var(--text-color);
+}
+
+/* Modifica leggermente total-bookings se non serve più lì */
+.total-bookings {
+    display: none; /* Nascondiamolo dall'header se ridondante o spostiamolo */
+}
