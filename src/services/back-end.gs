@@ -11,12 +11,12 @@ const CONFIG = {
     TEMPORARY_AVAILABILITY: "TemporaryAvailability",
     COMMUNICATIONS: "Communications"
   },
-  BASE_URL: "https.park-app-reserve.vercel.app/", // URL Vercel corretto
+  BASE_URL: "https://park-app-reserve.vercel.app/",
   EMAIL: {
     FROM_NAME: "Park app",
     REPLY_TO: "noreply@park-app.com"
   },
-  TOKEN_EXPIRY: 3600000, // 1 ora in millisecondi
+  TOKEN_EXPIRY: 3600000,
   ASSIGNMENT_HOUR: 19, // Ora di assegnazione automatica
   LOG_LEVEL: "DEBUG"
 };
@@ -225,26 +225,20 @@ function getDynamicWindowSize() {
   
   const today = normalizeDate(new Date());
 
-  // 1. Identifica i posti non fissi che hanno disponibilità future
-  // Creiamo un Set di ID per evitare duplicati e rendere la ricerca veloce
   const spacesWithFutureAvailability = new Set(
     tempAvail
       .filter(avail => normalizeDate(avail.availableDate).getTime() >= today.getTime())
       .map(avail => avail.parkingSpaceId)
   );
 
-  // 2. Calcola la capacità totale attiva
-  // Un posto conta se è FISSO (true) OPPURE se ha disponibilità future
   const activeSpaces = allSpaces.filter(space => 
     space.isFixed === true || spacesWithFutureAvailability.has(space.id)
   );
 
   const totalCapacity = activeSpaces.length;
-
-  if (totalCapacity === 0) return 30; // Fallback di sicurezza
+  if (totalCapacity === 0) return 30; 
 
   let days = 30;
-  
   // < 2 posti: Finestra BREVE (7 gg) -> Alta rotazione
   // 2 - 3 posti: Finestra MEDIA (15 gg)
   // > 3 posti: Finestra LUNGA (30 gg) -> Bassa rotazione
@@ -257,8 +251,32 @@ function getDynamicWindowSize() {
     days = 30;
   }
   
-  logToClient(`Finestra dinamica: ${totalCapacity} posti -> ${days} giorni.`);
+  logToClient(`Finestra dinamica: ${totalCapacity} posti -> ${days} giorni (ATTIVI).`);
   return days;
+}
+
+function getStartDateFromActiveDays(history, daysCount) {
+  const uniqueDatesSet = new Set();
+  history.forEach(h => {
+    uniqueDatesSet.add(normalizeDate(h.assignmentDate).getTime());
+  });
+  
+  const sortedUniqueDates = Array.from(uniqueDatesSet).sort((a, b) => b - a);
+  
+  logToClient(`Trovati ${sortedUniqueDates.length} giorni attivi nello storico.`);
+  
+  // L'indice target è daysCount - 1.
+  // Esempio: Vogliamo 14 giorni. Indice 13.
+  const targetIndex = Math.max(0, daysCount - 1);
+
+  if (sortedUniqueDates.length === 0) {
+    return new Date(new Date().getTime() - (targetIndex * 86400000));
+  }
+
+  const actualIndex = Math.min(targetIndex, sortedUniqueDates.length - 1);
+  const startDateTimestamp = sortedUniqueDates[actualIndex];
+  
+  return new Date(startDateTimestamp);
 }
 
 // =================================================================
@@ -466,45 +484,29 @@ function getUsersWithPriority() {
   const today = normalizeDate(new Date());
   const tomorrow = new Date(today.getTime() + 86400000);
   
-  // Calcolo dinamico della finestra
   const lookBackDays = getDynamicWindowSize(); 
-  const windowStartDate = new Date(tomorrow.getTime() - (lookBackDays * 86400000));
+  logToClient(`lookBackDays ${lookBackDays}`)
+  // --- CALCOLO DATA INIZIO BASATO SU GIORNI ATTIVI ---
+  // Passiamo l'intero storico per trovare i giorni effettivamente utilizzati
+  const windowStartDate = getStartDateFromActiveDays(history, lookBackDays);
+  // ---------------------------------------------------
   
-  logToClient(`getUsersWithPriority: Finestra di ${lookBackDays} giorni.`);
-
-  const recentHistory = history.filter(h => { 
-      const d = normalizeDate(h.assignmentDate); 
-      return d >= windowStartDate && d <= tomorrow; 
-  });
+  logToClient(`getUsersWithPriority: Finestra inizia il ${formatDate(windowStartDate)} (${lookBackDays} giorni attivi).`);
   
-  const recentReqs = allRequests.filter(r => { 
-      const d = normalizeDate(r.requestedDate); 
-      return d >= windowStartDate && d <= tomorrow && (r.status === 'assigned' || r.status === 'not_assigned'); 
-  });
+  const recentHistory = history.filter(h => { const d = normalizeDate(h.assignmentDate); return d >= windowStartDate && d <= tomorrow; });
+  const recentReqs = allRequests.filter(r => { const d = normalizeDate(r.requestedDate); return d >= windowStartDate && d <= tomorrow && (r.status === 'assigned' || r.status === 'not_assigned'); });
   
   return allUsers.map(u => {
     const userId = u.id;
-    const userRecentAssignments = recentHistory.filter(h => h.userId === userId).length;
-    const userRecentProcessedRequests = recentReqs.filter(r => r.userId === userId).length;
+    const userAssigns = recentHistory.filter(h => h.userId === userId).length;
+    const userReqs = recentReqs.filter(r => r.userId === userId).length;
+    u.successRate = userReqs > 0 ? userAssigns / userReqs : 0.0;
+    
+    u.windowDays = lookBackDays; // Per la UI
+    u.recentAssignments = userAssigns;
+    u.recentRequests = userReqs;
 
-    let successRate = 1.0; 
-    if (userRecentProcessedRequests > 0) {
-      successRate = userRecentAssignments / userRecentProcessedRequests;
-    } else {
-      successRate = 0.0;
-    }
-    
-    u.successRate = successRate;
-    u.recentAssignments = userRecentAssignments; 
-    u.recentRequests = userRecentProcessedRequests; 
-    u.windowDays = lookBackDays;
-    
-    delete u.password; 
-    delete u.salt;
-    delete u.verificationToken;
-    delete u.resetToken;
-    delete u.resetTokenExpiry;
-    
+    delete u.password; delete u.salt; delete u.verificationToken; delete u.resetToken; delete u.resetTokenExpiry;
     return u;
   });
 }
@@ -997,7 +999,8 @@ function fulfillParkingRequest(payload) {
  * Accetta un 'actorId' per notificare gli utenti se la modifica è fatta da un admin.
  */
 function cancelMultipleRequests(payload) {
-  const { requestIds, actorId } = payload; // Accetta actorId
+  const { requestIds, actorId } = payload;
+  // Accetta actorId
   if (!requestIds || !Array.isArray(requestIds) || requestIds.length === 0) {
     throw new Error("Nessun ID di richiesta fornito.");
   }
@@ -1006,10 +1009,13 @@ function cancelMultipleRequests(payload) {
   let processedCount = 0;
   let errors = [];
   const requestsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
-
+  
   uniqueRequestIds.forEach(reqId => {
     try {
+      // Ricarichiamo i dati ogni volta per essere sicuri di avere l'indice di riga aggiornato
+      // (in caso di cancellazioni multiple che fanno scalare le righe)
       const result = findRowByColumn(CONFIG.SHEETS.REQUESTS, 'requestId', reqId);
+      
       if (!result) {
         logToClient(`Richiesta ${reqId} non trovata, saltata.`);
         return; 
@@ -1034,21 +1040,23 @@ function cancelMultipleRequests(payload) {
       const notifyUser = actorId && actorId !== userId;
 
       if (status === 'pending') {
-        if (notifyUser) sendAdminCancellationEmail(userId, requestDate); // <-- INVIA EMAIL
+        if (notifyUser) sendAdminCancellationEmail(userId, requestDate);
+        // <-- INVIA EMAIL
         requestsSheet.deleteRow(result.row);
         logToClient(`Richiesta ${reqId} (stato: pending) eliminata.`);
         processedCount++;
       } else if (status === 'not_assigned') {
-        if (notifyUser) sendAdminCancellationEmail(userId, requestDate); // <-- INVIA EMAIL
+        if (notifyUser) sendAdminCancellationEmail(userId, requestDate);
+        // <-- INVIA EMAIL
         updateCell(requestsSheet, result.row, 'status', 'cancelled_by_user', result.headers);
         logToClient(`Richiesta ${reqId} (stato: not_assigned) aggiornata a cancelled_by_user.`);
         processedCount++;
       } else if (status === 'assigned') {
-        if (notifyUser) sendAdminCancellationEmail(userId, requestDate); // <-- INVIA EMAIL
+        if (notifyUser) sendAdminCancellationEmail(userId, requestDate);
+        // <-- INVIA EMAIL
         
         // Passiamo l'actorId anche alla funzione di riassegnazione
-        cancelAssignmentAndReassign({ requestId: reqId, actorId: actorId }); 
-        
+        cancelAssignmentAndReassign({ requestId: reqId, actorId: actorId });
         logToClient(`Assegnazione per richiesta ${reqId} annullata (tramite cancelAssignmentAndReassign).`);
         processedCount++;
       } else {
@@ -1061,6 +1069,10 @@ function cancelMultipleRequests(payload) {
       errors.push(errorMsg);
     }
   });
+
+  // --- MODIFICA IMPORTANTE: FORZA IL SALVATAGGIO ---
+  SpreadsheetApp.flush(); 
+  // ------------------------------------------------
 
   if (processedCount === 0 && errors.length === 0 && uniqueRequestIds.length > 0) {
      throw new Error("Nessuna delle richieste selezionate poteva essere processata (potrebbero essere passate o già annullate).");
@@ -1201,8 +1213,11 @@ function calculatePriority(requests) {
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS); 
   const today = normalizeDate(new Date());
   
-  const lookBackDays = getDynamicWindowSize(); // <-- Dinamico
-  const windowStartDate = new Date(today.getTime() - (lookBackDays * 86400000));
+  const lookBackDays = getDynamicWindowSize();
+
+  // --- CALCOLO DATA INIZIO BASATO SU GIORNI ATTIVI ---
+  const windowStartDate = getStartDateFromActiveDays(history, lookBackDays);
+  // ---------------------------------------------------
   
   const recentHistory = history.filter(h => normalizeDate(h.assignmentDate) >= windowStartDate);
   const recentReqs = allRequests.filter(r => { const d = normalizeDate(r.requestedDate); return d >= windowStartDate && d <= today && (r.status === 'assigned' || r.status === 'not_assigned'); });
