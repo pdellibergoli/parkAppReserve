@@ -220,7 +220,7 @@ function isWeekday(date) {
 }
 
 function getDynamicWindowSize() {
-  const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
+  /*const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
   const tempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY);
   
   const today = normalizeDate(new Date());
@@ -236,22 +236,22 @@ function getDynamicWindowSize() {
   );
 
   const totalCapacity = activeSpaces.length;
-  if (totalCapacity === 0) return 30; 
+  if (totalCapacity === 0) return 30;*/
 
   let days = 30;
   // < 2 posti: Finestra BREVE (7 gg) -> Alta rotazione
   // 2 - 3 posti: Finestra MEDIA (15 gg)
   // > 3 posti: Finestra LUNGA (30 gg) -> Bassa rotazione
   
-  if (totalCapacity < 2) {
-    days = 7;
+  /*if (totalCapacity < 2) {
+    days = 30;
   } else if (totalCapacity <= 3) {
     days = 15;
   } else {
     days = 30;
-  }
+  }*/
   
-  logToClient(`Finestra dinamica: ${totalCapacity} posti -> ${days} giorni (ATTIVI).`);
+  //logToClient(`Finestra dinamica: ${totalCapacity} posti -> ${days} giorni (ATTIVI).`);
   return days;
 }
 
@@ -1000,7 +1000,7 @@ function fulfillParkingRequest(payload) {
  */
 function cancelMultipleRequests(payload) {
   const { requestIds, actorId } = payload;
-  // Accetta actorId
+  
   if (!requestIds || !Array.isArray(requestIds) || requestIds.length === 0) {
     throw new Error("Nessun ID di richiesta fornito.");
   }
@@ -1012,8 +1012,7 @@ function cancelMultipleRequests(payload) {
   
   uniqueRequestIds.forEach(reqId => {
     try {
-      // Ricarichiamo i dati ogni volta per essere sicuri di avere l'indice di riga aggiornato
-      // (in caso di cancellazioni multiple che fanno scalare le righe)
+      // Ricarichiamo la riga ogni volta per evitare errori di indice se ne cancelliamo diverse
       const result = findRowByColumn(CONFIG.SHEETS.REQUESTS, 'requestId', reqId);
       
       if (!result) {
@@ -1023,7 +1022,7 @@ function cancelMultipleRequests(payload) {
 
       const status = result.data[result.headers.indexOf('status')];
       const requestDate = normalizeDate(result.data[result.headers.indexOf('requestedDate')]);
-      const userId = result.data[result.headers.indexOf('userId')]; // Proprietario
+      const userId = result.data[result.headers.indexOf('userId')];
       const today = normalizeDate(new Date());
 
       if (requestDate < today) {
@@ -1036,26 +1035,22 @@ function cancelMultipleRequests(payload) {
           return;
       }
 
-      // Invia email solo se l'attore è un admin che agisce su un altro utente
       const notifyUser = actorId && actorId !== userId;
 
       if (status === 'pending') {
         if (notifyUser) sendAdminCancellationEmail(userId, requestDate);
-        // <-- INVIA EMAIL
-        requestsSheet.deleteRow(result.row);
+        requestsSheet.deleteRow(result.row); // Cancella fisicamente la riga
         logToClient(`Richiesta ${reqId} (stato: pending) eliminata.`);
         processedCount++;
       } else if (status === 'not_assigned') {
         if (notifyUser) sendAdminCancellationEmail(userId, requestDate);
-        // <-- INVIA EMAIL
         updateCell(requestsSheet, result.row, 'status', 'cancelled_by_user', result.headers);
         logToClient(`Richiesta ${reqId} (stato: not_assigned) aggiornata a cancelled_by_user.`);
         processedCount++;
       } else if (status === 'assigned') {
         if (notifyUser) sendAdminCancellationEmail(userId, requestDate);
-        // <-- INVIA EMAIL
         
-        // Passiamo l'actorId anche alla funzione di riassegnazione
+        // Per le assegnate, annulla l'assegnazione e prova a riassegnare il posto
         cancelAssignmentAndReassign({ requestId: reqId, actorId: actorId });
         logToClient(`Assegnazione per richiesta ${reqId} annullata (tramite cancelAssignmentAndReassign).`);
         processedCount++;
@@ -1070,9 +1065,9 @@ function cancelMultipleRequests(payload) {
     }
   });
 
-  // --- MODIFICA IMPORTANTE: FORZA IL SALVATAGGIO ---
+  // --- MODIFICA FONDAMENTALE: FORZA IL SALVATAGGIO ---
   SpreadsheetApp.flush(); 
-  // ------------------------------------------------
+  // --------------------------------------------------
 
   if (processedCount === 0 && errors.length === 0 && uniqueRequestIds.length > 0) {
      throw new Error("Nessuna delle richieste selezionate poteva essere processata (potrebbero essere passate o già annullate).");
@@ -1234,11 +1229,11 @@ function calculatePriority(requests) {
 function assignParking(request, space, recordInHistory) {
   updateRequestStatus(request.requestId, 'assigned', space.id, space.number);
 
-  if (recordInHistory) {
+  //if (recordInHistory) {
     const historySheet = SpreadsheetApp.getActiveSpreadsheet()
       .getSheetByName(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
     historySheet.appendRow([request.userId, request.requestedDate, space.id]);
-  }
+  //}
 
   sendSuccessEmail(request.userId, request.requestedDate, space.number);
 }
@@ -1360,13 +1355,13 @@ function cancelAssignmentAndReassign(payload) {
   // --- FINE MODIFICA ---
 
   // 4. RIVALUTA LO STATO FINALE
-  const finalIsOverbooking = checkOverbookingForDate(requestDate);
+  /*const finalIsOverbooking = checkOverbookingForDate(requestDate);
   logToClient(`Stato finale per ${formatDate(requestDate)}: Overbooking? ${finalIsOverbooking}`);
 
   if (!finalIsOverbooking) {
       logToClient("Overbooking risolto per la data. Pulizia dello storico...");
       clearHistoryForDate(requestDate);
-  }
+  }*/
 
   let message = "La tua assegnazione è stata annullata";
   if (reassigned) {
@@ -1455,12 +1450,12 @@ function addTemporaryAvailability(payload) {
   // Controlla se l'aggiunta risolve l'overbooking (logica invariata)
   const isOverbooking = checkOverbookingForDate(targetDate);
 
-  logToClient(`isOverbooking: ${isOverbooking}`);
+  /*logToClient(`isOverbooking: ${isOverbooking}`);
   
   if (!isOverbooking) {
     Logger.log("L'aggiunta del posto ha risolto l'overbooking. Pulizia dello storico.");
     clearHistoryForDate(targetDate);
-  }
+  }*/
 
   // --- INIZIO NUOVA LOGICA PER ASSEGNAZIONE GIORNO STESSO ---
   const today = normalizeDate(new Date());
@@ -1492,15 +1487,17 @@ function addTemporaryAvailability(payload) {
   return { availabilityId: newId, parkingSpaceId: spaceId, availableDate: targetDate };
 }
 
+// --- FUNZIONE DI PULIZIA STORICO AGGIORNATA (Più robusta) ---
 function clearHistoryForDate(date) {
-  const historySheet = SpreadsheetApp.getActiveSpreadsheet()
-    .getSheetByName(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
-  const data = historySheet.getDataRange().getValues();
-  const dateString = normalizeDate(date).toDateString();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
+  const data = sheet.getDataRange().getValues();
+  const targetDateStr = formatDate(date); // Uso confronto stringa dd/MM/yyyy
   
-  for (let i = data.length - 1; i >= 1; i--) {
-    if (normalizeDate(data[i][1]).toDateString() === dateString) {
-      historySheet.deleteRow(i + 1);
+  for(let i=data.length-1; i>=1; i--) {
+    // Colonna 1 è assignmentDate (indice 1)
+    const rowDate = data[i][1];
+    if (rowDate && formatDate(rowDate) === targetDateStr) {
+        sheet.deleteRow(i+1);
     }
   }
 }
@@ -1612,46 +1609,150 @@ function removeTemporaryAvailability(payload) {
 // ===================================================
 
 /**
- * AZIONE ADMIN: Cancella tutte le richieste (pending, not_assigned) per un giorno.
- * Le richieste 'assigned' vengono ignorate.
+ * AZIONE ADMIN: Cancella TUTTE le richieste (pending, not_assigned, assigned) per un giorno.
+ * Se ci sono assegnazioni, pulisce anche lo storico per garantire coerenza.
  */
 function adminCancelAllRequestsForDate(payload) {
   const { date } = payload;
   if (!date) throw new Error("Data non fornita.");
   
-  const targetDate = normalizeDate(date);
-  const dateString = targetDate.toDateString();
-  logToClient(`ADMIN ACTION: Cancellazione richieste per ${dateString}`, "INFO");
+  // Usiamo la stringa formattata per confronto sicuro
+  const targetDateStr = formatDate(date); 
+  const targetDateObj = normalizeDate(date);
+  
+  logToClient(`ADMIN ACTION: Cancellazione TOTALE richieste per ${targetDateStr}`, "INFO");
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
   const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  let deletedCount = 0;
   
-  const usersToNotify = {}; // Per raggruppare le notifiche
+  const headers = data[0].map(h => String(h).trim());
+  const dateColIdx = headers.indexOf('requestedDate');
+  const statusColIdx = headers.indexOf('status');
+  const userColIdx = headers.indexOf('userId');
 
+  let deletedCount = 0;
+  const usersToNotify = {}; 
+
+  // Iteriamo al contrario per cancellare senza sfasare gli indici
   for (let i = data.length - 1; i >= 1; i--) {
     const row = data[i];
-    const requestDate = normalizeDate(row[headers.indexOf('requestedDate')]);
-    const status = row[headers.indexOf('status')];
+    const rowDateRaw = row[dateColIdx];
     
-    if (requestDate.toDateString() === dateString) {
-      if (status === 'pending' || status === 'not_assigned') {
-        const userId = row[headers.indexOf('userId')];
-        usersToNotify[userId] = true; // Segna l'utente per la notifica
+    if (!rowDateRaw) continue;
+    
+    const rowDateStr = formatDate(rowDateRaw);
+    
+    if (rowDateStr === targetDateStr) {
+        const status = String(row[statusColIdx] || '').trim();
+        
+        const userId = row[userColIdx];
+        usersToNotify[userId] = true;
         sheet.deleteRow(i + 1);
         deletedCount++;
+    }
+  }
+  
+  // --- PULIZIA STORICO ---
+  // Cancelliamo lo storico per questa data (necessario se abbiamo cancellato delle assigned)
+  if (deletedCount > 0) {
+      clearHistoryForDate(targetDateObj);
+  }
+  
+  SpreadsheetApp.flush();
+
+  // Notifiche
+  Object.keys(usersToNotify).forEach(userId => {
+    sendAdminCancellationEmail(userId, targetDateObj);
+  });
+  
+  logToClient(`ADMIN ACTION: Eliminate ${deletedCount} richieste per ${targetDateStr}.`);
+  return { message: `Sono state eliminate ${deletedCount} richieste per il ${targetDateStr} e lo storico è stato aggiornato.` };
+}
+
+/**
+ * AZIONE ADMIN: Resetta tutte le assegnazioni E i rifiuti (le porta in 'pending')
+ * e cancella lo storico per quel giorno.
+ */
+function adminResetAssignmentsForDate(payload) {
+  const { date } = payload;
+  if (!date) throw new Error("Data non fornita.");
+  
+  // Usiamo la stringa formattata per un confronto sicuro (es. "11/12/2025")
+  const targetDateStr = formatDate(date);
+  logToClient(`ADMIN ACTION: Reset completo (assegnati/non assegnati) per ${targetDateStr}`, "INFO");
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
+  const data = sheet.getDataRange().getValues();
+  
+  // Puliamo gli header per sicurezza
+  const headers = data[0].map(h => String(h).trim());
+  
+  const dateColIdx = headers.indexOf('requestedDate');
+  const statusColIdx = headers.indexOf('status');
+  const userColIdx = headers.indexOf('userId');
+  const assignedIdColIdx = headers.indexOf('assignedParkingSpaceId');
+  const assignedNumColIdx = headers.indexOf('assignedParkingSpaceNumber');
+
+  if (dateColIdx === -1 || statusColIdx === -1) {
+     throw new Error("Colonne necessarie non trovate nel foglio Requests.");
+  }
+
+  let resetCount = 0;
+  const usersToNotify = {}; // Solo chi aveva il posto
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const rowDateRaw = row[dateColIdx];
+    const statusRaw = String(row[statusColIdx] || '').trim();
+    
+    // Se la data è vuota, salta
+    if (!rowDateRaw) continue;
+
+    // Converti la data della riga in stringa "dd/MM/yyyy"
+    const rowDateStr = formatDate(rowDateRaw);
+    
+    // Confronto stringa vs stringa (Molto più robusto)
+    if (rowDateStr === targetDateStr) {
+      logToClient(`row[userColIdx]: ${row[userColIdx]} - statusRaw: ${statusRaw}`);
+      // --- MODIFICA CRUCIALE: Includiamo anche 'not_assigned' ---
+      if (statusRaw === 'assigned' || statusRaw === 'not_assigned') {
+        const userId = row[userColIdx];
+        
+        // Notifica solo chi aveva il posto (gli viene tolto)
+        // Chi era 'not_assigned' torna in gara senza notifiche (per non creare confusione)
+        if (statusRaw === 'assigned') {
+           usersToNotify[userId] = true; 
+        }
+        
+        // Resetta i campi
+        sheet.getRange(i + 1, statusColIdx + 1).setValue('pending');
+        sheet.getRange(i + 1, assignedIdColIdx + 1).setValue('');
+        sheet.getRange(i + 1, assignedNumColIdx + 1).setValue('');
+        
+        resetCount++;
       }
     }
   }
   
-  // Invia email agli utenti le cui richieste sono state cancellate
-  Object.keys(usersToNotify).forEach(userId => {
-    sendAdminCancellationEmail(userId, targetDate);
-  });
-  
-  logToClient(`ADMIN ACTION: Eliminate ${deletedCount} richieste (pending/not_assigned) per ${dateString}.`);
-  return { message: `Sono state eliminate ${deletedCount} richieste (in attesa o non assegnate) per il ${formatDate(targetDate)}.` };
+  if (resetCount > 0) {
+    logToClient(`ADMIN ACTION: ${resetCount} richieste resettate a 'pending'. Pulizia storico...`);
+    
+    // Per pulire lo storico serve l'oggetto data, usiamo normalizeDate
+    const targetDateObj = normalizeDate(date);
+    clearHistoryForDate(targetDateObj); 
+
+    // Invia email solo a chi ha perso l'assegnazione
+    Object.keys(usersToNotify).forEach(userId => {
+      sendAdminCancellationEmail(userId, date); 
+    });
+  } else {
+    logToClient(`ADMIN ACTION: Nessuna richiesta processata (assigned/not_assigned) trovata per il reset!`);
+  }
+
+  // Fondamentale per salvare le modifiche immediatamente
+  SpreadsheetApp.flush(); 
+
+  return { message: `${resetCount} richieste (assegnate o non) sono state resettate allo stato 'In attesa' per il ${targetDateStr}.` };
 }
 
 /**
@@ -1677,7 +1778,7 @@ function adminResetAssignmentsForDate(payload) {
     const requestDate = normalizeDate(row[headers.indexOf('requestedDate')]);
     const status = row[headers.indexOf('status')];
     
-    if (requestDate.toDateString() === dateString && status === 'assigned') {
+    if (requestDate.toDateString() === dateString && (status === 'assigned' || status === 'not_assigned')) {
       const userId = row[headers.indexOf('userId')];
       usersToNotify[userId] = true; // Segna l'utente per la notifica
       
