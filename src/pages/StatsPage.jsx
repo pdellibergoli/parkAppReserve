@@ -48,7 +48,6 @@ const StatsPage = () => {
 
   const spaceMap = useMemo(() => new Map(allData.spaces.map(s => [s.id, s.number])), [allData.spaces]);
 
-  // Recupera la finestra temporale dal primo utente (è uguale per tutti)
   const priorityWindowDays = useMemo(() => {
       if (allData.users && allData.users.length > 0) {
           return allData.users[0].windowDays || 30;
@@ -56,38 +55,29 @@ const StatsPage = () => {
       return 30;
   }, [allData.users]);
 
-  // --- ELABORAZIONE DATI ---
   const { userStats, kpiData, chartData } = useMemo(() => {
-    const { history, users, requests } = allData;
+    const { users, requests } = allData;
     if (!users.length) return { userStats: [], kpiData: {}, chartData: [] };
 
     const stats = users.map(user => {
-      const userAssignments = history.filter(h => h.userId === user.id);
-      const totalAssignments = userAssignments.length;
+      // Usiamo il dato calcolato dal backend per la coerenza dei 30gg
+      const totalAssignments = user.recentAssignments || 0;
       
-      const parkingCounts = userAssignments.reduce((acc, curr) => {
-        const spaceName = spaceMap.get(curr.parkingSpaceId) || 'Sconosciuto';
-        acc[spaceName] = (acc[spaceName] || 0) + 1;
-        return acc;
-      }, {});
-      const sortedParkingCounts = Object.entries(parkingCounts).sort(([, a], [, b]) => b - a);
+      // Filtriamo le richieste per questo utente per passarle al modale
+      const userRequests = requests.filter(r => r.userId === user.id);
       
       return { 
         user, 
         totalAssignments, 
-        parkingCounts: sortedParkingCounts, 
-        userAssignments,
+        userAssignments: userRequests,
         fullName: `${user.firstName} ${user.lastName || ''}`.trim()
       }; 
     });
 
     const sortedForCards = [...stats].sort((a,b) => a.user.successRate - b.user.successRate);
+    const sortedForChart = [...stats].sort((a, b) => b.totalAssignments - a.totalAssignments).slice(0, 5);
 
-    const sortedForChart = [...stats]
-      .sort((a, b) => b.totalAssignments - a.totalAssignments)
-      .slice(0, 5);
-
-    const totalAssignmentsOverall = history.length;
+    const totalAssignmentsOverall = allData.history.length;
     const topUser = sortedForChart.length > 0 ? sortedForChart[0] : null;
     
     const dayCounts = requests.reduce((acc, curr) => {
@@ -111,9 +101,7 @@ const StatsPage = () => {
             busiestDayCount: busiestDateEntry[1]
         }
     };
-
-  }, [allData, spaceMap]);
-
+  }, [allData]);
 
   const handleOpenDetailsModal = (userData) => {
       setSelectedUserForModal(userData.user);
@@ -128,15 +116,13 @@ const StatsPage = () => {
     <>
       <div className="stats-container">
         <h1>Statistiche Generali</h1>
-        
-        {/* ... KPI GRID ... */}
         <div className="kpi-grid">
             <div className="kpi-card">
                 <div className="kpi-icon blue"><FaChartLine /></div>
                 <div className="kpi-content">
                     <h3>Totale Assegnazioni</h3>
                     <p>{kpiData.total}</p>
-                    <span>dall'inizio dei tempi</span>
+                    <span>storico assoluto</span>
                 </div>
             </div>
             <div className="kpi-card">
@@ -144,33 +130,28 @@ const StatsPage = () => {
                 <div className="kpi-content">
                     <h3>Utente più Attivo</h3>
                     <p className="small-text">{kpiData.topUser}</p>
-                    <span>con {kpiData.topUserCount} parcheggi</span>
+                    <span>con {kpiData.topUserCount} parcheggi (30gg)</span>
                 </div>
             </div>
             <div className="kpi-card">
                 <div className="kpi-icon green"><FaCalendarCheck /></div>
                 <div className="kpi-content">
-                    <h3>Giorno Record (Richieste)</h3>
+                    <h3>Giorno Record</h3>
                     <p className="small-text">{kpiData.busiestDay}</p>
-                    <span>{kpiData.busiestDayCount} richieste inviate</span>
+                    <span>{kpiData.busiestDayCount} richieste</span>
                 </div>
             </div>
         </div>
 
-        {/* ... CHART ... */}
         <div className="chart-section">
-            <h2>Top 5 Utenti per Utilizzo</h2>
+            <h2>Top 5 Utenti (Ultimi 30gg)</h2>
             <div className="chart-wrapper">
                 <ResponsiveContainer width="100%" height={300}>
-                    <BarChart
-                        data={chartData}
-                        layout="vertical"
-                        margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-                    >
+                    <BarChart data={chartData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                         <XAxis type="number" hide />
                         <YAxis dataKey="fullName" type="category" width={120} tick={{fontSize: 12}} />
-                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                        <Tooltip cursor={{fill: 'transparent'}} />
                         <Bar dataKey="totalAssignments" name="Assegnazioni" barSize={20} radius={[0, 10, 10, 0]}>
                              {chartData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={index === 0 ? '#DE1F3C' : '#555'} />
@@ -182,62 +163,32 @@ const StatsPage = () => {
         </div>
 
         <h2>Dettaglio Priorità</h2>
-        
-        {/* --- MODIFICA: Info Finestra Temporale --- */}
         <div className="priority-info-banner">
              <FaInfoCircle />
-             <p>
-                La classifica qui sotto determina chi avrà priorità per le future assegnazioni. 
-                Il calcolo si basa sul <strong>tasso di successo</strong> negli ultimi <strong>{priorityWindowDays} giorni</strong> (Finestra Dinamica). 
-                Chi ha ottenuto meno parcheggi rispetto alle richieste fatte, ha una probabilità più alta.
-             </p>
+             <p>Calcolo basato sugli ultimi <strong>{priorityWindowDays} giorni lavorativi</strong>.</p>
         </div>
-        {/* ---------------------------------------- */}
         
         <div className="stats-grid">
-          {userStats.map((userData) => {
-            const probabilityPercent = ((1 - userData.user.successRate) * 100).toFixed(0);
-            
-            // Dati per il dettaglio
-            const recentReqs = userData.user.recentRequests || 0;
-            const recentAssigns = userData.user.recentAssignments || 0;
-
-            return (
-              <div 
-                key={userData.user.id} 
-                className="user-stat-card" 
-                onClick={() => handleOpenDetailsModal(userData)}
-                style={{cursor: 'pointer'}} 
-              >
+          {userStats.map((userData) => (
+              <div key={userData.user.id} className="user-stat-card" onClick={() => handleOpenDetailsModal(userData)}>
                 <div className="card-header">
                   <UserAvatar user={userData.user} />
                   <div className="user-info">
                     <span className="user-name">{userData.user.firstName} {userData.user.lastName}</span>
-                    <span className="user-priority-rate">
-                      Probabilità: <strong>{probabilityPercent}%</strong>
-                    </span>
+                    <span className="user-priority-rate">Probabilità: <strong>{((1 - userData.user.successRate) * 100).toFixed(0)}%</strong></span>
                   </div>
                 </div>
-                
-                {/* --- MODIFICA: Dettagli Calcolo --- */}
                 <div className="card-priority-details">
                     <div className="priority-row">
-                        <span>Richieste (ultimi {priorityWindowDays}gg):</span>
-                        <strong>{recentReqs}</strong>
-                    </div>
-                    <div className="priority-row">
-                        <span>Assegnati (ultimi {priorityWindowDays}gg):</span>
-                        <strong>{recentAssigns}</strong>
+                        <span>Assegnati (30gg):</span>
+                        <strong>{userData.totalAssignments}</strong>
                     </div>
                 </div>
-                {/* --------------------------------- */}
-
                 <div className="card-body">
                   <p className="click-details-text">Clicca per storico completo</p>
                 </div>
               </div>
-            );
-          })}
+          ))}
         </div>
       </div>
 

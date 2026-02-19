@@ -1,130 +1,68 @@
-.user-assignments-modal {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-  
-  .modal-user-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid #e0e0e0;
-  }
-  
-  .user-info-left {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-  }
-  
-  .modal-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-  }
-  
-  .modal-user-name {
-    font-size: 1.3rem;
-    font-weight: 500;
-    color: var(--text-color);
-  }
-  
-  .modal-total-assignments {
-    font-size: 1rem;
-    color: var(--text-color);
-    font-weight: 500;
-    white-space: nowrap;
-  }
-  
-  .assignments-list-container {
-    max-height: 50vh; /* Altezza massima per la lista */
-    overflow-y: auto; /* Scrollbar verticale se necessario */
-    padding-right: 10px; /* Spazio per la scrollbar */
-  }
-  
-  .assignments-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .assignment-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.8rem 0.5rem;
-    border-bottom: 1px solid #eee;
-  }
-  .assignment-item:last-child {
-      border-bottom: none;
-  }
-  
-  
-  .assignment-date {
-    color: var(--text-color);
-  }
-  
-  .assignment-space {
-    font-weight: 500;
-    color: var(--primary-color);
-  }
-  
-  .no-assignments-message {
-      text-align: center;
-      color: #777;
-      margin-top: 1rem;
-  }
-  
-  /* Stili scrollbar (opzionale) */
-  .assignments-list-container::-webkit-scrollbar {
-    width: 6px;
-  }
-  .assignments-list-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-  }
-  .assignments-list-container::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
-  }
-  .assignments-list-container::-webkit-scrollbar-thumb:hover {
-    background: #aaa;
-  }
+.user-assignments-container {
+  max-height: 450px;
+  overflow-y: auto;
+  padding: 5px;
+}
 
-  .assignments-list-container {
-    max-height: 50vh; /* Altezza massima per la lista (puoi regolarla) */
-    overflow-y: auto; /* Scrollbar verticale se necessario */
-    padding-right: 10px; /* Spazio per la scrollbar */
-  }
-  
-  /* Stili scrollbar (opzionale) */
-  .assignments-list-container::-webkit-scrollbar {
-    width: 6px;
-  }
-  .assignments-list-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-  }
-  .assignments-list-container::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
-  }
-  .assignments-list-container::-webkit-scrollbar-thumb:hover {
-    background: #aaa;
-  }
-  
-  .assignments-list {
-    list-style: none;
-    padding: 0;
-    margin: 0; /* Assicurati che non ci sia margine di default */
-    display: flex;
-    flex-direction: column;
-  }
+.user-summary {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border-left: 4px solid #DE1F3C;
+}
+
+.user-summary p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.assignments-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.assignment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.req-main-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.date {
+  font-weight: 600;
+  color: #444;
+  width: 75px;
+  text-transform: capitalize;
+}
+
+.status-badge {
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 95px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.space-info {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  margin-top: 20px;
+}

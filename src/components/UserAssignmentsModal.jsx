@@ -1,67 +1,68 @@
 import React from 'react';
 import Modal from './Modal';
-import { format } from 'date-fns';
 import './UserAssignmentsModal.css';
-import { getTextColor } from '../utils/colors';
-
-// Avatar simile a quello della StatsPage
-const ModalAvatar = ({ user }) => {
-  const getInitials = () => {
-    if (!user) return '?';
-    if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`;
-    return user.firstName ? user.firstName[0] : 'U';
-  };
-  const backgroundColor = user.avatarColor || '#DE1F3C';
-  const textColor = getTextColor(backgroundColor);
-  return <div className="modal-avatar" style={{ backgroundColor, color: textColor }}>{getInitials()}</div>;
-};
 
 const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap }) => {
-  if (!isOpen || !user || !userAssignments) {
-    return null;
-  }
+  if (!user) return null;
 
-  const sortedAssignments = [...userAssignments].sort((a, b) => new Date(b.assignmentDate) - new Date(a.assignmentDate));
+  // Filtriamo le richieste degli ultimi 30 giorni e ordiniamo per data decrescente
+  const last30DaysRequests = [...userAssignments]
+    .filter(req => {
+      const reqDate = new Date(req.requestedDate);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return reqDate >= thirtyDaysAgo && req.status !== 'cancelled_by_user';
+    })
+    .sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+
+  // Conteggio effettivo dei parcheggi ottenuti (stato assigned) negli ultimi 30gg
+  const countAssigned = last30DaysRequests.filter(r => r.status === 'assigned').length;
+
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'assigned': return { label: 'Assegnato', color: '#28a745' };
+      case 'not_assigned': return { label: 'Non Assegnato', color: '#dc3545' };
+      case 'pending': return { label: 'In attesa', color: '#6c757d' };
+      default: return { label: status, color: '#333' };
+    }
+  };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Dettaglio Assegnazioni">
-      <div className="user-assignments-modal">
-        {/* Header della Modale */}
-        <div className="modal-user-header">
-          <div className="user-info-left">
-             <ModalAvatar user={user} />
-             <span className="modal-user-name">{user.firstName} {user.lastName}</span>
-          </div>
-          <span className="modal-total-assignments">
-            Totale: {userAssignments.length} assegnazioni
-          </span>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Storico: ${user.firstName} ${user.lastName}`}>
+      <div className="user-assignments-container">
+        <div className="user-summary">
+           <p>Parcheggi ottenuti (ultimi 30 gg): <strong>{countAssigned}</strong></p>
         </div>
+        
+        {last30DaysRequests.length === 0 ? (
+          <p className="no-data">Nessuna richiesta negli ultimi 30 giorni.</p>
+        ) : (
+          <ul className="assignments-list">
+            {last30DaysRequests.map((req) => {
+              const statusInfo = getStatusStyle(req.status);
+              const dateObj = new Date(req.requestedDate);
+              const formattedDate = dateObj.toLocaleDateString('it-IT', {
+                weekday: 'short', day: '2-digit', month: '2-digit'
+              });
 
-        {/* Lista delle Assegnazioni */}
-        {/* ---- ASSICURATI CHE QUESTO DIV ABBIA LA CLASSE ---- */}
-        <div className="assignments-list-container">
-          {sortedAssignments.length > 0 ? (
-            <ul className="assignments-list">
-              {sortedAssignments.map((assignment, index) => (
-                <li key={assignment.assignmentDate + index} className="assignment-item">
-                  <span className="assignment-date">
-                    {format(new Date(assignment.assignmentDate), 'dd/MM/yyyy')}
-                  </span>
-                  <span className="assignment-space">
-                    {spaceMap.get(assignment.parkingSpaceId) || 'N/A'}
+              return (
+                <li key={req.requestId} className="assignment-item">
+                  <div className="req-main-info">
+                    <span className="date">{formattedDate}</span>
+                    <span className="status-badge" style={{ backgroundColor: statusInfo.color }}>
+                      {statusInfo.label}
+                    </span>
+                  </div>
+                  <span className="space-info">
+                    {req.status === 'assigned' 
+                      ? `Posto: ${req.assignedParkingSpaceNumber || spaceMap.get(req.assignedParkingSpaceId) || 'N/D'}` 
+                      : '-'}
                   </span>
                 </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="no-assignments-message">Nessuna assegnazione trovata per questo utente nel periodo selezionato.</p>
-          )}
-        </div>
-        {/* ---- FINE CONTENITORE ---- */}
-
-         <div className="modal-actions">
-            <button className="submit-btn" onClick={onClose}>Chiudi</button>
-          </div>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </Modal>
   );
