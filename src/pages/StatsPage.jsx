@@ -59,16 +59,39 @@ const StatsPage = () => {
     const { users, requests } = allData;
     if (!users.length) return { userStats: [], kpiData: {}, chartData: [] };
 
+    // Funzione per calcolare la data di inizio (30gg lavorativi fa)
+    const getStartDate = (days) => {
+      let date = new Date();
+      date.setHours(0, 0, 0, 0);
+      let count = 0;
+      while (count < days) {
+        date.setDate(date.getDate() - 1);
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+      }
+      return date;
+    };
+
+    const startDate = getStartDate(priorityWindowDays);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
     const stats = users.map(user => {
-      // Usiamo il dato calcolato dal backend per la coerenza dei 30gg
       const totalAssignments = user.recentAssignments || 0;
       
-      // Filtriamo le richieste per questo utente per passarle al modale
-      const userRequests = requests.filter(r => r.userId === user.id);
+      // Filtriamo tutte le richieste valide dell'utente
+      const userRequests = requests.filter(r => r.userId === user.id && r.status !== 'cancelled_by_user');
+      
+      // Calcoliamo le richieste totali nel periodo (escludendo il giorno limite per coerenza backend)
+      const totalRequestsInWindow = userRequests.filter(r => {
+        const d = new Date(r.requestedDate);
+        return d > startDate && d <= today;
+      }).length;
       
       return { 
         user, 
         totalAssignments, 
+        totalRequests: totalRequestsInWindow,
         userAssignments: userRequests,
         fullName: `${user.firstName} ${user.lastName || ''}`.trim()
       }; 
@@ -101,7 +124,7 @@ const StatsPage = () => {
             busiestDayCount: busiestDateEntry[1]
         }
     };
-  }, [allData]);
+  }, [allData, priorityWindowDays]);
 
   const handleOpenDetailsModal = (userData) => {
       setSelectedUserForModal(userData.user);
@@ -179,6 +202,10 @@ const StatsPage = () => {
                   </div>
                 </div>
                 <div className="card-priority-details">
+                    <div className="priority-row">
+                        <span>Richieste fatte (30gg):</span>
+                        <strong>{userData.totalRequests}</strong>
+                    </div>
                     <div className="priority-row">
                         <span>Assegnati (30gg):</span>
                         <strong>{userData.totalAssignments}</strong>

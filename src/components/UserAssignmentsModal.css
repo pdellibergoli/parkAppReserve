@@ -76,3 +76,7 @@
   color: #999;
   margin-top: 20px;
 }
+
+.stat-value {
+  font-weight: bold;
+}

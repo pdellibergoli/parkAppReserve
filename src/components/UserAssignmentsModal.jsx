@@ -13,7 +13,7 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
     while (count < days) {
       date.setDate(date.getDate() - 1);
       const dayOfWeek = date.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Esclude Domenica (0) e Sabato (6)
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         count++;
       }
     }
@@ -24,17 +24,17 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
   today.setHours(23, 59, 59, 999);
   const startDate = getStartDate(windowDays);
 
-  // Filtriamo le richieste nel periodo lavorativo e ordiniamo per data decrescente
+  // Filtriamo le richieste: escludiamo cancellate, escludiamo futuro, e allineiamo al periodo
   const filteredRequests = [...userAssignments]
     .filter(req => {
       const reqDate = new Date(req.requestedDate);
-      // Solo richieste tra startDate e oggi, escludendo le cancellate
-      return reqDate >= startDate && reqDate <= today && req.status !== 'cancelled_by_user';
+      return reqDate > startDate && reqDate <= today && req.status !== 'cancelled_by_user';
     })
     .sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
 
-  // Conteggio effettivo dei parcheggi ottenuti (stato assigned) nel periodo
-  const countAssigned = filteredRequests.filter(r => r.status === 'assigned').length;
+  // Conteggi per il riepilogo
+  const totalRequestsCount = filteredRequests.length;
+  const countAssigned = user.recentAssignments || 0;
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -51,14 +51,25 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
     <Modal isOpen={isOpen} onClose={onClose} title={`Storico: ${user.firstName} ${user.lastName}`}>
       <div className="user-assignments-container">
         <div className="user-summary">
-           <p className="period-info">
-             Periodo: <strong>{formatDate(startDate)}</strong> - <strong>{formatDate(today)}</strong>
+           <p className="period-label">Periodo di riferimento ({windowDays} gg lavorativi):</p>
+           <p className="period-dates">
+             Dal <strong>{formatDate(new Date(startDate.getTime() + 86400000))}</strong> al <strong>{formatDate(today)}</strong>
            </p>
-           <p>Parcheggi ottenuti: <strong>{countAssigned}</strong></p>
+           
+           <div className="summary-stats-grid">
+             <div className="stat-box">
+               <span className="stat-label">Richieste effettuate: </span>
+               <span className="stat-value">{totalRequestsCount}</span>
+             </div>
+             <div className="stat-box">
+               <span className="stat-label">Parcheggi ottenuti: </span>
+               <span className="stat-value highlight">{countAssigned}</span>
+             </div>
+           </div>
         </div>
         
         {filteredRequests.length === 0 ? (
-          <p className="no-data">Nessuna richiesta nel periodo considerato.</p>
+          <p className="no-data">Nessuna richiesta registrata nel periodo.</p>
         ) : (
           <ul className="assignments-list">
             {filteredRequests.map((req) => {
