@@ -29,18 +29,22 @@
   align-items: center;
   padding: 12px 8px;
   border-bottom: 1px solid #eee;
+  gap: 10px;
 }
 
 .req-main-info {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
+  flex: 1;
 }
 
 .date {
   font-weight: 600;
   color: #444;
-  width: 75px;
+  width: 95px; /* Larghezza sufficiente per "gio 20/02" */
+  white-space: nowrap; /* Forza il testo su una riga */
+  flex-shrink: 0;
   text-transform: capitalize;
 }
 
@@ -50,15 +54,21 @@
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 700;
-  min-width: 95px;
-  text-align: center;
+  width: 125px;           
+  display: inline-block;  
+  text-align: center; 
+  white-space: nowrap;  
+  box-sizing: border-box;   
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .space-info {
   font-size: 0.85rem;
   color: #666;
   font-style: italic;
+  text-align: right;
+  min-width: 80px;
 }
 
 .no-data {

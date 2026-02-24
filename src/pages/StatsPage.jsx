@@ -198,6 +198,7 @@ const StatsPage = () => {
         user={selectedUserForModal}
         userAssignments={assignmentsForModal}
         spaceMap={spaceMap}
+        windowDays={priorityWindowDays}
       />
     </>
   );
