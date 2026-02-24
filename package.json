@@ -12,6 +12,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
+    "lucide-react": "^0.575.0",
     "react": "^19.1.1",
     "react-big-calendar": "^1.19.4",
     "react-day-picker": "^9.11.1",
