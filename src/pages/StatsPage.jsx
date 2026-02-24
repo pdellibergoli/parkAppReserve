@@ -203,11 +203,11 @@ const StatsPage = () => {
                 </div>
                 <div className="card-priority-details">
                     <div className="priority-row">
-                        <span>Richieste fatte (30gg):</span>
+                        <span>Richieste fatte:</span>
                         <strong>{userData.totalRequests}</strong>
                     </div>
                     <div className="priority-row">
-                        <span>Assegnati (30gg):</span>
+                        <span>Assegnati:</span>
                         <strong>{userData.totalAssignments}</strong>
                     </div>
                 </div>
