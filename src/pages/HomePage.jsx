@@ -11,11 +11,11 @@ import './HomePage.css';
 import { useOutletContext } from 'react-router-dom';
 import DayRequestsModal from '../components/DayRequestsModal';
 import SendCommunicationModal from '../components/SendCommunicationModal';
+import AdminManuallyAssignModal from '../components/AdminManuallyAssignModal'; 
 import { callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
 import { useAuth } from '../context/AuthContext';
-// --- MODIFICA: Aggiunta FaTimes ---
-import { FaCar, FaBullhorn, FaInfoCircle, FaTimes } from 'react-icons/fa';
+import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus } from 'react-icons/fa';
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -41,6 +41,7 @@ const HomePage = () => {
 
   const [activeBanners, setActiveBanners] = useState([]);
   const [isCommModalOpen, setIsCommModalOpen] = useState(false);
+  const [isAdminAssignOpen, setIsAdminAssignOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -50,17 +51,9 @@ const HomePage = () => {
         callApi('getUsersWithPriority'),
         callApi('getActiveCommunication')
       ]);
-      setAllRequests(requestsData);
-      setUsers(usersData);
-      
-      if (Array.isArray(bannersData)) {
-          setActiveBanners(bannersData);
-      } else if (bannersData) {
-          setActiveBanners([bannersData]);
-      } else {
-          setActiveBanners([]);
-      }
-
+      setAllRequests(requestsData || []);
+      setUsers(usersData || []);
+      setActiveBanners(Array.isArray(bannersData) ? bannersData : (bannersData ? [bannersData] : []));
     } catch (err) {
       setError('Impossibile caricare i dati. Riprova più tardi.');
     } finally {
@@ -77,13 +70,12 @@ const HomePage = () => {
     setIsDayModalOpen(true);
   };
 
-  // --- NUOVA FUNZIONE: Cancella Banner ---
   const handleDeleteBanner = async (bannerId) => {
     if (window.confirm("Sei sicuro di voler cancellare questa comunicazione?")) {
       setIsLoading(true);
       try {
         await callApi('deleteCommunication', { id: bannerId });
-        forceDataRefresh(); // Ricarica la pagina per rimuovere il banner
+        fetchData(); 
       } catch (err) {
         alert(`Errore: ${err.message}`);
       } finally {
@@ -91,13 +83,11 @@ const HomePage = () => {
       }
     }
   };
-  // -------------------------------------
   
   const requestsForSelectedDay = useMemo(() => {
     if (!selectedDate || !allRequests) return [];
-    
     return allRequests
-      .filter(r => r.requestedDate && areDatesOnSameDay(new Date(r.requestedDate), selectedDate))
+      .filter(r => r.requestedDate && areDatesOnSameDay(r.requestedDate, selectedDate))
       .sort((a, b) => {
           const userA = users.find(u => u.id === a.userId);
           const userB = users.find(u => u.id === b.userId);
@@ -107,7 +97,7 @@ const HomePage = () => {
   
   const CustomDateCellWrapper = ({ children, value }) => {
     const requestsOnDay = useMemo(() => 
-      allRequests.filter(r => r.requestedDate && areDatesOnSameDay(new Date(r.requestedDate), value)),
+      allRequests.filter(r => r.requestedDate && areDatesOnSameDay(r.requestedDate, value)),
       [allRequests, value]
     );
     const count = requestsOnDay.length;
@@ -156,24 +146,17 @@ const HomePage = () => {
       {activeBanners.length > 0 && (
         <div className="banners-wrapper">
           {activeBanners.map(banner => (
-            /* --- MODIFICA: Layout Banner con bottone cancella --- */
             <div key={banner.id} className="communication-banner">
               <div className="banner-content">
                 <FaInfoCircle className="banner-icon" />
                 <span>{banner.message}</span>
               </div>
-              
-              {user && user.isAdmin && (
-                <button 
-                  className="banner-close-btn" 
-                  onClick={() => handleDeleteBanner(banner.id)}
-                  title="Cancella comunicazione"
-                >
+              {user?.isAdmin && (
+                <button className="banner-close-btn" onClick={() => handleDeleteBanner(banner.id)}>
                   <FaTimes />
                 </button>
               )}
             </div>
-            /* --- FINE MODIFICA --- */
           ))}
         </div>
       )}
@@ -185,9 +168,7 @@ const HomePage = () => {
           style={{ height: '75vh' }}
           culture='it'
           messages={{ next: "Succ", previous: "Prec", today: "Oggi" }}
-          components={{
-            dateCellWrapper: CustomDateCellWrapper,
-          }}
+          components={{ dateCellWrapper: CustomDateCellWrapper }}
           date={date}
           view="month"
           onNavigate={newDate => setDate(newDate)}
@@ -196,27 +177,35 @@ const HomePage = () => {
       </div>
 
       <div className="calendar-legend">
-        <div className="legend-item">
-          <FaCar className="my-request-icon status-assigned" />
-          <span>Richiesta Assegnata</span>
-        </div>
-        <div className="legend-item">
-          <FaCar className="my-request-icon status-pending" />
-          <span>Richiesta In Attesa</span>
-        </div>
-        <div className="legend-item">
-          <FaCar className="my-request-icon status-not_assigned" />
-          <span>Richiesta Non Assegnata</span>
-        </div>
+        <div className="legend-item"><FaCar className="my-request-icon status-assigned" /> <span>Assegnata</span></div>
+        <div className="legend-item"><FaCar className="my-request-icon status-pending" /> <span>In Attesa</span></div>
+        <div className="legend-item"><FaCar className="my-request-icon status-not_assigned" /> <span>Non Assegnata</span></div>
       </div>
 
-      <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Invia richiesta</button>
-      
-      {user && user.isAdmin && (
-        <button className="admin-comm-btn" onClick={() => setIsCommModalOpen(true)} title="Invia Comunicazione">
-            <FaBullhorn />
+      {/* --- CONTENITORE PULSANTI FLUTTUANTI --- */}
+      <div className="floating-actions-container">
+        {user?.isAdmin && (
+          <>
+            <button 
+              className="floating-btn admin-assign-btn" 
+              onClick={() => setIsAdminAssignOpen(true)}
+              title="Assegnazione Manuale"
+            >
+              <FaUserShield /> <span>Assegna Posto</span>
+            </button>
+            <button 
+              className="floating-btn admin-comm-btn-alt" 
+              onClick={() => setIsCommModalOpen(true)} 
+              title="Invia Comunicazione"
+            >
+              <FaBullhorn /> <span>Comunicazione</span>
+            </button>
+          </>
+        )}
+        <button className="floating-btn add-booking-btn-alt" onClick={handleOpenAddModal}>
+          <FaPlus /> <span>Invia richiesta</span>
         </button>
-      )}
+      </div>
 
       <DayRequestsModal
         isOpen={isDayModalOpen}
@@ -232,6 +221,14 @@ const HomePage = () => {
         isOpen={isCommModalOpen} 
         onClose={() => setIsCommModalOpen(false)} 
       />
+
+      {user?.isAdmin && (
+        <AdminManuallyAssignModal 
+          isOpen={isAdminAssignOpen}
+          onClose={() => setIsAdminAssignOpen(false)}
+          onRefreshData={forceDataRefresh}
+        />
+      )}
     </>
   );
 };

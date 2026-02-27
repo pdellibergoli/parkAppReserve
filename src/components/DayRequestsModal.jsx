@@ -84,20 +84,16 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
     const [adminLoading, setAdminLoading] = useState(false);
     const [parkingStatus, setParkingStatus] = useState(null);
 
-    // --- DEFINIZIONE DATE (Spostate qui in alto) ---
     const today = startOfToday();
     const requestDateObj = selectedDate || (requests && requests.length > 0 ? new Date(requests[0].requestedDate) : new Date());
     const dateTitle = format(requestDateObj, 'dd/MM/yyyy');
-    
-    // Controlla se la data visualizzata è nel passato (ieri o prima)
     const isPastDate = isBefore(requestDateObj, today);
-    // -----------------------------------------------
 
     useEffect(() => {
         if (!isOpen) {
             setIsAdminMode(false);
             setParkingStatus(null);
-        } else if (selectedDate && !isPastDate) { // Carica lo stato solo se NON è passato
+        } else if (selectedDate && !isPastDate) {
             const fetchStatus = async () => {
                 try {
                     const status = await callApi('getParkingStatusForDate', { date: format(selectedDate, 'yyyy-MM-dd') });
@@ -110,14 +106,22 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         }
     }, [isOpen, selectedDate, isPastDate]);
 
-    const hasPendingRequests = useMemo(() => {
-        if (!requests) return false;
-        return requests.some(r => r.status === 'pending');
+    /**
+     * CORREZIONE E FILTRO:
+     * 1. Usiamo optional chaining e nullish coalescing per evitare crash se requests è null.
+     * 2. Filtriamo via le richieste 'cancelled_by_user'.
+     */
+    const filteredRequests = useMemo(() => {
+        return (requests || []).filter(r => r.status !== 'cancelled_by_user');
     }, [requests]);
 
+    const hasPendingRequests = useMemo(() => {
+        return filteredRequests.some(r => r.status === 'pending');
+    }, [filteredRequests]);
+
     const sortedRequests = useMemo(() => {
-        if (!requests || !users) return [];
-        return [...requests].sort((a, b) => {
+        if (!users) return [];
+        return [...filteredRequests].sort((a, b) => {
             if (a.status === 'assigned' && b.status !== 'assigned') return -1;
             if (a.status !== 'assigned' && b.status === 'assigned') return 1;
             
@@ -127,7 +131,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
             const rateB = userB?.successRate ?? 1;
             return rateA - rateB; 
         });
-    }, [requests, users]);
+    }, [filteredRequests, users]);
 
     const handleCancelClick = (request) => {
         const isAssigned = request.status === 'assigned';
@@ -178,43 +182,32 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
             case 'pending': return 'In attesa';
             case 'assigned': return 'Assegnato';
             case 'not_assigned': return 'Non assegnato';
-            case 'cancelled_by_user': return 'Annullato dall\'utente';
             default: return status;
         }
     };
 
     if (!isOpen) return null; 
 
-    // --- TITOLO PERSONALIZZATO CON LOGICA DATE ---
     const customTitle = (
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
             <span style={{ fontSize: '1.1rem' }}>Richieste del {dateTitle}</span>
-            
-            {/* Mostra info posti SOLO se NON è una data passata */}
             {!isPastDate && (
                 <div className="status-item" style={{ flexDirection: 'row', gap: '5px', alignItems: 'center' }}>
                     <span className="label" style={{ marginBottom: 0 }}>Totale parcheggi disponibili:</span>
-                    
                     {parkingStatus ? (
                         <span className="value" style={{ fontSize: '1rem' }}>{parkingStatus.total}</span>
                     ) : (
                         <div className="spinner-small" style={{ 
-                            width: '14px', 
-                            height: '14px', 
-                            borderColor: '#666', 
-                            borderTopColor: 'transparent', 
-                            borderWidth: '2px' 
+                            width: '14px', height: '14px', borderColor: '#666', borderTopColor: 'transparent', borderWidth: '2px' 
                         }}></div>
                     )}
                 </div>
             )}
         </div>
     );
-    // ---------------------------------------------
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={customTitle}>
-
             {loggedInUser.isAdmin === true && (
                 <div className="admin-controls-wrapper">
                     {!isAdminMode ? (
@@ -239,15 +232,13 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
             )}
             
             <div className="day-bookings-list">
-                {(!requests || requests.length === 0) ? (
-                    <p style={{textAlign: 'center', color: '#666'}}>Nessuna richiesta per questo giorno.</p>
+                {sortedRequests.length === 0 ? (
+                    <p style={{textAlign: 'center', color: '#666'}}>Nessuna richiesta attiva per questo giorno.</p>
                 ) : (
                     sortedRequests.map(request => {
-                        const requestUser = users.find(u => u.id === request.userId);
+                        const requestUser = users?.find(u => u.id === request.userId);
                         const isMyRequest = requestUser && loggedInUser.id === requestUser.id;
                         const requestDate = new Date(request.requestedDate);
-                        // isPast è già calcolato in alto come isPastDate, ma qui serve per la logica dei bottoni
-                        // per sicurezza ricalcoliamolo locale al loop se serve o usiamo quello globale
                         const isPastRequest = isBefore(requestDate, today);
                         const status = request.status;
 
