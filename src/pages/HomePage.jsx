@@ -97,18 +97,22 @@ const HomePage = () => {
   
   const CustomDateCellWrapper = ({ children, value }) => {
     const requestsOnDay = useMemo(() => 
-      allRequests.filter(r => r.requestedDate && areDatesOnSameDay(r.requestedDate, value)),
+      allRequests.filter(r => 
+        r.requestedDate && 
+        areDatesOnSameDay(r.requestedDate, value) &&
+        r.status !== 'cancelled_by_user' // <--- FILTRO AGGIUNTO
+      ),
       [allRequests, value]
     );
     const count = requestsOnDay.length;
 
     const myRequestStatus = useMemo(() => {
-        if (!user || count === 0) return null;
-        const myRequest = requestsOnDay.find(request => request.userId === user.id);
-        return myRequest ? myRequest.status : null;
-    }, [requestsOnDay, user, count]);
+      if (!user || count === 0) return null;
+      const myRequest = requestsOnDay.find(request => request.userId === user.id);
+      return myRequest ? myRequest.status : null;
+  }, [requestsOnDay, user, count]);
     
-    const child = React.Children.only(children);
+  const child = React.Children.only(children);
     return React.cloneElement(
       child,
       {
