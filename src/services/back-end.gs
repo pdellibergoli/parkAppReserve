@@ -255,24 +255,32 @@ function getDynamicWindowSize() {
   return days;
 }
 
-function getStartDateFromActiveDays(history, daysCount) {
+function getStartDateFromActiveDays(requests, daysCount) {
+  // 1. Estrai tutte le date uniche dalle RICHIESTE PROCESSATE
+  // Usiamo ParkingRequests perché è l'unica fonte di verità completa.
   const uniqueDatesSet = new Set();
-  history.forEach(h => {
-    uniqueDatesSet.add(normalizeDate(h.assignmentDate).getTime());
+  
+  requests.forEach(r => {
+    // Consideriamo un giorno "attivo" se c'è almeno una richiesta processata (Assegnata o Rifiutata)
+    if (r.status === 'assigned' || r.status === 'not_assigned') {
+       uniqueDatesSet.add(normalizeDate(r.requestedDate).getTime());
+    }
   });
   
+  // 2. Converti in array e ordina dal più recente al più vecchio
   const sortedUniqueDates = Array.from(uniqueDatesSet).sort((a, b) => b - a);
   
-  logToClient(`Trovati ${sortedUniqueDates.length} giorni attivi nello storico.`);
-  
-  // L'indice target è daysCount - 1.
-  // Esempio: Vogliamo 14 giorni. Indice 13.
+  logToClient(`Trovati ${sortedUniqueDates.length} giorni attivi in ParkingRequests.`);
+
+  // 3. L'indice target è daysCount - 1
   const targetIndex = Math.max(0, daysCount - 1);
 
+  // 4. Fallback Calendario
   if (sortedUniqueDates.length === 0) {
     return new Date(new Date().getTime() - (targetIndex * 86400000));
   }
 
+  // 5. Prendi l'N-esima data attiva
   const actualIndex = Math.min(targetIndex, sortedUniqueDates.length - 1);
   const startDateTimestamp = sortedUniqueDates[actualIndex];
   
@@ -482,31 +490,45 @@ function getUsersWithPriority() {
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
   
   const today = normalizeDate(new Date());
-  const tomorrow = new Date(today.getTime() + 86400000);
   
   const lookBackDays = getDynamicWindowSize(); 
-  logToClient(`lookBackDays ${lookBackDays}`)
-  // --- CALCOLO DATA INIZIO BASATO SU GIORNI ATTIVI ---
-  // Passiamo l'intero storico per trovare i giorni effettivamente utilizzati
-  const windowStartDate = getStartDateFromActiveDays(history, lookBackDays);
-  // ---------------------------------------------------
   
-  logToClient(`getUsersWithPriority: Finestra inizia il ${formatDate(windowStartDate)} (${lookBackDays} giorni attivi).`);
+  // --- MODIFICA: Passiamo allRequests invece di history ---
+  const windowStartDate = getStartDateFromActiveDays(allRequests, lookBackDays);
   
-  const recentHistory = history.filter(h => { const d = normalizeDate(h.assignmentDate); return d >= windowStartDate && d <= tomorrow; });
-  const recentReqs = allRequests.filter(r => { const d = normalizeDate(r.requestedDate); return d >= windowStartDate && d <= tomorrow && (r.status === 'assigned' || r.status === 'not_assigned'); });
+  logToClient(`getUsersWithPriority: Finestra di ${lookBackDays}gg (Attivi). Start: ${formatDate(windowStartDate)} -> End: ${formatDate(today)}`);
+
+  // Filtro Storico (per il numeratore)
+  const recentHistory = history.filter(h => { 
+      const d = normalizeDate(h.assignmentDate); 
+      return d >= windowStartDate && d <= today; 
+  });
+  
+  // Filtro Richieste (per il denominatore)
+  const recentReqs = allRequests.filter(r => { 
+      const d = normalizeDate(r.requestedDate); 
+      return d >= windowStartDate && d <= today && (r.status === 'assigned' || r.status === 'not_assigned'); 
+  });
   
   return allUsers.map(u => {
     const userId = u.id;
     const userAssigns = recentHistory.filter(h => h.userId === userId).length;
     const userReqs = recentReqs.filter(r => r.userId === userId).length;
-    u.successRate = userReqs > 0 ? userAssigns / userReqs : 0.0;
-    
-    u.windowDays = lookBackDays; // Per la UI
-    u.recentAssignments = userAssigns;
-    u.recentRequests = userReqs;
 
+    let successRate = 1.0; 
+    if (userReqs > 0) {
+      successRate = userAssigns / userReqs;
+    } else {
+      successRate = 0.0;
+    }
+    
+    u.successRate = successRate;
+    u.recentAssignments = userAssigns; 
+    u.recentRequests = userReqs; 
+    u.windowDays = lookBackDays;
+    
     delete u.password; delete u.salt; delete u.verificationToken; delete u.resetToken; delete u.resetTokenExpiry;
+    
     return u;
   });
 }
@@ -1208,14 +1230,17 @@ function calculatePriority(requests) {
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS); 
   const today = normalizeDate(new Date());
   
-  const lookBackDays = getDynamicWindowSize();
-
-  // --- CALCOLO DATA INIZIO BASATO SU GIORNI ATTIVI ---
-  const windowStartDate = getStartDateFromActiveDays(history, lookBackDays);
-  // ---------------------------------------------------
+  const lookBackDays = getDynamicWindowSize(); 
   
-  const recentHistory = history.filter(h => normalizeDate(h.assignmentDate) >= windowStartDate);
-  const recentReqs = allRequests.filter(r => { const d = normalizeDate(r.requestedDate); return d >= windowStartDate && d <= today && (r.status === 'assigned' || r.status === 'not_assigned'); });
+  // --- MODIFICA: Passiamo allRequests invece di history ---
+  const windowStartDate = getStartDateFromActiveDays(allRequests, lookBackDays);
+  
+  const recentHistory = history.filter(h => normalizeDate(h.assignmentDate) >= windowStartDate && normalizeDate(h.assignmentDate) <= today);
+  
+  const recentReqs = allRequests.filter(r => { 
+      const d = normalizeDate(r.requestedDate); 
+      return d >= windowStartDate && d <= today && (r.status === 'assigned' || r.status === 'not_assigned'); 
+  });
   
   return requests.map(request => {
     const userId = request.userId;
@@ -1822,6 +1847,54 @@ function adminManuallyAssignForDate(payload) {
   return { 
     message: `Processo di assegnazione manuale completato per il ${formatDate(targetDate)}. 
 Risultati: ${result.assigned} assegnati, ${result.failed} non assegnati.` 
+  };
+}
+
+/**
+ * AZIONE ADMIN: Assegna manualmente un posto specifico a un utente specifico.
+ * Se esiste già una richiesta per quell'utente in quella data, la aggiorna.
+ * Altrimenti, ne crea una nuova e la assegna.
+ */
+function adminAssignParckingForDate(payload) {
+  const { date, userId, spaceId } = payload;
+  if (!date || !userId || !spaceId) throw new Error("Dati insufficienti (data, utente o posto mancanti).");
+  
+  const targetDate = normalizeDate(date);
+  logToClient(`ADMIN ACTION: Assegnazione manuale per ${formatDate(targetDate)}. Utente: ${userId}, Posto: ${spaceId}`, "INFO");
+
+  const allSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
+  const spaceDetails = allSpaces.find(s => s.id === spaceId);
+  if (!spaceDetails) throw new Error("Parcheggio non trovato.");
+
+  const requestsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
+  const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
+  
+  // 1. Controlla se l'utente ha già una richiesta per quel giorno
+  const existingRequest = allRequests.find(r => 
+    r.userId === userId && 
+    normalizeDate(r.requestedDate).getTime() === targetDate.getTime()
+  );
+
+  if (existingRequest) {
+    // Aggiorna la richiesta esistente
+    updateRequestStatus(existingRequest.requestId, 'assigned', spaceId, spaceDetails.number);
+  } else {
+    // Crea una nuova richiesta già assegnata
+    const requestId = "req_" + Utilities.getUuid();
+    requestsSheet.appendRow([requestId, userId, targetDate, 'assigned', spaceId, spaceDetails.number]);
+  }
+
+  // 2. Registra sempre nello storico per coerenza con le statistiche
+  const historySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
+  // Rimuovi eventuali record precedenti per lo stesso utente/data per evitare duplicati
+  removeFromHistory(userId, targetDate);
+  historySheet.appendRow([userId, targetDate, spaceId]);
+
+  // 3. Invia notifica
+  sendSuccessEmail(userId, targetDate, spaceDetails.number);
+  
+  return { 
+    message: `Posto ${spaceDetails.number} assegnato con successo a ${userId} per il giorno ${formatDate(targetDate)}.` 
   };
 }
 

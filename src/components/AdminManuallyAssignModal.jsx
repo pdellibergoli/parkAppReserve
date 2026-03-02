@@ -74,7 +74,7 @@ const AdminManuallyAssignModal = ({ isOpen, onClose, onRefreshData }) => {
     try {
       // Invio di una chiamata API per ogni data selezionata (compatibilità backend)
       const promises = selectedDates.map(date => 
-        callApi('adminManuallyAssignForDate', {
+        callApi('adminAssignParckingForDate', {
           date: formatDateKey(date),
           userId: targetUserId,
           spaceId: selectedSpaceId
