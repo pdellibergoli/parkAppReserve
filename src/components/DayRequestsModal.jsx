@@ -106,11 +106,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         }
     }, [isOpen, selectedDate, isPastDate]);
 
-    /**
-     * CORREZIONE E FILTRO:
-     * 1. Usiamo optional chaining e nullish coalescing per evitare crash se requests è null.
-     * 2. Filtriamo via le richieste 'cancelled_by_user'.
-     */
     const filteredRequests = useMemo(() => {
         return (requests || []).filter(r => r.status !== 'cancelled_by_user');
     }, [requests]);
@@ -148,6 +143,26 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                 .then(() => onRefreshData())
                 .catch(err => alert(`Errore: ${err.message}`))
                 .finally(() => setIsLoading(false));
+        }
+    };
+
+    const handleStatusChange = async (requestId, newStatus) => {
+        if (!window.confirm(`Cambiare lo stato in "${newStatus}"? Questa azione potrebbe inviare email e riassegnare posti.`)) {
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            await callApi('adminUpdateUserRequestStatus', { 
+                requestId, 
+                newStatus, 
+                actorId: loggedInUser.id 
+            });
+            onRefreshData();
+        } catch (error) {
+            alert("Errore durante l'aggiornamento: " + error.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -256,10 +271,23 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                                     {requestUser && <Avatar user={requestUser} />}
                                     <div className="card-details">
                                         <span className="user-name">{requestUser ? `${requestUser.firstName} ${requestUser.lastName}` : 'Utente non trovato'}</span>
-                                        <span className="parking-spot">
-                                            Stato: <strong>{getStatusText(status)}</strong>
+                                        <div className="parking-spot">
+                                            <span>Stato: </span>
+                                            {isAdminMode ? (
+                                                <select 
+                                                    className="admin-status-select"
+                                                    value={status}
+                                                    onChange={(e) => handleStatusChange(request.requestId, e.target.value)}
+                                                >
+                                                  <option value="pending">In attesa</option>
+                                                  <option value="assigned">Assegnato</option>
+                                                  <option value="not_assigned">Non assegnato</option>
+                                                </select>
+                                            ) : (
+                                                <strong>{getStatusText(status)}</strong>
+                                            )}
                                             {status === 'assigned' && ` - Posto: ${request.assignedParkingSpaceNumber}`}
-                                        </span>
+                                        </div>
                                         {showProbability && (
                                             <span className="probability-text">
                                                 Probabilità di assegnazione: <strong>{probabilityPercent}%</strong>

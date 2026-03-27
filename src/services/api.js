@@ -60,3 +60,6 @@ export const callApi = async (action, payload = {}) => {
      throw error; // Rilanciamo comunque per ora, ma potresti voler cambiare qui
   }
 };
+
+export const adminUpdateUserRequestStatus = (requestId, newStatus, actorId) => 
+  callApi('adminUpdateUserRequestStatus', { requestId, newStatus, actorId });
