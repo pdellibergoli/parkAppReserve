@@ -69,6 +69,14 @@ const MainLayout = () => {
                     <span>Park App Reserve</span>
                 </Link>
                 <div className="header-right">
+                    <a 
+                        href="https://www.paypal.com/donate/?hosted_button_id=ZYAR6VYBQC3UL" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="navbar-paypal"
+                    >
+                        Buy me a coffee! ☕
+                    </a>
                     <div className="user-menu" onMouseEnter={handleMenuEnter} onMouseLeave={handleMenuLeave}>
                         <span className="user-display-name">{user.firstName} {user.lastName}</span>
                         <UserAvatar user={user} />
