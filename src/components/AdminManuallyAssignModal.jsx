@@ -61,7 +61,7 @@ const AdminManuallyAssignModal = ({ isOpen, onClose, onRefreshData }) => {
   }, [isOpen]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!targetUserId || !selectedSpaceId || selectedDates.length === 0) {
       setError("Compila tutti i campi e seleziona almeno una data.");
       return;
@@ -72,7 +72,6 @@ const AdminManuallyAssignModal = ({ isOpen, onClose, onRefreshData }) => {
     setIsLoading(true);
 
     try {
-      // Invio di una chiamata API per ogni data selezionata (compatibilità backend)
       const promises = selectedDates.map(date => 
         callApi('adminAssignParckingForDate', {
           date: formatDateKey(date),
@@ -82,7 +81,6 @@ const AdminManuallyAssignModal = ({ isOpen, onClose, onRefreshData }) => {
       );
 
       await Promise.all(promises);
-
       setMessage("Assegnazioni completate con successo!");
       setTimeout(() => {
         onRefreshData();
@@ -95,99 +93,102 @@ const AdminManuallyAssignModal = ({ isOpen, onClose, onRefreshData }) => {
     }
   };
 
-  const isDayValid = (date) => {
-    const isPast = isBefore(date, today);
-    const isWeekend = getDay(date) === 0 || getDay(date) === 6;
-    return !isPast && !isWeekend;
-  };
-
   const handleSelectCurrentWeek = () => {
     const monday = startOfWeek(today, { locale: it });
     const days = [];
     for (let i = 0; i < 5; i++) {
       const day = addDays(monday, i);
-      if (isDayValid(day)) days.push(day);
+      const isPast = isBefore(day, today);
+      const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+      if (!isPast && !isWeekend) days.push(day);
     }
     setSelectedDates(days);
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Assegnazione Manuale (Admin)">
-      <form onSubmit={handleSubmit} className="admin-assign-form">
-        
-        <div className="admin-selectors-container">
-          <div className="admin-field">
-            <label>Utente:</label>
-            <select 
-              value={targetUserId} 
-              onChange={(e) => setTargetUserId(e.target.value)}
-              className="user-select-compact"
-            >
-              <option value="">Seleziona Utente...</option>
-              {usersList.map(u => (
-                <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-              ))}
-            </select>
+      <div className="admin-assign-modal-wrapper">
+        <form onSubmit={handleSubmit} className="modal-scroll-content">
+          
+          <div className="admin-selectors-container">
+            <div className="admin-field">
+              <label>Utente:</label>
+              <select 
+                value={targetUserId} 
+                onChange={(e) => setTargetUserId(e.target.value)}
+                className="user-select-compact"
+              >
+                <option value="">Seleziona Utente...</option>
+                {usersList.map(u => (
+                  <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="admin-field">
+              <label>Posto Auto:</label>
+              <select 
+                value={selectedSpaceId} 
+                onChange={(e) => setSelectedSpaceId(e.target.value)}
+                className="user-select-compact"
+              >
+                <option value="">Seleziona Posto...</option>
+                {spacesList.map(s => (
+                  <option key={s.id} value={s.id}>Posto {s.number} {s.isFixed ? '(Fisso)' : ''}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="admin-field">
-            <label>Posto Auto:</label>
-            <select 
-              value={selectedSpaceId} 
-              onChange={(e) => setSelectedSpaceId(e.target.value)}
-              className="user-select-compact"
-            >
-              <option value="">Seleziona Posto...</option>
-              {spacesList.map(s => (
-                <option key={s.id} value={s.id}>Posto {s.number} {s.isFixed ? '(Fisso)' : ''}</option>
-              ))}
-            </select>
+          <div className="quick-select-buttons">
+            <button type="button" className="quick-select-btn" onClick={handleSelectCurrentWeek}>Questa Settimana</button>
+            <button type="button" className="quick-select-btn secondary" onClick={() => setSelectedDates([])}>Reset</button>
           </div>
-        </div>
 
-        <div className="quick-select-buttons">
-          <button type="button" className="quick-select-btn" onClick={handleSelectCurrentWeek}>Settimana Corr.</button>
-          <button type="button" className="quick-select-btn secondary" onClick={() => setSelectedDates([])}>Reset</button>
-        </div>
-
-        <div className="modal-calendar-container">
-          <DayPicker
-            mode="multiple"
-            selected={selectedDates}
-            onSelect={setSelectedDates}
-            locale={it}
-            disabled={{ before: today, dayOfWeek: [0, 6] }}
-            month={currentMonth}
-            onMonthChange={setCurrentMonth}
-            showOutsideDays
-            modifiersClassNames={{
-              selected: 'rdp-day_selected',
-              today: 'rdp-day_today'
-            }}
-          />
-        </div>
-
-        <div className="selected-dates-summary">
-          <strong>Date selezionate: {selectedDates.length}</strong>
-          <div className="dates-list-scroll">
-            {selectedDates.length > 0 ? (
-                selectedDates.sort((a,b) => a-b).map(d => (
-                    <span key={d.toISOString()} className="date-tag">{format(d, 'dd/MM/yyyy')}</span>
-                ))
-            ) : <span>Nessuna data selezionata</span>}
+          <div className="modal-calendar-container">
+            <DayPicker
+              mode="multiple"
+              selected={selectedDates}
+              onSelect={setSelectedDates}
+              locale={it}
+              disabled={{ before: today, dayOfWeek: [0, 6] }}
+              month={currentMonth}
+              onMonthChange={setCurrentMonth}
+              showOutsideDays
+              modifiersClassNames={{
+                selected: 'rdp-day_selected',
+                today: 'rdp-day_today'
+              }}
+            />
           </div>
-        </div>
 
-        {error && <p className="error-message">{error}</p>}
-        {message && <p className="success-message">{message}</p>}
+          <div className="selected-dates-summary">
+            <strong>Riepilogo date ({selectedDates.length}):</strong>
+            <div className="dates-list-scroll">
+              {selectedDates.length > 0 ? (
+                  [...selectedDates].sort((a,b) => a-b).map(d => (
+                      <span key={d.toISOString()} className="date-tag">{format(d, 'dd/MM/yyyy')}</span>
+                  ))
+              ) : <span>Nessuna data selezionata</span>}
+            </div>
+          </div>
 
-        <div className="modal-actions">
+          {error && <p className="error-message">{error}</p>}
+          {message && <p className="success-message">{message}</p>}
+        </form>
+
+        <div className="modal-actions-sticky">
           <button type="button" className="cancel-btn" onClick={onClose}>Annulla</button>
-          <button type="submit" className="submit-btn" disabled={loadingData || selectedDates.length === 0}>
-            Conferma
+          <button 
+            type="submit" 
+            className="submit-btn" 
+            onClick={handleSubmit}
+            disabled={loadingData || selectedDates.length === 0}
+          >
+            Conferma Assegnazione
           </button>
         </div>
-      </form>
+      </div>
     </Modal>
   );
 };

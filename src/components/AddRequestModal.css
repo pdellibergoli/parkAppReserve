@@ -1,143 +1,50 @@
-.add-booking-form {
+/* --- LAYOUT SCROLL E FOOTER --- */
+.add-request-modal-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 1rem; /* Ridotto il gap generale */
+  max-height: 75vh;
+  overflow: hidden;
 }
 
-/* --- STILI SELETTORE UTENTE COMPATTO --- */
-.admin-user-selector {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background-color: var(--bg-color-hover);
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-}
-
-.admin-user-selector label {
-  font-weight: bold;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  margin: 0;
-}
-
-.user-select-compact {
-  flex-grow: 1;
-  padding: 0.4rem; /* Padding ridotto */
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--input-bg);
-  color: var(--text-color);
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.user-select-compact:focus {
-  outline: none;
-  border-color: var(--primary-color);
-}
-
-.user-loading-indicator {
-  font-style: italic;
-  font-size: 0.9rem;
-  color: var(--text-color-secondary);
-}
-/* -------------------------------------- */
-
-.form-group {
+.modal-scroll-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.2rem;
   display: flex;
   flex-direction: column;
+  gap: 1.5rem; /* Più spazio per non schiacciare */
 }
 
-.modal-actions {
-  margin-top: 1rem;
+.modal-actions-sticky {
+  padding: 1rem 1.2rem;
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
+  background-color: var(--bg-modal, white);
+  border-top: 1px solid var(--border-color);
+  z-index: 10;
 }
 
-.modal-actions button {
-  padding: 0.6rem 1.2rem !important;
-  font-weight: 500;
-  width: auto !important; 
+/* --- ADMIN SELECTOR --- */
+.admin-selectors-container {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-}
-
-.cancel-btn {
-  background-color: var(--secondary-color);
-  color: var(--secondary-text-color);
-}
-.cancel-btn:hover {
-  background-color: var(--secondary-color-hover);
-  color: var(--secondary-text-color);
-}
-
-.submit-btn {
-  background-color: var(--primary-color);
-  color: var(--primary-text-color);
-}
-.submit-btn:hover {
-  background-color: var(--primary-color-hover);
-}
-
-.submit-btn:disabled {
-    background-color: #555 !important; 
-    color: #aaa !important;
-}
-
-.rdp-day_button{
-  background-color: #fff !important;
-  border-color: #000000 !important;
-}
-
-.rdp-day_button:hover{
-  background-color: #fff !important;
-  color: var(--primary-color) !important;
-}
-
-/* Colori giorni richiesti */
-.rdp-day.rdp-disabled.rdp-day_requested .rdp-day_button{
-  background-color: var(--primary-color) !important; 
-  color: rgb(255, 255, 255) !important;
-  opacity: 1 !important;
-}
-
-.rdp-day.rdp-disabled .rdp-day_button{
-  background-color: #747474 !important; 
-  color: rgb(255, 255, 255) !important;
-}
-
-.rdp-disabled {
-  opacity: 1;
-}
-
-.warning-message {
-  color: var(--warning-text);
-  background-color: var(--warning-bg);
-  border: 1px solid var(--warning-border);
+  gap: 10px;
+  background-color: var(--bg-color-hover);
   padding: 0.8rem;
-  border-radius: 4px;
-  text-align: center;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
-.spinner-small {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 1s ease-in-out infinite;
+.admin-field { flex: 1; }
+.admin-field label {
+  display: block;
+  font-weight: bold;
+  font-size: 0.85rem;
+  margin-bottom: 5px;
+  color: var(--text-color);
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* --- STILI REACT-DAY-PICKER --- */
+/* --- CALENDARIO (Cerchi e Frecce) --- */
 .modal-calendar-container {
   display: flex;
   justify-content: center;
@@ -147,167 +54,82 @@
   background-color: var(--bg-color);
 }
 
-.modal-calendar-container .rdp {
-  --rdp-cell-size: 40px;
-  --rdp-accent-color: var(--primary-color);
-  --rdp-background-color: var(--primary-color-hover);
-  --rdp-color: var(--text-color);
-  --rdp-background-color-disabled: var(--bg-color-hover);
-  --rdp-color-disabled: var(--text-color-light);
+/* 1. Colore Frecce (Chevron) */
+.rdp-chevron {
+  color: var(--primary-color) !important;
+  fill: var(--primary-color) !important; 
 }
 
-.modal-calendar-container .rdp-head_cell {
-  color: var(--text-color-secondary);
-  font-weight: 500;
-  font-size: 0.9rem;
+.rdp-button_previous:hover .rdp-chevron, .rdp-button_next:hover .rdp-chevron{
+  fill: white !important;
 }
 
-.modal-calendar-container .rdp-caption_label {
-  font-weight: bold;
-  color: var(--text-color);
-}
-
-.rdp-chevron{
-  fill: var(--primary-color) !important;
-  border-radius: 4px;
-}
-
-.rdp-chevron:hover{
-  fill: #fff !important;
-  border-radius: 4px;
-}
-
-.rdp-day_button{
-  color: #000000 !important;
-}
-.rdp-day{
-  border-color: #000000 !important;
-  color: var(--text-color) !important;
-}
-
+/* 2. Cerchi perfetti per i giorni */
 .modal-calendar-container .rdp-day_selected,
 .modal-calendar-container .rdp-day_selected:hover {
   background-color: var(--primary-color) !important;
   color: var(--primary-text-color) !important;
-  border-radius: 30px;
+  border-radius: 50% !important; /* CERCHIO */
 }
 
 .modal-calendar-container .rdp-day_today:not(.rdp-day_selected) {
   font-weight: bold;
   color: var(--primary-color) !important;
-  border-color: var(--primary-color) !important; 
-  border-radius: 30px;
-}
-
-.rdp-day.rdp-day_today{
-  font-weight: bold;
-  color: var(--primary-color) !important;
-  border: 2px solid var(--primary-color);
-  border-radius: 30px;
-}
-
-.modal-calendar-container .rdp-day:not(.rdp-day_disabled):not(.rdp-day_selected):hover {
-  background-color: var(--bg-color-hover);
-  border-radius: 4px;
-}
-
-/* Stile per il giorno 'richiesto' */
-.modal-calendar-container .rdp-day_requested {
-  position: relative;
-  color: var(--text-color);
-}
-
-.modal-calendar-container .rdp-day_requested::after {
-  content: '';
-  position: absolute;
-  bottom: 6px; 
-  left: 50%;
-  transform: translateX(-50%);
-  width: 8px; 
-  height: 8px; 
-  border-radius: 50%;
-  background-color: #ffffff;
+  border: 2px solid var(--primary-color) !important;
+  border-radius: 50% !important; /* CERCHIO */
 }
 
 .modal-calendar-container .rdp-day_disabled {
   opacity: 0.2;
-  cursor: not-allowed;
-}
-.modal-calendar-container .rdp-day_disabled:hover {
-  background-color: transparent !important;
 }
 
-.modal-calendar-container .rdp-day_disabled.rdp-day_requested::after {
-    background-color: var(--text-color-light); 
+/* --- SELEZIONE RAPIDA --- */
+.quick-select-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-/* Stile riepilogo date */
-.selected-dates-summary {
-  font-size: 0.9rem;
-}
-.selected-dates-summary strong {
-  color: var(--text-color);
-  display: block;
-  margin-bottom: 0.5rem;
+.quick-select-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.5rem !important;
+  font-size: 0.85rem !important;
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
+.quick-select-btn.secondary {
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+}
+
+/* --- RIEPILOGO E TAG --- */
 .dates-list-scroll {
-  max-height: 80px; 
+  max-height: 60px;
   overflow-y: auto;
   background-color: var(--bg-color-hover);
   border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 0.5rem;
-  color: var(--text-color-secondary);
 }
 
 .date-tag {
   display: inline-block;
   background-color: var(--secondary-color);
   color: var(--secondary-text-color);
-  padding: 0.25rem 0.5rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 4px;
   margin: 2px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.8rem;
 }
 
-/* Stili pulsanti selezione rapida */
-.quick-select-buttons {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: -0.5rem; 
-  margin-bottom: -0.5rem; 
-  flex-wrap: wrap; 
-}
-
-.quick-select-btn {
-  padding: 0.4rem 0.8rem !important;
-  font-size: 0.85rem !important;
-  font-weight: 500;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color .2s;
-  min-height: auto !important; 
-  background-color: var(--primary-color);
-  color: var(--primary-text-color);
-  border: none;
-  
-  flex-grow: 1; 
-  flex-basis: 120px; 
+.success-message {
+  color: #28a745;
   text-align: center;
-}
-.quick-select-btn:hover {
-  background-color: var(--primary-color-hover) !important;
-  color: var(--primary-text-color) !important;
-}
-
-.quick-select-btn.secondary {
-  background-color: var(--secondary-color) !important;
-  color: var(--secondary-text-color) !important;
-}
-.quick-select-btn.secondary:hover {
-  background-color: var(--secondary-color-hover) !important;
-  color: var(--secondary-text-color) !important;
+  font-weight: bold;
+  margin: 1rem 0;
 }
