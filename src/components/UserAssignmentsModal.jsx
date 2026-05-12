@@ -1,40 +1,39 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Modal from './Modal';
 import './UserAssignmentsModal.css';
 
 const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap, windowDays = 30 }) => {
   if (!user) return null;
 
-  // Funzione per calcolare la data di inizio (N giorni lavorativi fa)
-  const getStartDate = (days) => {
-    let date = new Date();
-    date.setHours(0, 0, 0, 0);
-    let count = 0;
-    while (count < days) {
-      date.setDate(date.getDate() - 1);
-      const dayOfWeek = date.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        count++;
+  const { startDate, today, filteredRequests } = useMemo(() => {
+    const dToday = new Date();
+    dToday.setHours(23, 59, 59, 999);
+
+    const getStartDate = (days) => {
+      let date = new Date();
+      date.setHours(0, 0, 0, 0);
+      let count = 0;
+      while (count < days) {
+        date.setDate(date.getDate() - 1);
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
       }
-    }
-    return date;
-  };
+      return date;
+    };
 
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  const startDate = getStartDate(windowDays);
+    const dStart = getStartDate(windowDays);
 
-  // Filtriamo le richieste: escludiamo cancellate, escludiamo futuro, e allineiamo al periodo
-  const filteredRequests = [...userAssignments]
-    .filter(req => {
-      const reqDate = new Date(req.requestedDate);
-      return reqDate > startDate && reqDate <= today && req.status !== 'cancelled_by_user';
-    })
-    .sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
+    const relevantStatuses = new Set(['assigned', 'not_assigned', 'pending']);
+    
+    const filtered = [...userAssignments]
+      .filter(req => {
+        const reqDate = new Date(req.requestedDate);
+        return reqDate >= dStart && reqDate <= dToday && relevantStatuses.has(req.status);
+      })
+      .sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
 
-  // Conteggi per il riepilogo
-  const totalRequestsCount = filteredRequests.length;
-  const countAssigned = user.recentAssignments || 0;
+    return { startDate: dStart, today: dToday, filteredRequests: filtered };
+  }, [userAssignments, windowDays]);
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -53,17 +52,17 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
         <div className="user-summary">
            <p className="period-label">Periodo di riferimento ({windowDays} gg lavorativi):</p>
            <p className="period-dates">
-             Dal <strong>{formatDate(new Date(startDate.getTime() + 86400000))}</strong> al <strong>{formatDate(today)}</strong>
+             Dal <strong>{formatDate(startDate)}</strong> al <strong>{formatDate(today)}</strong>
            </p>
            
            <div className="summary-stats-grid">
              <div className="stat-box">
                <span className="stat-label">Richieste effettuate: </span>
-               <span className="stat-value">{totalRequestsCount}</span>
+               <span className="stat-value">{user.recentRequests}</span>
              </div>
              <div className="stat-box">
                <span className="stat-label">Parcheggi ottenuti: </span>
-               <span className="stat-value highlight">{countAssigned}</span>
+               <span className="stat-value highlight">{user.recentAssignments}</span>
              </div>
            </div>
         </div>
