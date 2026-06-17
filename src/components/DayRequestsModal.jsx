@@ -84,6 +84,9 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
     const [adminLoading, setAdminLoading] = useState(false);
     const [parkingStatus, setParkingStatus] = useState(null);
 
+    // STATO PER GESTIRE LA SOTTO-MODALE DI FORZATURA ADMIN
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
+
     const today = startOfToday();
     const requestDateObj = selectedDate || (requests && requests.length > 0 ? new Date(requests[0].requestedDate) : new Date());
     const dateTitle = format(requestDateObj, 'dd/MM/yyyy');
@@ -93,6 +96,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         if (!isOpen) {
             setIsAdminMode(false);
             setParkingStatus(null);
+            setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
         } else if (selectedDate && !isPastDate) {
             const fetchStatus = async () => {
                 try {
@@ -146,17 +150,32 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         }
     };
 
-    const handleStatusChange = async (requestId, newStatus) => {
-        if (!window.confirm(`Cambiare lo stato in "${newStatus}"? Questa azione potrebbe inviare email e riassegnare posti.`)) {
-            return;
-        }
+    // FUNZIONE INTERCETTATA PER APRIRE L'OVERLAY CUSTOM O CHIEDERE CONFERMA STANDARD
+    const handleStatusChange = (requestId, currentStatus, newStatus) => {
+        if (currentStatus === newStatus) return;
 
+        // Se passiamo ad assegnato o togliamo un assegnato, chiediamo se usare la logica o forzare
+        if ((currentStatus === 'assigned' && newStatus !== 'assigned') || 
+            (currentStatus !== 'assigned' && newStatus === 'assigned')) {
+            setConfirmModal({ isOpen: true, requestId, newStatus, currentStatus });
+        } else {
+            // Per i cambi di stato standard (es. da pending a not_assigned), usiamo la conferma semplice
+            if (window.confirm(`Cambiare lo stato in "${getStatusText(newStatus)}"?`)) {
+                executeStatusChange(requestId, newStatus, false);
+            }
+        }
+    };
+
+    // ESECUZIONE REALE DELLA CHIAMATA API AL BE CON IL PARAMETRO preventAutoLogic
+    const executeStatusChange = async (requestId, newStatus, preventAutoLogic) => {
         try {
             setIsLoading(true);
+            setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
             await callApi('adminUpdateUserRequestStatus', { 
                 requestId, 
                 newStatus, 
-                actorId: loggedInUser.id 
+                actorId: loggedInUser.id,
+                preventAutoLogic: preventAutoLogic // Parametro inviato al BE
             });
             onRefreshData();
         } catch (error) {
@@ -223,95 +242,139 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={customTitle}>
-            {loggedInUser.isAdmin === true && (
-                <div className="admin-controls-wrapper">
-                    {!isAdminMode ? (
-                        <button className="admin-panel-toggle" onClick={() => setIsAdminMode(true)}>
-                            <FaWrench /> Abilita Modifiche Admin
-                        </button>
-                    ) : (
-                        <button className="admin-panel-toggle active" onClick={() => setIsAdminMode(false)}>
-                            <FaLock /> Disabilita Modifiche Admin
-                        </button>
-                    )}
-                    
-                    {isAdminMode && (
-                        <AdminActions 
-                            selectedDate={requestDateObj}
-                            onAdminAction={handleAdminAction}
-                            isLoading={adminLoading}
-                            hasPendingRequests={hasPendingRequests}
-                        />
-                    )}
-                </div>
-            )}
-            
-            <div className="day-bookings-list">
-                {sortedRequests.length === 0 ? (
-                    <p style={{textAlign: 'center', color: '#666'}}>Nessuna richiesta attiva per questo giorno.</p>
-                ) : (
-                    sortedRequests.map(request => {
-                        const requestUser = users?.find(u => u.id === request.userId);
-                        const isMyRequest = requestUser && loggedInUser.id === requestUser.id;
-                        const requestDate = new Date(request.requestedDate);
-                        const isPastRequest = isBefore(requestDate, today);
-                        const status = request.status;
+            <div className="day-requests-wrapper" style={{ position: 'relative' }}>
+                
+                {/* INTERFACCIA DI CONFERMA INTERNA PER GLI ADMIN */}
+                {confirmModal.isOpen && (
+                    <div className="custom-confirm-overlay">
+                        <div className="custom-confirm-box">
+                            <h3>Conferma Modifica Stato</h3>
+                            <p>Stai cambiando lo stato della richiesta in: <strong>{getStatusText(confirmModal.newStatus)}</strong>.</p>
+                            <p className="confirm-prompt-text">Scegli la modalità di gestione per questa azione:</p>
+                            
+                            <div className="confirm-actions-col">
+                                <button 
+                                    className="confirm-btn logic" 
+                                    onClick={() => executeStatusChange(confirmModal.requestId, confirmModal.newStatus, false)}
+                                >
+                                    Applica Logica Automatica
+                                    <small>
+                                        {confirmModal.newStatus === 'assigned' 
+                                            ? "(Prende automaticamente il primo posto libero)" 
+                                            : "(Riassegna subito il posto liberato all'utente successivo in lista)"}
+                                    </small>
+                                </button>
+                                
+                                <button 
+                                    className="confirm-btn force" 
+                                    onClick={() => executeStatusChange(confirmModal.requestId, confirmModal.newStatus, true)}
+                                >
+                                    Forza solo cambio stato
+                                    <small>(Nessun automatismo a cascata / Permette Overbooking manuale)</small>
+                                </button>
+                            </div>
+                            
+                            <button 
+                                className="cancel-btn block-btn" 
+                                style={{ marginTop: '1.2rem', width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', cursor: 'pointer' }} 
+                                onClick={() => setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null })}
+                            >
+                                Annulla e mantieni stato precedente
+                            </button>
+                        </div>
+                    </div>
+                )}
 
-                        const canEdit = status === 'pending' && !isPastRequest;
-                        const canCancel = (status === 'pending' || status === 'not_assigned' || status === 'assigned') && !isPastRequest;
-                        const showEdit = (isMyRequest && canEdit) || (isAdminMode && canEdit);
-                        const showCancel = (isMyRequest && canCancel) || (isAdminMode && canCancel);
+                {loggedInUser.isAdmin === true && (
+                    <div className="admin-controls-wrapper">
+                        {!isAdminMode ? (
+                            <button className="admin-panel-toggle" onClick={() => setIsAdminMode(true)}>
+                                <FaWrench /> Abilita Modifiche Admin
+                            </button>
+                        ) : (
+                            <button className="admin-panel-toggle active" onClick={() => setIsAdminMode(false)}>
+                                <FaLock /> Disabilita Modifiche Admin
+                            </button>
+                        )}
                         
-                        const showProbability = isTomorrow(requestDate) && status === 'pending' && requestUser?.successRate !== undefined;
-                        const probabilityPercent = requestUser?.successRate !== undefined ? ((1 - requestUser.successRate) * 100).toFixed(0) : 0;
+                        {isAdminMode && (
+                            <AdminActions 
+                                selectedDate={requestDateObj}
+                                onAdminAction={handleAdminAction}
+                                isLoading={adminLoading}
+                                hasPendingRequests={hasPendingRequests}
+                            />
+                        )}
+                    </div>
+                )}
+                
+                <div className="day-bookings-list">
+                    {sortedRequests.length === 0 ? (
+                        <p style={{textAlign: 'center', color: '#666'}}>Nessuna richiesta attiva per questo giorno.</p>
+                    ) : (
+                        sortedRequests.map(request => {
+                            const requestUser = users?.find(u => u.id === request.userId);
+                            const isMyRequest = requestUser && loggedInUser.id === requestUser.id;
+                            const requestDate = new Date(request.requestedDate);
+                            const isPastRequest = isBefore(requestDate, today);
+                            const status = request.status;
 
-                        return (
-                            <div key={request.requestId} className={`booking-card status-${status}`}>
-                                <div className="card-main-info">
-                                    {requestUser && <Avatar user={requestUser} />}
-                                    <div className="card-details">
-                                        <span className="user-name">{requestUser ? `${requestUser.firstName} ${requestUser.lastName}` : 'Utente non trovato'}</span>
-                                        <div className="parking-spot">
-                                            <span>Stato: </span>
-                                            {isAdminMode ? (
-                                                <select 
-                                                    className="admin-status-select"
-                                                    value={status}
-                                                    onChange={(e) => handleStatusChange(request.requestId, e.target.value)}
-                                                >
-                                                  <option value="pending">In attesa</option>
-                                                  <option value="assigned">Assegnato</option>
-                                                  <option value="not_assigned">Non assegnato</option>
-                                                </select>
-                                            ) : (
-                                                <strong>{getStatusText(status)}</strong>
+                            const canEdit = status === 'pending' && !isPastRequest;
+                            const canCancel = (status === 'pending' || status === 'not_assigned' || status === 'assigned') && !isPastRequest;
+                            const showEdit = (isMyRequest && canEdit) || (isAdminMode && canEdit);
+                            const showCancel = (isMyRequest && canCancel) || (isAdminMode && canCancel);
+                            
+                            const showProbability = isTomorrow(requestDate) && status === 'pending' && requestUser?.successRate !== undefined;
+                            const probabilityPercent = requestUser?.successRate !== undefined ? ((1 - requestUser.successRate) * 100).toFixed(0) : 0;
+
+                            return (
+                                <div key={request.requestId} className={`booking-card status-${status}`}>
+                                    <div className="card-main-info">
+                                        {requestUser && <Avatar user={requestUser} />}
+                                        <div className="card-details">
+                                            <span className="user-name">{requestUser ? `${requestUser.firstName} ${requestUser.lastName}` : 'Utente non trovato'}</span>
+                                            <div className="parking-spot">
+                                                <span>Stato: </span>
+                                                {isAdminMode ? (
+                                                    <select 
+                                                        className="admin-status-select"
+                                                        value={status}
+                                                        onChange={(e) => handleStatusChange(request.requestId, status, e.target.value)}
+                                                    >
+                                                      <option value="pending">In attesa</option>
+                                                      <option value="assigned">Assegnato</option>
+                                                      <option value="not_assigned">Non assegnato</option>
+                                                    </select>
+                                                ) : (
+                                                    <strong>{getStatusText(status)}</strong>
+                                                )}
+                                                {status === 'assigned' && ` - Posto: ${request.assignedParkingSpaceNumber || 'Forzato'}`}
+                                            </div>
+                                            {showProbability && (
+                                                <span className="probability-text">
+                                                    Probabilità di assegnazione: <strong>{probabilityPercent}%</strong>
+                                                </span>
                                             )}
-                                            {status === 'assigned' && ` - Posto: ${request.assignedParkingSpaceNumber}`}
                                         </div>
-                                        {showProbability && (
-                                            <span className="probability-text">
-                                                Probabilità di assegnazione: <strong>{probabilityPercent}%</strong>
-                                            </span>
+                                    </div>
+
+                                    <div className="card-actions">
+                                        {showEdit && (
+                                            <button className="icon-btn edit-btn" onClick={() => handleEditClick(request)} title="Modifica">
+                                                <FaPencilAlt />
+                                            </button>
+                                        )}
+                                        {showCancel && (
+                                            <button className="icon-btn delete-btn" onClick={() => handleCancelClick(request)} title="Cancella">
+                                                <FaTrashAlt />
+                                            </button>
                                         )}
                                     </div>
                                 </div>
-
-                                <div className="card-actions">
-                                    {showEdit && (
-                                        <button className="icon-btn edit-btn" onClick={() => handleEditClick(request)} title="Modifica">
-                                            <FaPencilAlt />
-                                        </button>
-                                    )}
-                                    {showCancel && (
-                                        <button className="icon-btn delete-btn" onClick={() => handleCancelClick(request)} title="Cancella">
-                                            <FaTrashAlt />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })
-                )}
+                            );
+                        })
+                    )}
+                </div>
             </div>
         </Modal>
     );

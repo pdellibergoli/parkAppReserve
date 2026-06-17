@@ -262,3 +262,89 @@
 
 .admin-action-btn:disabled { background-color: #ccc; cursor: not-allowed; }
 .admin-action-btn .spinner-small { width: 16px; height: 16px; border-width: 2px; }
+/* Custom Confirm Overlay */
+.custom-confirm-overlay {
+  position: absolute; 
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  border-radius: 8px;
+}
+
+.custom-confirm-box {
+  background: var(--bg-modal, white);
+  padding: 1.5rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 350px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+.custom-confirm-box h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+  font-size: 1.2rem;
+}
+
+.custom-confirm-box p {
+  font-size: 0.95rem;
+  margin-bottom: 1.2rem;
+  color: var(--text-color);
+}
+
+.confirm-actions-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.confirm-btn {
+  padding: 0.8rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: opacity 0.2s;
+  font-size: 0.95rem;
+}
+
+.confirm-btn.logic {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.confirm-btn.force {
+  background-color: #f39c12;
+  color: white;
+}
+
+.confirm-btn small {
+  font-weight: normal;
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.confirm-btn:hover {
+  opacity: 0.9;
+}
+
+.confirm-actions-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.block-btn {
+  display: block;
+  width: 100%;
+}
