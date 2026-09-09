@@ -796,7 +796,7 @@ function fulfillParkingRequest(payload) {
 }
 
 function adminUpdateUserRequestStatus(payload) {
-  const { requestId, newStatus, actorId } = payload;
+  const { requestId, newStatus, actorId, preventAutoLogic } = payload;
   if (!requestId || !newStatus) throw new Error("Dati insufficienti per l'aggiornamento.");
 
   const result = findRowByColumn(CONFIG.SHEETS.REQUESTS, 'requestId', requestId);
@@ -822,16 +822,33 @@ function adminUpdateUserRequestStatus(payload) {
 
     sendAdminCancellationEmail(userId, requestDate);
 
-    // Riassegna escludendo l'utente appena revocato
-    const bestCandidate = findBestCandidate(requestDate, userId);
-    if (bestCandidate) {
-      const spaceObj = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES).find(s => s.id === currentSpaceId);
-      if (spaceObj) assignParking(bestCandidate, { id: currentSpaceId, number: currentSpaceNum });
+    // Se l'admin ha scelto la "logica automatica"
+    if (!preventAutoLogic) {
+      const bestCandidate = findBestCandidate(requestDate, userId);
+      if (bestCandidate) {
+        const spaceObj = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES).find(s => s.id === currentSpaceId);
+        if (spaceObj) assignParking(bestCandidate, { id: currentSpaceId, number: currentSpaceNum });
+      }
+    } else {
+       logToClient(`Logica prevenuta: il posto liberato non è stato riassegnato automaticamente.`);
     }
   } else if (newStatus === 'assigned' && oldStatus !== 'assigned') {
-    const freeSpaces = getAvailableSpacesForDate(requestDate);
-    if (freeSpaces.length === 0) throw new Error("Nessun posto disponibile.");
-    assignParking({ requestId, userId, requestedDate: requestDate }, freeSpaces[0]);
+    if (!preventAutoLogic) {
+      const freeSpaces = getAvailableSpacesForDate(requestDate);
+      if (freeSpaces.length === 0) throw new Error("Nessun posto disponibile. (Seleziona 'Forza' per ignorare il limite)");
+      assignParking({ requestId, userId, requestedDate: requestDate }, freeSpaces[0]);
+    } else {
+      // FORZATURA: Lo mettiamo in assigned ignorando se ci sono posti
+      updateCell(sheet, result.row, 'status', newStatus, headers);
+      updateCell(sheet, result.row, 'assignedParkingSpaceId', 'forced', headers);
+      updateCell(sheet, result.row, 'assignedParkingSpaceNumber', 'Forzato', headers);
+      
+      const historySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
+      historySheet.appendRow([userId, requestDate, 'forced']);
+      
+      sendSuccessEmail(userId, requestDate, "Forzato (Extra)");
+      logToClient(`Assegnazione forzata (Overbooking) per ${userId} in data ${formatDate(requestDate)}.`);
+    }
   } else {
     updateCell(sheet, result.row, 'status', newStatus, headers);
   }
@@ -841,7 +858,7 @@ function adminUpdateUserRequestStatus(payload) {
 }
 
 function adminUpdateRequestStatus(payload) {
-  const { requestId, newStatus } = payload;
+  const { requestId, newStatus, preventAutoLogic } = payload;
   if (!requestId || !newStatus) throw new Error("Dati insufficienti.");
 
   const result = findRowByColumn(CONFIG.SHEETS.REQUESTS, 'requestId', requestId);
@@ -867,18 +884,33 @@ function adminUpdateRequestStatus(payload) {
 
     sendAdminCancellationEmail(userId, requestDate);
 
-    const spaceObj = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES).find(s => s.id === currentSpaceId);
-    if (spaceObj) {
-      const bestCandidate = findBestCandidate(requestDate);
-      if (bestCandidate) {
-        logToClient(`Riassegnazione al miglior candidato: ${bestCandidate.userId}`);
-        assignParking(bestCandidate, { id: currentSpaceId, number: currentSpaceNum });
-      }
+    if (!preventAutoLogic) {
+        const spaceObj = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES).find(s => s.id === currentSpaceId);
+        if (spaceObj) {
+          const bestCandidate = findBestCandidate(requestDate);
+          if (bestCandidate) {
+            logToClient(`Riassegnazione al miglior candidato: ${bestCandidate.userId}`);
+            assignParking(bestCandidate, { id: currentSpaceId, number: currentSpaceNum });
+          }
+        }
+    } else {
+        logToClient(`Logica prevenuta: il posto liberato non è stato riassegnato automaticamente.`);
     }
   } else if (newStatus === 'assigned' && oldStatus !== 'assigned') {
-    const freeSpaces = getAvailableSpacesForDate(requestDate);
-    if (freeSpaces.length === 0) throw new Error("Nessun posto libero.");
-    assignParking({ requestId, userId, requestedDate: requestDate }, freeSpaces[0]);
+    if (!preventAutoLogic) {
+        const freeSpaces = getAvailableSpacesForDate(requestDate);
+        if (freeSpaces.length === 0) throw new Error("Nessun posto libero. (Seleziona 'Forza' per ignorare il limite)");
+        assignParking({ requestId, userId, requestedDate: requestDate }, freeSpaces[0]);
+    } else {
+        updateCell(sheet, result.row, 'status', newStatus, headers);
+        updateCell(sheet, result.row, 'assignedParkingSpaceId', 'forced', headers);
+        updateCell(sheet, result.row, 'assignedParkingSpaceNumber', 'Forzato', headers);
+        
+        const historySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
+        historySheet.appendRow([userId, requestDate, 'forced']);
+        
+        sendSuccessEmail(userId, requestDate, "Forzato (Extra)");
+    }
   } else {
     updateCell(sheet, result.row, 'status', newStatus, headers);
   }
