@@ -316,7 +316,11 @@ const HomePage = () => {
         onOptimisticDelete={handleOptimisticDelete}
       />
 
-      <SendCommunicationModal onBannerCreated={(newBanner) => setActiveBanners(prev => [newBanner, ...prev])} />
+      <SendCommunicationModal 
+        isOpen={isCommModalOpen} 
+        onClose={() => setIsCommModalOpen(false)} 
+        onBannerCreated={(newBanner) => setActiveBanners(prev => [newBanner, ...prev])} 
+      />
 
       {user?.isAdmin && (
         <AdminManuallyAssignModal 
