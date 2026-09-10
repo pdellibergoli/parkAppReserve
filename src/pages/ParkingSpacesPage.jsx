@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { callApi } from '../services/api';
-import { FaTrashAlt, FaCalendarPlus } from 'react-icons/fa';
+import { FaTrashAlt, FaCalendarPlus, FaPencilAlt, FaCheck, FaTimes } from 'react-icons/fa';
 import AvailabilityModal from '../components/AvailabilityModal';
 import './ParkingSpacesPage.css';
 
@@ -11,8 +11,12 @@ const ParkingSpacesPage = () => {
   const [newSpaceName, setNewSpaceName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   
-  // 1. NUOVO STATO PER GESTIRE IL CARICAMENTO DELLA SINGOLA RIGA
   const [deletingSpaceId, setDeletingSpaceId] = useState(null);
+
+  // STATI PER LA MODIFICA IN-LINE DEL NOME
+  const [editingSpaceId, setEditingSpaceId] = useState(null);
+  const [editingName, setEditingName] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
 
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState(null);
@@ -40,12 +44,21 @@ const ParkingSpacesPage = () => {
 
   const handleAddSpace = async (e) => {
     e.preventDefault();
-    if (!newSpaceName.trim()) return;
+    if (!String(newSpaceName).trim()) return;
     setIsAdding(true);
     try {
-      await callApi('addParkingSpace', { number: newSpaceName.trim() });
+      const response = await callApi('addParkingSpace', { number: String(newSpaceName).trim() });
       setNewSpaceName('');
-      fetchParkingSpaces();
+      if (response?.space) {
+        setParkingSpaces(prevSpaces => {
+          const nextSpaces = [...prevSpaces, response.space];
+          return nextSpaces.sort((a, b) => 
+            String(a.number).localeCompare(String(b.number), undefined, { numeric: true })
+          );
+        });
+      } else {
+        fetchParkingSpaces();
+      }
     } catch (err) {
       alert(`Errore: ${err.message}`);
     } finally {
@@ -53,16 +66,44 @@ const ParkingSpacesPage = () => {
     }
   };
 
+  const handleStartEdit = (space) => {
+    setEditingSpaceId(space.id);
+    setEditingName(String(space.number ?? '')); // <--- CONVERTITO IN STRINGA
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSpaceId(null);
+    setEditingName('');
+  };
+
+  const handleSaveName = async (spaceId) => {
+    const cleanName = String(editingName).trim(); // <--- CONVERTITO IN STRINGA PRIMA DI .trim()
+    if (!cleanName) return;
+
+    setIsSavingName(true);
+    try {
+      await callApi('updateParkingSpaceName', { spaceId, number: cleanName });
+      setParkingSpaces(prev =>
+        prev.map(s => s.id === spaceId ? { ...s, number: cleanName } : s)
+      );
+      setEditingSpaceId(null);
+    } catch (err) {
+      alert(`Errore durante il salvataggio: ${err.message}`);
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
   const handleDeleteSpace = async (spaceId, spaceNumber) => {
     if (window.confirm(`Sei sicuro di voler eliminare il parcheggio "${spaceNumber}"? Questa azione annullerà anche eventuali assegnazioni future per questo posto.`)) {
-      setDeletingSpaceId(spaceId); // 2. IMPOSTA LO STATO DI CARICAMENTO
+      setDeletingSpaceId(spaceId);
       try {
         await callApi('deleteParkingSpace', { spaceId });
-        fetchParkingSpaces(); // Il refresh dei dati farà sparire la riga
+        setParkingSpaces(prev => prev.filter(s => s.id !== spaceId));
       } catch (err) {
         alert(`Errore: ${err.message}`);
       } finally {
-        setDeletingSpaceId(null); // 3. RESETTA LO STATO DI CARICAMENTO
+        setDeletingSpaceId(null);
       }
     }
   };
@@ -89,7 +130,7 @@ const ParkingSpacesPage = () => {
   const handleOpenAvailabilityModal = (space) => {
       setSelectedSpace(space);
       setIsAvailabilityModalOpen(true);
-  }
+  };
 
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
@@ -109,7 +150,7 @@ const ParkingSpacesPage = () => {
               placeholder="Es. 'Posto 15'"
               className="space-input"
             />
-            <button type="submit" className="primary-submit-btn" disabled={isAdding || !newSpaceName.trim()}>
+            <button type="submit" className="primary-submit-btn" disabled={isAdding || !String(newSpaceName).trim()}>
               {isAdding ? <div className="spinner-small"></div> : 'Aggiungi'}
             </button>
           </form>
@@ -119,12 +160,45 @@ const ParkingSpacesPage = () => {
           <h2>Parcheggi Esistenti ({parkingSpaces.length})</h2>
           <ul className="spaces-list">
             {parkingSpaces.map(space => {
-              const isDeleting = deletingSpaceId === space.id; // 4. Controlla se questa è la riga in cancellazione
+              const isDeleting = deletingSpaceId === space.id;
+              const isEditing = editingSpaceId === space.id;
 
               return (
                 <li key={space.id} className="space-item">
-                  <span className="space-number">{space.number}</span>
+                  {isEditing ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <input 
+                        type="text" 
+                        value={editingName} 
+                        onChange={(e) => setEditingName(e.target.value)}
+                        className="space-input"
+                        style={{ padding: '4px 8px', fontSize: '0.9rem' }}
+                        autoFocus
+                      />
+                      <button 
+                        className="icon-btn" 
+                        onClick={() => handleSaveName(space.id)}
+                        disabled={isSavingName || !String(editingName).trim()}
+                        title="Salva nome"
+                        style={{ color: '#28a745' }}
+                      >
+                        {isSavingName ? <div className="spinner-small"></div> : <FaCheck />}
+                      </button>
+                      <button 
+                        className="icon-btn" 
+                        onClick={handleCancelEdit}
+                        disabled={isSavingName}
+                        title="Annulla"
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="space-number">{space.number}</span>
+                  )}
+
                   <div className="space-actions">
+
                     <div className="fixed-toggle">
                       <label htmlFor={`fixed-${space.id}`}>Fisso</label>
                       <input
@@ -132,7 +206,7 @@ const ParkingSpacesPage = () => {
                         id={`fixed-${space.id}`}
                         checked={space.isFixed === true}
                         onChange={() => handleFixedChange(space.id, space.isFixed)}
-                        disabled={isDeleting} // Disabilita durante la cancellazione
+                        disabled={isDeleting || isEditing}
                       />
                     </div>
                     
@@ -141,9 +215,20 @@ const ParkingSpacesPage = () => {
                         className="icon-btn edit-btn"
                         onClick={() => handleOpenAvailabilityModal(space)}
                         title={`Gestisci disponibilità per ${space.number}`}
-                        disabled={isDeleting} // Disabilita durante la cancellazione
+                        disabled={isDeleting || isEditing}
                       >
                         <FaCalendarPlus />
+                      </button>
+                    )}
+
+                    {!isEditing && (
+                      <button 
+                        className="modify-space-btn" 
+                        onClick={() => handleStartEdit(space)}
+                        title="Rinomina parcheggio"
+                        disabled={isDeleting}
+                      >
+                        <FaPencilAlt />
                       </button>
                     )}
 
@@ -151,9 +236,8 @@ const ParkingSpacesPage = () => {
                       className="delete-space-btn"
                       onClick={() => handleDeleteSpace(space.id, space.number)}
                       title={`Elimina parcheggio ${space.number}`}
-                      disabled={isDeleting} // Disabilita durante la cancellazione
+                      disabled={isDeleting || isEditing}
                     >
-                      {/* 5. MOSTRA SPINNER O ICONA */}
                       {isDeleting ? <div className="spinner-small" style={{borderColor: 'rgba(0,0,0,0.2)', borderTopColor: '#DE1F3C'}}></div> : <FaTrashAlt />}
                     </button>
                   </div>

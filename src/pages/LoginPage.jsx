@@ -19,11 +19,8 @@ const LoginPage = () => {
   const location = useLocation();
 
   const handleSubmit = async (e) => {
-    // ... (logica handleSubmit invariata) ...
-     if (e) e.preventDefault();
+    if (e) e.preventDefault();
     setError('');
-    setResendMessage('');
-    setShowResendLink(false);
     setLoading(true);
 
     try {
@@ -32,12 +29,12 @@ const LoginPage = () => {
       if (loginResult && loginResult.verificationNeeded) {
         setError(loginResult.message);
         setShowResendLink(true);
-      } else if (!loginResult || !loginResult.id) {
-        setError('Si è verificato un errore inaspettato durante il login.');
+      } else if (loginResult) {
+        // NAVIGAZIONE DOPO IL LOGIN RIUSCITO
+        navigate('/', { replace: true });
       }
     } catch (err) {
       setError(err.message || 'Credenziali non valide. Riprova.');
-      setShowResendLink(false);
     } finally {
       setLoading(false);
     }

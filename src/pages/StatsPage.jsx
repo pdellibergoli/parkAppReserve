@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { callApi } from '../services/api';
 import { getTextColor } from '../utils/colors';
 import UserAssignmentsModal from '../components/UserAssignmentsModal';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { FaTrophy, FaCalendarCheck, FaChartLine, FaInfoCircle } from 'react-icons/fa';
+import { FaInfoCircle } from 'react-icons/fa';
 import './StatsPage.css';
 
 const UserAvatar = ({ user }) => {
@@ -17,33 +17,69 @@ const UserAvatar = ({ user }) => {
 };
 
 const StatsPage = () => {
-  const [allData, setAllData] = useState({ history: [], users: [], spaces: [], requests: [] });
-  const [loading, setLoading] = useState(true);
+  const context = useOutletContext() || {};
+  const { sharedUsers = [], sharedSpaces = [], sharedRequests = [] } = context;
+
+  // Stato per i dati caricati via API solo in caso di fallback (es. F5)
+  const [fetchedData, setFetchedData] = useState({ users: [], spaces: [], requests: [] });
+  const [loading, setLoading] = useState(sharedUsers.length === 0);
   const [error, setError] = useState('');
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const [assignmentsForModal, setAssignmentsForModal] = useState([]);
 
+  // Se i dati sono in memoria usa quelli, altrimenti usa quelli scaricati via API
+  const allData = useMemo(() => {
+    if (sharedUsers.length > 0) {
+      return {
+        users: sharedUsers,
+        spaces: sharedSpaces,
+        requests: sharedRequests
+      };
+    }
+    return fetchedData;
+  }, [sharedUsers, sharedSpaces, sharedRequests, fetchedData]);
+
+  const hasMemoryData = sharedUsers.length > 0;
+
   useEffect(() => {
+    // Se i dati sono già presenti nel contesto, non fare nulla
+    if (hasMemoryData) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        const [history, users, spaces, requests] = await Promise.all([
-          callApi('getAssignmentHistory'),
+        const [users, spaces, requests] = await Promise.all([
           callApi('getUsersWithPriority'), 
           callApi('getParkingSpaces'),
           callApi('getRequests', {})
         ]);
-        setAllData({ history, users, spaces, requests });
+        if (isMounted) {
+          setFetchedData({ users, spaces, requests });
+        }
       } catch (err) {
-        setError("Impossibile caricare i dati delle statistiche.");
+        if (isMounted) {
+          setError("Impossibile caricare i dati delle statistiche.");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+
     fetchInitialData();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasMemoryData]);
 
   const spaceMap = useMemo(() => new Map(allData.spaces.map(s => [s.id, s.number])), [allData.spaces]);
 
@@ -63,9 +99,9 @@ const StatsPage = () => {
     return date;
   };
 
-  const { userStats, kpiData, chartData, startDateLabel } = useMemo(() => {
-    const { users, requests, history } = allData;
-    if (!users.length) return { userStats: [], kpiData: {}, chartData: [], startDateLabel: '' };
+  const { userStats, startDateLabel } = useMemo(() => {
+    const { users } = allData;
+    if (!users.length) return { userStats: [], startDateLabel: '' };
 
     const startDate = calculateStartDate(priorityWindowDays);
 
@@ -77,30 +113,11 @@ const StatsPage = () => {
       fullName: `${user.firstName} ${user.lastName || ''}`.trim()
     }));
 
-    const sortedForCards = [...stats].sort((a,b) => a.successRate - b.successRate);
-    const sortedForChart = [...stats].sort((a, b) => b.totalAssignments - a.totalAssignments).slice(0, 5);
-
-    const busiestDateEntry = Object.entries(
-      requests.reduce((acc, curr) => {
-        if (curr.status !== 'cancelled_by_user') {
-            const dateStr = new Date(curr.requestedDate).toLocaleDateString();
-            acc[dateStr] = (acc[dateStr] || 0) + 1;
-        }
-        return acc;
-      }, {})
-    ).reduce((a, b) => a[1] > b[1] ? a : b, ["N/D", 0]);
+    const sortedForCards = [...stats].sort((a, b) => a.successRate - b.successRate);
 
     return {
         userStats: sortedForCards,
-        chartData: sortedForChart,
-        startDateLabel: startDate.toLocaleDateString('it-IT'),
-        kpiData: {
-            total: history.length,
-            topUser: sortedForChart[0]?.fullName || 'Nessuno',
-            topUserCount: sortedForChart[0]?.totalAssignments || 0,
-            busiestDay: busiestDateEntry[0],
-            busiestDayCount: busiestDateEntry[1]
-        }
+        startDateLabel: startDate.toLocaleDateString('it-IT')
     };
   }, [allData, priorityWindowDays]);
 
@@ -118,52 +135,6 @@ const StatsPage = () => {
     <>
       <div className="stats-container">
         <h1>Statistiche Generali</h1>
-        
-        <div className="kpi-grid">
-            <div className="kpi-card">
-                <div className="kpi-icon blue"><FaChartLine /></div>
-                <div className="kpi-content">
-                    <h3>Totale Assegnazioni</h3>
-                    <p>{kpiData.total}</p>
-                    <span>storico assoluto</span>
-                </div>
-            </div>
-            <div className="kpi-card">
-                <div className="kpi-icon gold"><FaTrophy /></div>
-                <div className="kpi-content">
-                    <h3>Utente più Attivo</h3>
-                    <p className="small-text">{kpiData.topUser}</p>
-                    <span>con {kpiData.topUserCount} parcheggi ({priorityWindowDays}gg)</span>
-                </div>
-            </div>
-            <div className="kpi-card">
-                <div className="kpi-icon green"><FaCalendarCheck /></div>
-                <div className="kpi-content">
-                    <h3>Giorno Record</h3>
-                    <p className="small-text">{kpiData.busiestDay}</p>
-                    <span>{kpiData.busiestDayCount} richieste</span>
-                </div>
-            </div>
-        </div>
-
-        <div className="chart-section">
-            <h2>Top 5 Utenti (Ultimi {priorityWindowDays}gg)</h2>
-            <div className="chart-wrapper">
-                <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                        <XAxis type="number" hide />
-                        <YAxis dataKey="fullName" type="category" width={120} tick={{fontSize: 12}} />
-                        <Tooltip cursor={{fill: 'transparent'}} />
-                        <Bar dataKey="totalAssignments" name="Assegnazioni" barSize={20} radius={[0, 10, 10, 0]}>
-                             {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={index === 0 ? '#DE1F3C' : '#555'} />
-                             ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        </div>
 
         <h2>Dettaglio Priorità</h2>
         <div className="priority-info-banner">

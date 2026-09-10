@@ -12,7 +12,7 @@ import { useOutletContext } from 'react-router-dom';
 import DayRequestsModal from '../components/DayRequestsModal';
 import SendCommunicationModal from '../components/SendCommunicationModal';
 import AdminManuallyAssignModal from '../components/AdminManuallyAssignModal'; 
-import { callApi } from '../services/api';
+import { fetchData as apiFetchData, postData, callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
 import { useAuth } from '../context/AuthContext';
 import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus } from 'react-icons/fa';
@@ -26,7 +26,15 @@ const areDatesOnSameDay = (first, second) => {
 };
 
 const HomePage = () => {
-  const { handleOpenAddModal, handleOpenEditModal, refreshKey, forceDataRefresh } = useOutletContext();
+  const context = useOutletContext() || {};
+  const { 
+    handleOpenAddModal, 
+    handleOpenEditModal, 
+    refreshKey, 
+    forceDataRefresh,
+    registerOptimisticHandlers 
+  } = context;
+
   const { setIsLoading } = useLoading();
   const { user } = useAuth(); 
   
@@ -43,39 +51,109 @@ const HomePage = () => {
   const [isCommModalOpen, setIsCommModalOpen] = useState(false);
   const [isAdminAssignOpen, setIsAdminAssignOpen] = useState(false);
 
+  const [parkingSpaces, setParkingSpaces] = useState([]);
+  const [temporaryAvailabilities, setTemporaryAvailabilities] = useState([]);
+
+  const handleOptimisticUpdate = useCallback((updatedRequest) => {
+    if (!updatedRequest) return;
+    setAllRequests(prev => {
+      const array = Array.isArray(prev) ? prev : [];
+      
+      const index = array.findIndex(r => 
+        (r.requestId && r.requestId === updatedRequest.requestId) ||
+        (r.userId === updatedRequest.userId && areDatesOnSameDay(r.requestedDate, updatedRequest.requestedDate))
+      );
+
+      if (index !== -1) {
+        const next = [...array];
+        next[index] = { ...next[index], ...updatedRequest };
+        return next;
+      }
+      return [...array, updatedRequest];
+    });
+  }, []);
+
+  const handleOptimisticDelete = useCallback((requestIdToDelete) => {
+    setAllRequests(prev => {
+      const array = Array.isArray(prev) ? prev : [];
+      return array.filter(r => r.requestId !== requestIdToDelete);
+    });
+  }, []);
+
+  // REGISTRA I GESTORI SU MAINLAYOUT QUANDO HOMEPAGE SI MONTA
+  useEffect(() => {
+    if (typeof registerOptimisticHandlers === 'function') {
+      registerOptimisticHandlers({
+        onUpdate: handleOptimisticUpdate,
+        onDelete: handleOptimisticDelete,
+        usersList: users,
+        allRequests: allRequests
+      });
+    }
+  }, [registerOptimisticHandlers, handleOptimisticUpdate, handleOptimisticDelete, users, allRequests]);
+
+  const executeApi = useCallback(async (action, payload = {}, method = 'POST') => {
+    if (typeof callApi === 'function') {
+      return await callApi(action, payload, method);
+    }
+    if (method === 'POST') {
+      return await postData(action, payload);
+    }
+    return await apiFetchData(action, payload);
+  }, []);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
-      const [requestsData, usersData, bannersData] = await Promise.all([
-        callApi('getRequests', {}),
-        callApi('getUsersWithPriority'),
-        callApi('getActiveCommunication')
-      ]);
-      setAllRequests(requestsData || []);
-      setUsers(usersData || []);
-      setActiveBanners(Array.isArray(bannersData) ? bannersData : (bannersData ? [bannersData] : []));
+      const initialData = await executeApi('getInitialData', { userId: user?.id });
+
+      setAllRequests(initialData?.requests || []);
+      setUsers(initialData?.users || []);
+      setActiveBanners(initialData?.banners || []);
+      
+      setParkingSpaces(initialData?.parkingSpaces || []);
+      setTemporaryAvailabilities(initialData?.temporaryAvailabilities || []);
     } catch (err) {
-      setError('Impossibile caricare i dati. Riprova più tardi.');
+      console.error("[HomePage Error]:", err);
+      setError('Impossibile caricare i dati.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [executeApi, user?.id]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData, refreshKey]);
-  
-  const handleDayClick = (date) => {
-    setSelectedDate(date); 
+
+  const handleDayClick = (clickedDate) => {
+    setSelectedDate(clickedDate); 
     setIsDayModalOpen(true);
   };
+
+  const totalParkingForSelectedDate = useMemo(() => {
+    if (!selectedDate) return 0;
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    
+    // Contiamo i posti fissi
+    const fixedCount = parkingSpaces.filter(s => s.isFixed || s.type === 'fixed').length;
+    
+    // Contiamo i posti resi disponibili temporaneamente per questa specifica data
+    const tempCount = temporaryAvailabilities.filter(a => {
+      const availDateStr = format(new Date(a.availableDate), 'yyyy-MM-dd');
+      return availDateStr === dateStr;
+    }).length;
+
+    return fixedCount + tempCount;
+  }, [selectedDate, parkingSpaces, temporaryAvailabilities]);
 
   const handleDeleteBanner = async (bannerId) => {
     if (window.confirm("Sei sicuro di voler cancellare questa comunicazione?")) {
       setIsLoading(true);
       try {
-        await callApi('deleteCommunication', { id: bannerId });
-        fetchData(); 
+        await executeApi('deleteCommunication', { id: bannerId }, 'POST');
+        setActiveBanners(prev => prev.filter(b => b.id !== bannerId)); 
       } catch (err) {
         alert(`Errore: ${err.message}`);
       } finally {
@@ -85,9 +163,14 @@ const HomePage = () => {
   };
   
   const requestsForSelectedDay = useMemo(() => {
-    if (!selectedDate || !allRequests) return [];
-    return allRequests
-      .filter(r => r.requestedDate && areDatesOnSameDay(r.requestedDate, selectedDate))
+    const requestsArray = Array.isArray(allRequests) 
+      ? allRequests 
+      : (allRequests?.data && Array.isArray(allRequests.data) ? allRequests.data : []);
+
+    if (!selectedDate || requestsArray.length === 0) return [];
+
+    return requestsArray
+      .filter(r => r && r.requestedDate && areDatesOnSameDay(r.requestedDate, selectedDate))
       .sort((a, b) => {
           const userA = users.find(u => u.id === a.userId);
           const userB = users.find(u => u.id === b.userId);
@@ -96,27 +179,35 @@ const HomePage = () => {
   }, [selectedDate, allRequests, users]);
   
   const CustomDateCellWrapper = ({ children, value }) => {
-    const requestsOnDay = useMemo(() => 
-      allRequests.filter(r => 
+    const requestsOnDay = useMemo(() => {
+      const requestsArray = Array.isArray(allRequests) 
+        ? allRequests 
+        : (allRequests?.data && Array.isArray(allRequests.data) ? allRequests.data : []);
+
+      return requestsArray.filter(r => 
+        r &&
         r.requestedDate && 
         areDatesOnSameDay(r.requestedDate, value) &&
-        r.status !== 'cancelled_by_user' // <--- FILTRO AGGIUNTO
-      ),
-      [allRequests, value]
-    );
+        r.status !== 'cancelled_by_user'
+      );
+    }, [value]);
+
     const count = requestsOnDay.length;
 
     const myRequestStatus = useMemo(() => {
       if (!user || count === 0) return null;
       const myRequest = requestsOnDay.find(request => request.userId === user.id);
       return myRequest ? myRequest.status : null;
-  }, [requestsOnDay, user, count]);
+    }, [requestsOnDay, count]);
     
-  const child = React.Children.only(children);
+    const child = React.Children.only(children);
     return React.cloneElement(
       child,
       {
-        onClick: () => handleDayClick(value),
+        onClick: (e) => {
+          if (child.props.onClick) child.props.onClick(e);
+          handleDayClick(value);
+        },
         className: `${child.props.className} rbc-day-bg-clickable ${count > 0 ? 'has-booking-badge' : ''}`,
       },
       <>
@@ -177,6 +268,8 @@ const HomePage = () => {
           view="month"
           onNavigate={newDate => setDate(newDate)}
           views={['month']}
+          selectable={true}
+          onSelectSlot={(slotInfo) => handleDayClick(slotInfo.start)}
         />
       </div>
 
@@ -186,7 +279,6 @@ const HomePage = () => {
         <div className="legend-item"><FaCar className="my-request-icon status-not_assigned" /> <span>Non Assegnata</span></div>
       </div>
 
-      {/* --- CONTENITORE PULSANTI FLUTTUANTI --- */}
       <div className="floating-actions-container">
         {user?.isAdmin && (
           <>
@@ -217,20 +309,23 @@ const HomePage = () => {
         requests={requestsForSelectedDay}
         selectedDate={selectedDate}
         users={users}
+        totalParkingSpaces={totalParkingForSelectedDate}
         onEdit={handleEditRequest}
         onRefreshData={forceDataRefresh}
+        onOptimisticUpdate={handleOptimisticUpdate}
+        onOptimisticDelete={handleOptimisticDelete}
       />
 
-      <SendCommunicationModal 
-        isOpen={isCommModalOpen} 
-        onClose={() => setIsCommModalOpen(false)} 
-      />
+      <SendCommunicationModal onBannerCreated={(newBanner) => setActiveBanners(prev => [newBanner, ...prev])} />
 
       {user?.isAdmin && (
         <AdminManuallyAssignModal 
           isOpen={isAdminAssignOpen}
           onClose={() => setIsAdminAssignOpen(false)}
           onRefreshData={forceDataRefresh}
+          onOptimisticUpdate={handleOptimisticUpdate}
+          usersList={users}
+          parkingSpaces={parkingSpaces}
         />
       )}
     </>

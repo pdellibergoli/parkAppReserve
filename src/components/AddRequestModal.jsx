@@ -17,22 +17,26 @@ import './AddRequestModal.css';
 
 const formatDateKey = (date) => format(date, 'yyyy-MM-dd');
 
-const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
+const AddRequestModal = ({ 
+  isOpen, 
+  onClose, 
+  onRquestCreated, 
+  onOptimisticUpdate, 
+  usersList = [], 
+  allRequests = [] 
+}) => {
   const [selectedDates, setSelectedDates] = useState([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [existingRequestDates, setExistingRequestDates] = useState(new Set());
-  
-  const [usersList, setUsersList] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false); 
   const [targetUserId, setTargetUserId] = useState('');
 
   const { user } = useAuth();
   const { setIsLoading } = useLoading();
   const today = startOfToday();
 
+  // Imposta il target user di default quando si apre la modale
   useEffect(() => {
     if (isOpen) {
       setSelectedDates([]);
@@ -41,48 +45,27 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
       setSubmitLoading(false);
       setCurrentMonth(new Date());
       setTargetUserId(user.id);
-
-      const fetchData = async () => {
-        try {
-          if (user.isAdmin) {
-            setUsersLoading(true);
-            const allUsers = await callApi('getUsers');
-            setUsersList(allUsers.sort((a, b) => a.firstName.localeCompare(b.firstName)));
-            setUsersLoading(false);
-          }
-          await fetchExistingRequestsForUser(user.id);
-        } catch (err) {
-          console.error("Errore caricamento dati:", err);
-          setUsersLoading(false);
-        }
-      };
-      
-      fetchData();
     }
-  }, [isOpen, user.id, user.isAdmin]);
+  }, [isOpen, user.id]);
 
-  const fetchExistingRequestsForUser = async (userId) => {
-    try {
-      const requests = await callApi('getRequests', { userId: userId });
-      const activeRequestDates = requests
-        .filter(req => req.status !== 'cancelled_by_user')
-        .map(req => formatDateKey(new Date(req.requestedDate)));
-      setExistingRequestDates(new Set(activeRequestDates));
-    } catch (err) {
-      console.error("Errore caricamento richieste esistenti:", err);
-    }
-  };
+  // Calcolo sincrono istantaneo delle date già prenotate dall'utente (ZERO chiamate HTTP)
+  const existingRequestDates = useMemo(() => {
+    if (!isOpen || !targetUserId) return new Set();
+    
+    const activeDates = (allRequests || [])
+      .filter(req => req && req.userId === targetUserId && req.status !== 'cancelled_by_user')
+      .map(req => formatDateKey(new Date(req.requestedDate)));
 
-  const handleUserChange = async (e) => {
-    const newUserId = e.target.value;
-    setTargetUserId(newUserId);
+    return new Set(activeDates);
+  }, [isOpen, targetUserId, allRequests]);
+
+  const sortedUsers = useMemo(() => {
+    return [...usersList].sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''));
+  }, [usersList]);
+
+  const handleUserChange = (e) => {
+    setTargetUserId(e.target.value);
     setSelectedDates([]); 
-    setIsLoading(true); 
-    try {
-      await fetchExistingRequestsForUser(newUserId); 
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -108,8 +91,28 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
         dates: newDatesToSend, 
         actorId: user.id 
       });
-      setMessage(response.message);
-      setExistingRequestDates(prevSet => new Set([...prevSet, ...newDatesToSend]));
+
+      const backendRequests = Array.isArray(response) 
+        ? response 
+        : (response?.requests || response?.data);
+
+      if (typeof onOptimisticUpdate === 'function') {
+        if (Array.isArray(backendRequests) && backendRequests.length > 0) {
+          backendRequests.forEach(req => onOptimisticUpdate(req));
+        } else {
+          // Fallback locale: crea le richieste per aggiornare la UI in 0ms
+          newDatesToSend.forEach(dateStr => {
+            onOptimisticUpdate({
+              requestId: `temp_${Date.now()}_${Math.random()}`,
+              userId: targetUserId,
+              requestedDate: dateStr,
+              status: 'pending'
+            });
+          });
+        }
+      }
+
+      setMessage(response?.message || "Richiesta inviata con successo!");
       setSelectedDates([]); 
     } catch (err) {
       setError(err.message);
@@ -118,11 +121,6 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
       setSubmitLoading(false);
     }
   };
-
-  const handleCloseAndRefresh = () => {
-      onRquestCreated(); 
-      onClose();
-  }
 
   const showLateRequestWarning = useMemo(() => {
     const now = new Date();
@@ -178,7 +176,7 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
         <div className="success-container">
           <p className="success-message">{message}</p>
           <div className="modal-actions-sticky">
-            <button className="submit-btn" onClick={handleCloseAndRefresh}>Chiudi</button>
+            <button className="submit-btn" onClick={onClose}>Chiudi</button>
           </div>
         </div>
       ) : (
@@ -194,9 +192,8 @@ const AddRequestModal = ({ isOpen, onClose, onRquestCreated }) => {
                     value={targetUserId} 
                     onChange={handleUserChange}
                     className="user-select-compact"
-                    disabled={usersLoading}
                   >
-                    {usersList.map(u => (
+                    {sortedUsers.map(u => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName} {u.id === user.id ? '(Tu)' : ''}
                       </option>

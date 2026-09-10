@@ -76,15 +76,13 @@ const AdminActions = ({ selectedDate, onAdminAction, isLoading, hasPendingReques
     );
 };
 
-const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEdit, onCancel, onRefreshData }) => {
+const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEdit, totalParkingSpaces, onCancel, onRefreshData, onOptimisticUpdate, onOptimisticDelete }) => {
     const { user: loggedInUser } = useAuth();
     const { setIsLoading } = useLoading();
     
     const [isAdminMode, setIsAdminMode] = useState(false);
     const [adminLoading, setAdminLoading] = useState(false);
-    const [parkingStatus, setParkingStatus] = useState(null);
 
-    // STATO PER GESTIRE LA SOTTO-MODALE DI FORZATURA ADMIN
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
 
     const today = startOfToday();
@@ -92,23 +90,13 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
     const dateTitle = format(requestDateObj, 'dd/MM/yyyy');
     const isPastDate = isBefore(requestDateObj, today);
 
+    // RESET STATO LOCALE SENZA EFFETTUARE NESSUNA CHIAMATA DI RETE
     useEffect(() => {
         if (!isOpen) {
             setIsAdminMode(false);
-            setParkingStatus(null);
             setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
-        } else if (selectedDate && !isPastDate) {
-            const fetchStatus = async () => {
-                try {
-                    const status = await callApi('getParkingStatusForDate', { date: format(selectedDate, 'yyyy-MM-dd') });
-                    setParkingStatus(status);
-                } catch (error) {
-                    console.error("Errore status parcheggi", error);
-                }
-            };
-            fetchStatus();
         }
-    }, [isOpen, selectedDate, isPastDate]);
+    }, [isOpen]);
 
     const filteredRequests = useMemo(() => {
         return (requests || []).filter(r => r.status !== 'cancelled_by_user');
@@ -132,54 +120,72 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         });
     }, [filteredRequests, users]);
 
-    const handleCancelClick = (request) => {
+    const handleCancelClick = async (request) => {
         const isAssigned = request.status === 'assigned';
         const confirmMsg = `Sei sicuro di voler ${isAssigned ? 'annullare questa assegnazione' : 'cancellare questa richiesta'}?`;
         
         if (window.confirm(confirmMsg)) {
             setIsLoading(true);
-            const payload = { requestIds: [request.requestId] };
-            if (isAdminMode && request.userId !== loggedInUser.id) {
-                payload.actorId = loggedInUser.id;
+            
+            // Rimozione immediata dalla UI
+            if (typeof onOptimisticDelete === 'function') {
+                onOptimisticDelete(request.requestId);
             }
 
-            callApi('cancelMultipleRequests', payload)
-                .then(() => onRefreshData())
-                .catch(err => alert(`Errore: ${err.message}`))
-                .finally(() => setIsLoading(false));
+            try {
+                const payload = { 
+                    requestIds: [request.requestId],
+                    actorId: loggedInUser.id 
+                };
+                await callApi('cancelMultipleRequests', payload);
+            } catch (err) {
+                alert(`Errore durante l'eliminazione: ${err.message}`);
+                if (typeof onRefreshData === 'function') {
+                    onRefreshData();
+                }
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
-    // FUNZIONE INTERCETTATA PER APRIRE L'OVERLAY CUSTOM O CHIEDERE CONFERMA STANDARD
     const handleStatusChange = (requestId, currentStatus, newStatus) => {
         if (currentStatus === newStatus) return;
 
-        // Se passiamo ad assegnato o togliamo un assegnato, chiediamo se usare la logica o forzare
         if ((currentStatus === 'assigned' && newStatus !== 'assigned') || 
             (currentStatus !== 'assigned' && newStatus === 'assigned')) {
             setConfirmModal({ isOpen: true, requestId, newStatus, currentStatus });
         } else {
-            // Per i cambi di stato standard (es. da pending a not_assigned), usiamo la conferma semplice
             if (window.confirm(`Cambiare lo stato in "${getStatusText(newStatus)}"?`)) {
                 executeStatusChange(requestId, newStatus, false);
             }
         }
     };
 
-    // ESECUZIONE REALE DELLA CHIAMATA API AL BE CON IL PARAMETRO preventAutoLogic
     const executeStatusChange = async (requestId, newStatus, preventAutoLogic) => {
         try {
             setIsLoading(true);
             setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
+            
+            if (typeof onOptimisticUpdate === 'function') {
+                onOptimisticUpdate({ 
+                    requestId, 
+                    status: newStatus,
+                    assignedParkingSpaceNumber: newStatus === 'assigned' ? 'Forzato' : ''
+                });
+            }
             await callApi('adminUpdateUserRequestStatus', { 
                 requestId, 
                 newStatus, 
                 actorId: loggedInUser.id,
-                preventAutoLogic: preventAutoLogic // Parametro inviato al BE
+                preventAutoLogic: preventAutoLogic 
             });
-            onRefreshData();
+
         } catch (error) {
             alert("Errore durante l'aggiornamento: " + error.message);
+            if (typeof onRefreshData === 'function') {
+                onRefreshData();
+            }
         } finally {
             setIsLoading(false);
         }
@@ -228,13 +234,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
             {!isPastDate && (
                 <div className="status-item" style={{ flexDirection: 'row', gap: '5px', alignItems: 'center' }}>
                     <span className="label" style={{ marginBottom: 0 }}>Totale parcheggi disponibili:</span>
-                    {parkingStatus ? (
-                        <span className="value" style={{ fontSize: '1rem' }}>{parkingStatus.total}</span>
-                    ) : (
-                        <div className="spinner-small" style={{ 
-                            width: '14px', height: '14px', borderColor: '#666', borderTopColor: 'transparent', borderWidth: '2px' 
-                        }}></div>
-                    )}
+                    <span className="value" style={{ fontSize: '1rem' }}>{totalParkingSpaces}</span>
                 </div>
             )}
         </div>
@@ -244,7 +244,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         <Modal isOpen={isOpen} onClose={onClose} title={customTitle}>
             <div className="day-requests-wrapper" style={{ position: 'relative' }}>
                 
-                {/* INTERFACCIA DI CONFERMA INTERNA PER GLI ADMIN */}
                 {confirmModal.isOpen && (
                     <div className="custom-confirm-overlay">
                         <div className="custom-confirm-box">

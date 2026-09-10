@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AddRequestModal from '../components/AddRequestModal';
-import EditRequestModal from '../components/EditRequestModal'; // 1. IMPORTA LA NUOVA MODALE
+import EditRequestModal from '../components/EditRequestModal';
 import { getTextColor } from '../utils/colors';
 import './MainLayout.css';
 import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
@@ -26,16 +26,26 @@ const MainLayout = () => {
     const navigate = useNavigate();
     
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false); // 2. STATO PER LA MODALE DI MODIFICA
-    const [requestToEdit, setRequestToEdit] = useState(null);    // 3. STATO PER MEMORIZZARE LA RICHIESTA DA MODIFICARE
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [requestToEdit, setRequestToEdit] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    const [sharedData, setSharedData] = useState({
+        onUpdate: null,
+        onDelete: null,
+        usersList: [],
+        allRequests: []
+    });
+
+    const registerOptimisticHandlers = useCallback((data) => {
+        setSharedData(prev => ({ ...prev, ...data }));
+    }, []);
 
     const forceDataRefresh = useCallback(() => {
         setRefreshKey(prevKey => prevKey + 1);
     }, []);
 
-    const handleSuccess = () => {
-        forceDataRefresh();
+    const handleCloseModals = () => {
         setIsAddModalOpen(false);
         setIsEditModalOpen(false);
         setRequestToEdit(null);
@@ -46,14 +56,8 @@ const MainLayout = () => {
         setIsEditModalOpen(true);
     };
 
-    const handleCloseEditModal = () => {
-        setIsEditModalOpen(false);
-        setRequestToEdit(null);
-    };
-
     const handleOpenAddModal = () => setIsAddModalOpen(true);
     
-    // Logica menu utente (invariata)
     const [isUserMenuOpen, setUserMenuOpen] = useState(false);
     const menuTimerRef = useRef(null);
     const handleMenuEnter = () => { clearTimeout(menuTimerRef.current); setUserMenuOpen(true); };
@@ -63,7 +67,6 @@ const MainLayout = () => {
     return (
         <div className="main-layout">
             <header className="main-header">
-                {/* ... header invariato ... */}
                  <Link to="/" className="logo">
                     <img src={logo} alt="Park App Reserve" className="logo-img" />
                     <span>Park App Reserve</span>
@@ -106,22 +109,34 @@ const MainLayout = () => {
             </nav>
 
             <main className="main-content">
-                {/* 5. PASSA LE NUOVE FUNZIONI AL CONTESTO */}
-                <Outlet context={{ handleOpenAddModal, handleOpenEditModal, forceDataRefresh, refreshKey }} />
+                <Outlet context={{ 
+                    handleOpenAddModal, 
+                    handleOpenEditModal, 
+                    forceDataRefresh, 
+                    refreshKey,
+                    handleCloseModals,
+                    registerOptimisticHandlers,
+                    sharedUsers: sharedData.usersList,
+                    sharedSpaces: sharedData.parkingSpaces,
+                    sharedRequests: sharedData.allRequests
+                }} />
             </main>
 
             <AddRequestModal
                 isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
-                onRquestCreated={handleSuccess}
+                onClose={handleCloseModals}
+                onRquestCreated={handleCloseModals}
+                onOptimisticUpdate={sharedData.onUpdate}
+                usersList={sharedData.usersList}
+                allRequests={sharedData.allRequests}
             />
 
-            {/* 6. AGGIUNGI LA NUOVA MODALE AL LAYOUT */}
             <EditRequestModal
                 isOpen={isEditModalOpen}
-                onClose={handleCloseEditModal}
-                onRequestUpdated={handleSuccess}
+                onClose={handleCloseModals}
+                onRequestUpdated={handleCloseModals}
                 requestData={requestToEdit}
+                onOptimisticUpdate={sharedData.onUpdate}
             />
         </div>
     );

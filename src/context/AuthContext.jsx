@@ -29,22 +29,27 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // ... (tutte le altre funzioni come login, logout, ecc. rimangono invariate)
   const login = async (mail, password) => {
-    const loggedInUser = await callApi('login', { mail, password });
-    
-    if (loggedInUser && loggedInUser.verificationNeeded) {
-        return loggedInUser;
-    }
-    
-    const sessionData = {
-        user: loggedInUser,
-        timestamp: new Date().getTime()
-    };
+    const response = await callApi('login', { mail, password });
 
-    setUser(loggedInUser);
-    localStorage.setItem('parkingAppUser', JSON.stringify(sessionData));
-    return loggedInUser;
+    // Se callApi restituisce direttamente l'oggetto utente (contiene .id)
+    // oppure se restituisce l'involucro completo (contiene .data o .status === 'success')
+    const userData = response?.id ? response : (response?.data || response);
+
+    if (userData && userData.id) {
+      setUser(userData);
+      
+      const sessionData = {
+        user: userData,
+        timestamp: new Date().getTime()
+      };
+      localStorage.setItem('parkingAppUser', JSON.stringify(sessionData));
+      return userData;
+    } else if (response && response.verificationNeeded) {
+      return { verificationNeeded: true, message: response.message };
+    } else {
+      throw new Error(response?.message || 'Credenziali non valide.');
+    }
   };
   
   const signup = async (firstName, lastName, mail, password) => {

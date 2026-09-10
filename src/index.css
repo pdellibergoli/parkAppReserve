@@ -9,11 +9,11 @@
   /* --- Tema Chiaro (Default) --- */
   --bg-color: #ffffff;
   --bg-rgb: 255, 255, 255;
-  --bg-color-secondary: #f9f9f9; /* Sfondo cards/modali */
+  --bg-color-secondary: #f9f9f9;
   --bg-color-hover: #f0f0f0;
   --text-color: #213547;
   --text-color-secondary: #555;
-  --text-color-light: #666; /* Per placeholder, note */
+  --text-color-light: #666;
   --cal-bg-off-range: #c8c8c8;
   --cal-txt-off-range: #232323;
   --border-color: #e0e0e0;
@@ -22,7 +22,7 @@
   --primary-color-hover: #b71c34;
   --primary-text-color: #ffffff;
   --text-input-color: #181818;
-  --secondary-color: #4a4a4a; /* Grigio scuro per bottoni secondari */
+  --secondary-color: #4a4a4a;
   --secondary-color-hover: #5a5a5a;
   --secondary-text-color: #ffffff;
   --error-bg: #fce8e6;
@@ -38,16 +38,17 @@
   --input-bg: #ffffff;
   --input-text: var(--text-color);
   --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  --modal-bg: rgba(255, 255, 255, 0.3); /* Sfondo overlay modale */
+  --modal-bg: rgba(255, 255, 255, 0.3);
+  --bg-mod-btn: #f0b666;
 }
 
 .dark-theme {
   /* --- Tema Scuro --- */
   --bg-color: #1a1a1a;
   --bg-rgb: 26, 26, 26;
-  --bg-color-secondary: #242424; /* Sfondo cards/modali */
+  --bg-color-secondary: #242424; 
   --bg-color-hover: #333333;
-  --text-color: #e0e0e0; /* Testo più chiaro */
+  --text-color: #e0e0e0;
   --text-color-secondary: #b0b0b0;
   --text-color-light: #888;
   --cal-bg-off-range: #666;
@@ -56,7 +57,7 @@
   --border-color-input: #555;
   --primary-text-color: #ffffff;
   --text-input-color: #ffffff;
-  --secondary-color: #6b7280; /* Grigio medio */
+  --secondary-color: #6b7280; 
   --secondary-color-hover: #4b5563;
   --secondary-text-color: #ffffff;
   --error-bg: #4b1b1b;
@@ -65,14 +66,14 @@
   --success-bg: #163020;
   --success-border: #155e34;
   --success-text: #bbf7d0;
-  --warning-bg: rgba(234, 179, 8, 0.1); /* Sfondo Giallo Scuro */
-  --warning-border: #ca8a04; /* Giallo Scuro */
-  --warning-text: #fef08a; /* Testo Giallo Chiaro */
+  --warning-bg: rgba(234, 179, 8, 0.1); 
+  --warning-border: #ca8a04; 
+  --warning-text: #fef08a;
   --link-color: var(--primary-color);
   --input-bg: #333;
   --input-text: var(--text-color);
   --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  --modal-bg: rgba(0, 0, 0, 0.5); /* Sfondo overlay modale scuro */
+  --modal-bg: rgba(0, 0, 0, 0.5); 
 
   /* Colori specifici tema scuro per componenti (es. calendario) */
   --rbc-today-bg: #333;
@@ -80,6 +81,7 @@
   --rbc-header-bg: #444;
   --rbc-header-text: var(--text-color);
   --rbc-date-cell-color: var(--text-color-secondary);
+  --bg-mod-btn: #f0b666;
 }
 
 /* Applica le variabili globali */
@@ -93,7 +95,7 @@ body {
   font-weight: var(--font-weight-normal);
   color: var(--text-color);
   background-color: var(--bg-color);
-  transition: background-color 0.3s, color 0.3s; /* Transizione fluida */
+  transition: background-color 0.3s, color 0.3s; 
 }
 
 #root {
@@ -128,10 +130,9 @@ body {
 .auth-header h1 {
   margin: 0; 
   font-size: 2rem; 
-  color: #333; /* Potresti voler usare var(--text-color) qui */
+  color: #333; 
 }
 
-/* Opzionale: Riduci un po' il margine superiore del titolo h2 del form */
 .auth-form h2 {
   margin-bottom: 0.5rem;
 }
@@ -151,13 +152,13 @@ body {
   text-align: center;
   margin-bottom: 0.5rem;
   font-size: 2rem;
-  color: var(--text-color); /* Usa variabile */
+  color: var(--text-color); 
 }
 
 .auth-form p {
   text-align: center;
   margin-bottom: 2rem;
-  color: var(--text-color-light); /* Usa variabile */
+  color: var(--text-color-light); 
 }
 
 .input-group {
@@ -167,11 +168,11 @@ body {
 .input-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: var(--text-color-secondary); /* Usa variabile */
+  color: var(--text-color-secondary); 
 }
 
 .input-group input,
-.form-group input, /* Stili per modali */
+.form-group input, 
 .form-group select {
   width: 100%;
   padding: 0.8rem;
@@ -207,22 +208,20 @@ button:hover, .btn:hover {
 }
 
 button:disabled, .btn:disabled {
-  background-color: #555; /* Grigio scuro per disabilitato */
+  background-color: #555; 
   color: #aaa;
   cursor: not-allowed;
 }
 
-/* Stili specifici per bottoni secondari */
 .secondary-btn {
   background-color: var(--secondary-color) !important;
   color: var(--secondary-text-color) !important;
-  border: none !important; /* Rimuovi bordo se presente */
+  border: none !important; 
 }
 .secondary-btn:hover {
   background-color: var(--secondary-color-hover) !important;
   color: var(--secondary-text-color) !important;
 }
-/* Modifica per bottoni cancel nelle modali */
 .cancel-btn {
   background-color: var(--secondary-color);
   color: var(--secondary-text-color);
@@ -243,7 +242,6 @@ button:disabled, .btn:disabled {
   color: #aaa !important;
 }
 
-/* Messaggi di errore/successo/warning */
 .error-message {
   color: var(--error-text);
   background-color: var(--error-bg);
@@ -295,13 +293,12 @@ button:disabled, .btn:disabled {
   font-size: 0.9rem;
 }
 
-/* Spinner */
 .spinner {
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(150, 150, 150, 0.3); /* Grigio più chiaro per contrasto */
+  border: 3px solid rgba(150, 150, 150, 0.3); 
   border-radius: 50%;
-  border-top-color: var(--text-color); /* Usa colore testo del tema */
+  border-top-color: var(--text-color); 
   animation: spin 1s ease-in-out infinite;
 }
 .spinner-small {
@@ -309,7 +306,7 @@ button:disabled, .btn:disabled {
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: var(--primary-text-color); /* Bianco per contrasto su pulsante */
+  border-top-color: var(--primary-text-color); 
   animation: spin 1s ease-in-out infinite;
 }
 
@@ -317,12 +314,11 @@ button:disabled, .btn:disabled {
   to { transform: rotate(360deg); }
 }
 
-/* Altri stili (password toggle, resend, ecc. che usano colori specifici) */
 .password-input-wrapper { position: relative; display: flex; align-items: center; }
 .password-input-wrapper input { padding-right: 3rem; }
 .password-toggle-btn {
   position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%);
-  background: none; border: none; cursor: pointer; color: #a0a0a0; /* Mantenuto grigio per visibilità */
+  background: none; border: none; cursor: pointer; color: #a0a0a0; 
   display: flex; align-items: center; justify-content: center;
   padding: 0.5rem !important; width: auto !important; height: auto !important;
 }
@@ -335,18 +331,17 @@ button:disabled, .btn:disabled {
 }
 .resend-container p { margin: 0 0 1rem 0; color: var(--warning-text); text-align: center; }
 
-/* Stili specifici tema per react-big-calendar */
 .rbc-calendar {
   background-color: var(--bg-color-secondary);
   border-radius: 8px;
   padding: 1rem;
   border: 1px solid var(--border-color);
-  color: var(--text-color); /* Colore testo generale calendario */
+  color: var(--text-color); 
 }
 .rbc-toolbar button {
   color: var(--text-color-secondary);
   background: transparent;
-  border: 1px solid var(--border-color-input); /* Aggiunto bordo leggero */
+  border: 1px solid var(--border-color-input);
 }
 .rbc-toolbar button:hover, 
 .rbc-toolbar button:focus {
@@ -362,7 +357,7 @@ button:disabled, .btn:disabled {
   color: var(--text-color);
 }
 .rbc-header {
-  background-color: var(--rbc-header-bg, #DE1F3C) !important; /* Usa variabile se definita, altrimenti default */
+  background-color: var(--rbc-header-bg, #DE1F3C) !important; 
   color: var(--rbc-header-text, #fff);
   border: 1px solid var(--border-color);
 }
@@ -385,20 +380,18 @@ button:disabled, .btn:disabled {
 .rbc-show-more {
   color: var(--primary-color) !important;
 }
-/* Pallino prenotazioni */
 .booking-count-badge {
   background-color: var(--primary-color);
   color: var(--primary-text-color);
 }
 
-/* Stili per le Modali */
 .modal-overlay {
   background-color: var(--modal-bg);
 }
 .modal-content {
   background-color: var(--bg-color-secondary);
   color: var(--text-color);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4); /* Ombra più scura per tema scuro */
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4); 
 }
 .modal-header {
   border-bottom: 1px solid var(--border-color);
@@ -414,7 +407,6 @@ button:disabled, .btn:disabled {
   background: none !important;
 }
 
-/* Card e Liste */
 .profile-card,
 .add-space-form-container,
 .spaces-list-container,
@@ -428,15 +420,15 @@ button:disabled, .btn:disabled {
     color: var(--text-color);
     border-bottom: 1px solid var(--border-color);
 }
-.booking-card { /* Anche per DayRequestsModal, MyRequestsPage */
+.booking-card { 
     background-color: var(--bg-color-hover) !important;
     border: 1px solid var(--border-color) !important;
 }
-.booking-card.selected { /* MyRequestsPage */
-    background-color: rgba(222, 31, 60, 0.2) !important; /* Sfondo rosso tenue */
+.booking-card.selected { 
+    background-color: rgba(222, 31, 60, 0.2) !important; 
     border-color: var(--primary-color) !important;
 }
-.card-details .user-name { /* DayRequestsModal, StatsPage */
+.card-details .user-name { 
     color: var(--text-color);
 }
 .card-details .parking-spot, /* DayRequestsModal */

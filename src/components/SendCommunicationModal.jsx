@@ -3,7 +3,7 @@ import Modal from './Modal';
 import { callApi } from '../services/api';
 import './SendCommunicationModal.css';
 
-const SendCommunicationModal = ({ isOpen, onClose }) => {
+const SendCommunicationModal = ({ isOpen, onClose, onBannerCreated }) => {
   const [message, setMessage] = useState('');
   const [isPersistent, setIsPersistent] = useState(false);
   const [startDate, setStartDate] = useState('');
@@ -35,14 +35,19 @@ const SendCommunicationModal = ({ isOpen, onClose }) => {
         startDate,
         endDate
       });
+
+      // Se è stato generato un nuovo banner persistente, lo inseriamo nello stato di HomePage
+      if (response?.banner && typeof onBannerCreated === 'function') {
+        onBannerCreated(response.banner);
+      }
+
       setStatusMsg(response.message);
-      // Reset form dopo 2 secondi e chiudi
       setTimeout(() => {
           onClose();
           setMessage('');
           setIsPersistent(false);
           setStatusMsg('');
-      }, 2000);
+      }, 1500);
     } catch (err) {
       setError(err.message);
       setStatusMsg('');

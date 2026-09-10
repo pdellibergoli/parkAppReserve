@@ -1,65 +1,74 @@
-// src/services/api.js
-
 const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
 if (!SCRIPT_URL) {
-  // Se la variabile non è definita, blocchiamo l'app con un errore chiaro.
-  throw new Error("La variabile d'ambiente VITE_GOOGLE_SCRIPT_URL non è stata impostata o è vuota.");
+  console.error("CRITICO: La variabile d'ambiente per l'URL dello script non è impostata!");
 }
 
-export const callApi = async (action, payload = {}) => {
-  try {
-    const response = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action, payload }),
-    });
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    const result = await response.json();
+const pendingRequests = new Map();
 
-    // --- NUOVO: Stampa i log ricevuti dal backend ---
-    if (result.logs && Array.isArray(result.logs)) {
-      console.groupCollapsed(`[API Response Logs for ${action}]`); // Raggruppa i log per chiarezza
-      result.logs.forEach(logMsg => console.debug(logMsg)); // Usa console.debug o console.log
-      console.groupEnd();
+/**
+ * Gestore Fetch robusto con gestione del Retry
+ */
+async function fetchWithRetry(options, retries = 3, backoff = 1000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(SCRIPT_URL, { ...options, redirect: 'follow' });
+      const text = await response.text();
+
+      // Scarta se la risposta è la pagina di errore/login HTML di Google
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        throw new Error(`Risposta HTML non valida da Google Apps Script`);
+      }
+
+      return JSON.parse(text);
+    } catch (err) {
+      console.warn(`[API Retry] Tentativo ${attempt}/${retries} fallito:`, err.message);
+      if (attempt === retries) throw err;
+      await delay(backoff * attempt);
     }
-    // --- FINE NUOVO ---
-
-    if (result.status === 'error') {
-      // Logghiamo l'errore anche qui se presente nei log inviati
-      console.error(`Errore API (${action}): ${result.message}`);
-      throw new Error(result.message);
-    }
-
-    return result.data; // Restituisci solo i dati effettivi come prima
-
-  } catch (error) {
-    // --- MODIFICA: Non rilanciare l'errore se è già stato gestito sopra ---
-    // Se l'errore viene dal nostro blocco 'if (result.status === 'error')',
-    // è già stato loggato. Altrimenti, gestisci errori di rete o JSON non valido.
-    if (!error.message.startsWith('Errore API')) {
-         console.error(`ERRORE FETCH/JSON API per '${action}':`, error);
-         // Blocco diagnostico per risposta grezza (invariato)
-        try {
-          const rawResponse = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action, payload }),
-          });
-          const responseText = await rawResponse.text();
-          console.log('--- INIZIO RISPOSTA GREZZA DAL SERVER GOOGLE ---');
-          console.log(responseText);
-          console.log('--- FINE RISPOSTA GREZZA DAL SERVER GOOGLE ---');
-        } catch (e) {
-          console.error("Impossibile anche recuperare la risposta come testo.", e);
-        }
-        // Rilancia solo errori non gestiti dal backend
-        throw error;
-    }
-    // Se l'errore era già loggato dal backend, non lo rilanciamo per evitare duplicati
-     // ma potremmo voler restituire qualcosa o gestire diversamente
-     // A seconda di come il tuo frontend gestisce gli errori API
-     throw error; // Rilanciamo comunque per ora, ma potresti voler cambiare qui
   }
+}
+
+/**
+ * Funzione principale API (Usa POST per compatibilità con doPost su Apps Script)
+ */
+export const callApi = async (action, payload = {}) => {
+  const cacheKey = `${action}_${JSON.stringify(payload)}`;
+  if (pendingRequests.has(cacheKey)) {
+    return pendingRequests.get(cacheKey);
+  }
+
+  const requestOptions = {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, payload, data: payload }),
+  };
+
+  const requestPromise = (async () => {
+    try {
+      const result = await fetchWithRetry(requestOptions);
+
+      if (result && Array.isArray(result.logs)) {
+        console.groupCollapsed(`[API Logs per ${action}]`);
+        result.logs.forEach((logMsg) => console.debug(logMsg));
+        console.groupEnd();
+      }
+
+      if (result && result.status === 'error') {
+        throw new Error(result.message || `Errore backend per ${action}`);
+      }
+
+      return result ? (result.data !== undefined ? result.data : result) : null;
+    } finally {
+      pendingRequests.delete(cacheKey);
+    }
+  })();
+
+  pendingRequests.set(cacheKey, requestPromise);
+  return requestPromise;
 };
 
-export const adminUpdateUserRequestStatus = (requestId, newStatus, actorId) => 
-  callApi('adminUpdateUserRequestStatus', { requestId, newStatus, actorId });
+export const fetchData = (action, params) => callApi(action, params);
+export const postData = (action, data) => callApi(action, data);

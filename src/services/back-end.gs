@@ -54,7 +54,10 @@ function doPost(e) {
   try {
     const data = parseRequestData(e);
     logToClient(`Azione ricevuta: ${data.action}`);
-    const result = routeAction(data.action, data.payload);
+    
+    const actualPayload = data.payload || data.data || data;
+    
+    const result = routeAction(data.action, actualPayload);
     logToClient(`Azione completata con successo.`);
     return createJsonResponse({ status: 'success', data: result });
   } catch (error) {
@@ -70,9 +73,36 @@ function doPost(e) {
 
 function parseRequestData(e) {
   if (!e?.postData?.contents) throw new Error("Richiesta non valida o dati mancanti.");
-  const data = JSON.parse(e.postData.contents);
+  
+  let data;
+  try {
+    data = JSON.parse(e.postData.contents);
+  } catch (err) {
+    throw new Error("Il corpo della richiesta non è un JSON valido.");
+  }
+
   if (!data.action) throw new Error("Azione non specificata.");
   return data;
+}
+
+/**
+ * Recupera in un'unica chiamata tutti i dati necessari all'avvio della HomePage
+ */
+function getInitialData(payload) {
+  const requests = getRequestsForUser({});
+  const users = getUsersWithPriority();
+  const banners = getActiveCommunication();
+  
+  const parkingSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES); 
+  const temporaryAvailabilities = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY); 
+
+  return {
+    requests: requests,
+    users: users,
+    banners: banners,
+    parkingSpaces: parkingSpaces,
+    temporaryAvailabilities: temporaryAvailabilities
+  };
 }
 
 function createJsonResponse(data) {
@@ -83,6 +113,7 @@ function createJsonResponse(data) {
 function routeAction(action, payload) {
   const routes = {
     // Autenticazione
+    'getInitialData': () => getInitialData(payload),
     'login': () => loginUser(payload),
     'signup': () => signupUser(payload),
     'resendVerificationEmail': () => resendVerificationEmail(payload),
@@ -103,6 +134,7 @@ function routeAction(action, payload) {
     'addParkingSpace': () => addParkingSpace(payload),
     'deleteParkingSpace': () => deleteParkingSpace(payload),
     'updateParkingSpaceFixedStatus': () => updateParkingSpaceFixedStatus(payload),
+    'updateParkingSpaceName': () => updateParkingSpaceName(payload),
 
     // Gestione richieste
     'getRequests': () => getRequestsForUser(payload),
@@ -474,9 +506,14 @@ function addParkingSpace(payload) {
 
   const spacesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.PARKING_SPACES);
   const newId = "space_" + new Date().getTime();
-  spacesSheet.appendRow([newId, number.trim(), false]);
+  
+  const newSpace = { id: newId, number: number.trim(), isFixed: false };
+  spacesSheet.appendRow([newSpace.id, newSpace.number, newSpace.isFixed]);
 
-  return { id: newId, number: number.trim(), isFixed: false };
+  return {
+    message: "Parcheggio aggiunto con successo.",
+    space: newSpace
+  };
 }
 
 function deleteParkingSpace(payload) {
@@ -534,6 +571,25 @@ function updateParkingSpaceFixedStatus(payload) {
   updateCell(sheet, result.row, 'isFixed', isFixed, result.headers);
 
   return { spaceId, isFixed };
+}
+
+function updateParkingSpaceName(payload) {
+  const { spaceId, number } = payload;
+  if (!spaceId || !number || number.trim() === "") {
+    throw new Error("ID e nuovo nome del parcheggio sono obbligatori.");
+  }
+
+  const result = findRowByColumn(CONFIG.SHEETS.PARKING_SPACES, 'id', spaceId);
+  if (!result) throw new Error("Parcheggio non trovato.");
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.PARKING_SPACES);
+  updateCell(sheet, result.row, 'number', number.trim(), result.headers);
+
+  return { 
+    message: "Nome del parcheggio aggiornato con successo.",
+    spaceId: spaceId,
+    number: number.trim()
+  };
 }
 
 function getParkingStatusForDate(payload) {
@@ -603,20 +659,33 @@ function createBatchRequests(payload) {
 
     const requestId = "req_" + Utilities.getUuid();
     requestsSheet.appendRow([requestId, userId, targetDate, 'pending', '', '']);
-    createdRequests.push({ requestId, date: targetDate });
+    
+    // 1. Costruiamo l'oggetto completo uguale alla struttura letta dal foglio
+    createdRequests.push({ 
+      requestId: requestId, 
+      userId: userId, 
+      requestedDate: targetDate, 
+      status: 'pending',
+      assignedParkingSpaceId: '',
+      assignedParkingSpaceNumber: ''
+    });
   });
 
   if (createdRequests.length === 0 && skippedDates.length > 0) throw new Error("Nessuna richiesta creata.");
 
   // Notifica all'utente se è un'azione admin
   if (actorId && actorId !== userId && createdRequests.length > 0) {
-    sendRequestCreatedEmail(userId, createdRequests.map(r => r.date), actorId);
+    sendRequestCreatedEmail(userId, createdRequests.map(r => r.requestedDate), actorId);
   }
 
   // Assegnazione immediata se siamo già oltre l'orario di assegnazione e la richiesta è per oggi
   handleInstantAssignmentForToday(createdRequests, userId);
 
-  return { message: `Create ${createdRequests.length} richieste.` };
+  // 2. Restituiamo l'array 'requests' oltre al messaggio
+  return { 
+    message: `Create ${createdRequests.length} richieste.`,
+    requests: createdRequests 
+  };
 }
 
 function handleInstantAssignmentForToday(createdRequests, userId) {
@@ -665,7 +734,16 @@ function updateRequestDate(payload) {
 
   if (actorId && actorId !== userId) sendAdminModificationEmail(userId, oldRequestDate, targetDate);
 
-  return { message: "Richiesta aggiornata con successo." };
+  // RESTITUISCE L'OGGETTO AGGIORNATO
+  return { 
+    message: "Richiesta aggiornata con successo.",
+    updatedRequest: {
+      requestId: requestId,
+      userId: userId,
+      requestedDate: targetDate,
+      status: status
+    }
+  };
 }
 
 function cancelMultipleRequests(payload) {
@@ -1184,12 +1262,12 @@ function addTemporaryAvailability(payload) {
   const targetDate = normalizeDate(date);
   const availSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.TEMPORARY_AVAILABILITY);
   const newId = "avail_" + Utilities.getUuid();
+  
   availSheet.appendRow([newId, spaceId, targetDate]);
   SpreadsheetApp.flush();
 
   const today = normalizeDate(new Date());
 
-  // Assegnazione immediata se il posto è aggiunto per oggi
   if (targetDate.getTime() === today.getTime()) {
     logToClient("Disponibilità aggiunta per oggi. Tentativo di assegnazione immediata.");
     const candidate = findBestCandidate(targetDate);
@@ -1199,10 +1277,16 @@ function addTemporaryAvailability(payload) {
     }
   }
 
-  // Riassegnazione immediata se dopo le 19:00 e per domani
   handleInstantReassignment(spaceId, targetDate);
 
-  return { availabilityId: newId, parkingSpaceId: spaceId, availableDate: targetDate };
+  return { 
+    message: "Disponibilità temporanea aggiunta.",
+    availability: {
+      availabilityId: newId, 
+      parkingSpaceId: spaceId, 
+      availableDate: targetDate 
+    }
+  };
 }
 
 function handleInstantReassignment(spaceId, targetDate) {
@@ -1400,14 +1484,17 @@ function adminAssignParckingForDate(payload) {
   if (!spaceDetails) throw new Error("Parcheggio non trovato.");
 
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
-  const existingRequest = allRequests.find(r =>
+  let existingRequest = allRequests.find(r =>
     r.userId === userId && normalizeDate(r.requestedDate).getTime() === targetDate.getTime()
   );
 
+  let requestId;
+
   if (existingRequest) {
-    updateRequestStatus(existingRequest.requestId, 'assigned', spaceId, spaceDetails.number);
+    requestId = existingRequest.requestId;
+    updateRequestStatus(requestId, 'assigned', spaceId, spaceDetails.number);
   } else {
-    const requestId = "req_" + Utilities.getUuid();
+    requestId = "req_" + Utilities.getUuid();
     SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS)
       .appendRow([requestId, userId, targetDate, 'assigned', spaceId, spaceDetails.number]);
   }
@@ -1418,7 +1505,18 @@ function adminAssignParckingForDate(payload) {
 
   sendSuccessEmail(userId, targetDate, spaceDetails.number);
 
-  return { message: `Posto ${spaceDetails.number} assegnato a ${userId} per il ${formatDate(targetDate)}.` };
+  // RESTITUIAMO L'OGGETTO RICHIESTA CON IL REQUEST_ID UFFICIALE
+  return { 
+    message: `Posto ${spaceDetails.number} assegnato a ${userId} per il ${formatDate(targetDate)}.`,
+    request: {
+      requestId: requestId,
+      userId: userId,
+      requestedDate: targetDate,
+      status: 'assigned',
+      assignedParkingSpaceId: spaceId,
+      assignedParkingSpaceNumber: spaceDetails.number
+    }
+  };
 }
 
 // =================================================================
@@ -1450,13 +1548,30 @@ function sendAdminCommunication(payload) {
     }
   });
 
+  let createdBanner = null;
+
   if (isPersistent) {
     const commSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.COMMUNICATIONS);
-    commSheet.appendRow(["comm_" + new Date().getTime(), message, true, normalizeDate(startDate), normalizeDate(endDate), new Date()]);
+    const newCommId = "comm_" + new Date().getTime();
+    const startNorm = normalizeDate(startDate);
+    const endNorm = normalizeDate(endDate);
+    
+    commSheet.appendRow([newCommId, message, true, startNorm, endNorm, new Date()]);
     logToClient(`Comunicazione persistente salvata.`);
+
+    createdBanner = {
+      id: newCommId,
+      message: message,
+      isPersistent: true,
+      startDate: startNorm,
+      endDate: endNorm
+    };
   }
 
-  return { message: `Comunicazione inviata a ${emailCount} utenti.` };
+  return { 
+    message: `Comunicazione inviata a ${emailCount} utenti.`,
+    banner: createdBanner
+  };
 }
 
 function getActiveCommunication() {

@@ -5,7 +5,7 @@ import { callApi } from '../services/api';
 import { format } from 'date-fns';
 import './AddRequestModal.css'; // Riusiamo lo stesso stile
 
-const EditRequestModal = ({ isOpen, onClose, onRequestUpdated, requestData }) => {
+const EditRequestModal = ({ isOpen, onClose, onRequestUpdated, requestData, onOptimisticUpdate }) => {
   const [selectedDate, setSelectedDate] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,6 +18,8 @@ const EditRequestModal = ({ isOpen, onClose, onRequestUpdated, requestData }) =>
     }
   }, [isOpen, requestData]);
 
+  // src/components/EditRequestModal.jsx
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedDate) {
@@ -25,9 +27,8 @@ const EditRequestModal = ({ isOpen, onClose, onRequestUpdated, requestData }) =>
       return;
     }
 
-    // Non inviare la chiamata se la data non è cambiata
     if (format(new Date(requestData.requestedDate), 'yyyy-MM-dd') === selectedDate) {
-        onClose(); // Chiudi semplicemente la modale
+        onClose();
         return;
     }
 
@@ -36,14 +37,24 @@ const EditRequestModal = ({ isOpen, onClose, onRequestUpdated, requestData }) =>
     setLoading(true);
 
     try {
-      // --- MODIFICA QUI: Aggiungi actorId al payload ---
-      await callApi('updateRequestDate', {
+      const response = await callApi('updateRequestDate', {
         requestId: requestData.requestId,
         newDate: selectedDate,
-        actorId: requestData.actorId || null // Invia l'actorId se esiste
+        actorId: requestData.actorId || null
       });
-      // --- FINE MODIFICA ---
-      onRequestUpdated(); // Questo ricaricherà i dati e chiuderà la modale
+
+      const updatedReq = response?.updatedRequest || {
+        ...requestData,
+        requestedDate: selectedDate
+      };
+
+      if (onOptimisticUpdate) {
+        onOptimisticUpdate(updatedReq);
+      } else if (onRequestUpdated) {
+        onRequestUpdated();
+      }
+
+      onClose();
     } catch (err) {
       setError(err.message);
     } finally {
