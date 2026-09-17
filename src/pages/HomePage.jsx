@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -8,6 +8,7 @@ import it from 'date-fns/locale/it';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './HomePage.css';
 
+import { clearPrioritiesCache } from '../utils/priorityCache';
 import { useOutletContext } from 'react-router-dom';
 import DayRequestsModal from '../components/DayRequestsModal';
 import SendCommunicationModal from '../components/SendCommunicationModal';
@@ -28,6 +29,7 @@ const areDatesOnSameDay = (first, second) => {
 const HomePage = () => {
   const context = useOutletContext() || {};
   const { 
+    globalMonthCacheRef, // RECUPERATO DAL CONTESTO
     handleOpenAddModal, 
     handleOpenEditModal, 
     refreshKey, 
@@ -54,8 +56,23 @@ const HomePage = () => {
   const [parkingSpaces, setParkingSpaces] = useState([]);
   const [temporaryAvailabilities, setTemporaryAvailabilities] = useState([]);
 
+  // Usiamo il Ref globale o un fallback locale
+  const localCacheRef = useRef({});
+  const monthCacheRef = globalMonthCacheRef || localCacheRef;
+
+  // Pulisce le cache in memoria quando c'e una modifica ai dati
+  const handleRefreshDataAndCache = useCallback(() => {
+    clearPrioritiesCache();
+    monthCacheRef.current = {}; 
+    if (typeof forceDataRefresh === 'function') {
+      forceDataRefresh();
+    }
+  }, [forceDataRefresh, monthCacheRef]);
+
   const handleOptimisticUpdate = useCallback((updatedRequest) => {
     if (!updatedRequest) return;
+    clearPrioritiesCache();
+    monthCacheRef.current = {}; 
     setAllRequests(prev => {
       const array = Array.isArray(prev) ? prev : [];
       
@@ -71,16 +88,17 @@ const HomePage = () => {
       }
       return [...array, updatedRequest];
     });
-  }, []);
+  }, [monthCacheRef]);
 
   const handleOptimisticDelete = useCallback((requestIdToDelete) => {
+    clearPrioritiesCache();
+    monthCacheRef.current = {}; 
     setAllRequests(prev => {
       const array = Array.isArray(prev) ? prev : [];
       return array.filter(r => r.requestId !== requestIdToDelete);
     });
-  }, []);
+  }, [monthCacheRef]);
 
-  // REGISTRA I GESTORI SU MAINLAYOUT QUANDO HOMEPAGE SI MONTA
   useEffect(() => {
     if (typeof registerOptimisticHandlers === 'function') {
       registerOptimisticHandlers({
@@ -102,29 +120,67 @@ const HomePage = () => {
     return await apiFetchData(action, payload);
   }, []);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (targetDate = date, isForced = false) => {
+    const monthKey = format(targetDate, 'yyyy-MM');
+
+    // SE IL MESE È GIÀ SALVATO IN CACHE GLOBALE E NON È UN REFRESH FORZATO: 0 MS!
+    if (!isForced && monthCacheRef.current[monthKey]) {
+      const cached = monthCacheRef.current[monthKey];
+      setAllRequests(cached.requests);
+      setUsers(cached.users);
+      setActiveBanners(cached.banners);
+      setParkingSpaces(cached.parkingSpaces);
+      setTemporaryAvailabilities(cached.temporaryAvailabilities);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setIsLoading(true);
     setError('');
     try {
-      const initialData = await executeApi('getInitialData', { userId: user?.id });
+      const initialData = await executeApi('getInitialData', { 
+        userId: user?.id,
+        targetDate: format(targetDate, 'yyyy-MM-dd') 
+      });
 
-      setAllRequests(initialData?.requests || []);
-      setUsers(initialData?.users || []);
-      setActiveBanners(initialData?.banners || []);
-      
-      setParkingSpaces(initialData?.parkingSpaces || []);
-      setTemporaryAvailabilities(initialData?.temporaryAvailabilities || []);
+      const fetchedRequests = initialData?.requests || [];
+      const fetchedUsers = initialData?.users || [];
+      const fetchedBanners = initialData?.banners || [];
+      const fetchedSpaces = initialData?.parkingSpaces || [];
+      const fetchedTempAvail = initialData?.temporaryAvailabilities || [];
+
+      setAllRequests(fetchedRequests);
+      setUsers(fetchedUsers);
+      setActiveBanners(fetchedBanners);
+      setParkingSpaces(fetchedSpaces);
+      setTemporaryAvailabilities(fetchedTempAvail);
+
+      // SALVA NEL REF GLOBALE
+      monthCacheRef.current[monthKey] = {
+        requests: fetchedRequests,
+        users: fetchedUsers,
+        banners: fetchedBanners,
+        parkingSpaces: fetchedSpaces,
+        temporaryAvailabilities: fetchedTempAvail
+      };
     } catch (err) {
       console.error("[HomePage Error]:", err);
       setError('Impossibile caricare i dati.');
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
-  }, [executeApi, user?.id]);
+  }, [executeApi, user?.id, date, setIsLoading, monthCacheRef]);
+
+  const handleNavigate = async (newDate) => {
+    setDate(newDate);
+    await fetchData(newDate); 
+  };
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData, refreshKey]);
+    fetchData(date, false); // Tenta prima di usare la cache globale se disponibile
+  }, [refreshKey]);
 
   const handleDayClick = (clickedDate) => {
     setSelectedDate(clickedDate); 
@@ -135,11 +191,8 @@ const HomePage = () => {
     if (!selectedDate) return 0;
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    
-    // Contiamo i posti fissi
     const fixedCount = parkingSpaces.filter(s => s.isFixed || s.type === 'fixed').length;
     
-    // Contiamo i posti resi disponibili temporaneamente per questa specifica data
     const tempCount = temporaryAvailabilities.filter(a => {
       const availDateStr = format(new Date(a.availableDate), 'yyyy-MM-dd');
       return availDateStr === dateStr;
@@ -266,7 +319,7 @@ const HomePage = () => {
           components={{ dateCellWrapper: CustomDateCellWrapper }}
           date={date}
           view="month"
-          onNavigate={newDate => setDate(newDate)}
+          onNavigate={handleNavigate}
           views={['month']}
           selectable={true}
           onSelectSlot={(slotInfo) => handleDayClick(slotInfo.start)}
@@ -311,7 +364,7 @@ const HomePage = () => {
         users={users}
         totalParkingSpaces={totalParkingForSelectedDate}
         onEdit={handleEditRequest}
-        onRefreshData={forceDataRefresh}
+        onRefreshData={handleRefreshDataAndCache}
         onOptimisticUpdate={handleOptimisticUpdate}
         onOptimisticDelete={handleOptimisticDelete}
       />
@@ -326,7 +379,7 @@ const HomePage = () => {
         <AdminManuallyAssignModal 
           isOpen={isAdminAssignOpen}
           onClose={() => setIsAdminAssignOpen(false)}
-          onRefreshData={forceDataRefresh}
+          onRefreshData={handleRefreshDataAndCache}
           onOptimisticUpdate={handleOptimisticUpdate}
           usersList={users}
           parkingSpaces={parkingSpaces}

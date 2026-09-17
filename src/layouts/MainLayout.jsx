@@ -30,6 +30,9 @@ const MainLayout = () => {
     const [requestToEdit, setRequestToEdit] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
 
+    // CACHE GLOBALE DEI MESI (In memoria tra i cambi di pagina)
+    const globalMonthCacheRef = useRef({});
+
     const [sharedData, setSharedData] = useState({
         onUpdate: null,
         onDelete: null,
@@ -42,6 +45,7 @@ const MainLayout = () => {
     }, []);
 
     const forceDataRefresh = useCallback(() => {
+        globalMonthCacheRef.current = {}; // Svuota la cache globale
         setRefreshKey(prevKey => prevKey + 1);
     }, []);
 
@@ -110,6 +114,7 @@ const MainLayout = () => {
 
             <main className="main-content">
                 <Outlet context={{ 
+                    globalMonthCacheRef, // ESPOSIZIONE CACHE GLOBALE
                     handleOpenAddModal, 
                     handleOpenEditModal, 
                     forceDataRefresh, 

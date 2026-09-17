@@ -5,7 +5,9 @@ import { useLoading } from '../context/LoadingContext';
 import { callApi } from '../services/api';
 import { format, isBefore, startOfToday, isToday, isTomorrow } from 'date-fns';
 import { getTextColor } from '../utils/colors';
+import { getCachedPriorities, setCachedPriorities } from '../utils/priorityCache';
 import { FaPencilAlt, FaTrashAlt, FaLock, FaWrench } from 'react-icons/fa';
+import { clearPrioritiesCache } from '../utils/priorityCache';
 import './DayRequestsModal.css';
 
 const Avatar = ({ user }) => {
@@ -83,6 +85,9 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
     const [isAdminMode, setIsAdminMode] = useState(false);
     const [adminLoading, setAdminLoading] = useState(false);
 
+    // STATO PER UTENTI ARRICCHITI CON PRIORITÀ CARICATA DA CACHE/API
+    const [usersWithPriority, setUsersWithPriority] = useState([]);
+
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
 
     const today = startOfToday();
@@ -90,12 +95,33 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
     const dateTitle = format(requestDateObj, 'dd/MM/yyyy');
     const isPastDate = isBefore(requestDateObj, today);
 
-    // RESET STATO LOCALE SENZA EFFETTUARE NESSUNA CHIAMATA DI RETE
+    // 1. CARICAMENTO CON CACHE DI LOCALSTORAGE (10 MINUTI)
     useEffect(() => {
         if (!isOpen) {
             setIsAdminMode(false);
             setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
+            return;
         }
+
+        const loadPriorities = async () => {
+            // A. Tenta prima la lettura dalla Cache Locale
+            const cachedData = getCachedPriorities();
+            if (cachedData) {
+                setUsersWithPriority(cachedData);
+                return;
+            }
+
+            // B. Se assente o scaduta (>10 min), invoca il Backend
+            try {
+                const freshData = await callApi('getUsersWithPriority');
+                setUsersWithPriority(freshData);
+                setCachedPriorities(freshData); // Salva in cache
+            } catch (err) {
+                console.error("Errore recupero priorità:", err);
+            }
+        };
+
+        loadPriorities();
     }, [isOpen]);
 
     const filteredRequests = useMemo(() => {
@@ -106,19 +132,22 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         return filteredRequests.some(r => r.status === 'pending');
     }, [filteredRequests]);
 
+    // 2. ORDINAMENTO E CALCOLO PRIORITÀ CON USEMEMO SUI DATI UNIFICATI
     const sortedRequests = useMemo(() => {
-        if (!users) return [];
+        const activeUsersList = usersWithPriority.length > 0 ? usersWithPriority : users;
+        if (!activeUsersList) return [];
+
         return [...filteredRequests].sort((a, b) => {
             if (a.status === 'assigned' && b.status !== 'assigned') return -1;
             if (a.status !== 'assigned' && b.status === 'assigned') return 1;
             
-            const userA = users.find(u => u.id === a.userId);
-            const userB = users.find(u => u.id === b.userId);
+            const userA = activeUsersList.find(u => u.id === a.userId);
+            const userB = activeUsersList.find(u => u.id === b.userId);
             const rateA = userA?.successRate ?? 1;
             const rateB = userB?.successRate ?? 1;
             return rateA - rateB; 
         });
-    }, [filteredRequests, users]);
+    }, [filteredRequests, users, usersWithPriority]);
 
     const handleCancelClick = async (request) => {
         const isAssigned = request.status === 'assigned';
@@ -127,7 +156,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         if (window.confirm(confirmMsg)) {
             setIsLoading(true);
             
-            // Rimozione immediata dalla UI
             if (typeof onOptimisticDelete === 'function') {
                 onOptimisticDelete(request.requestId);
             }
@@ -180,6 +208,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                 actorId: loggedInUser.id,
                 preventAutoLogic: preventAutoLogic 
             });
+            clearPrioritiesCache();
 
         } catch (error) {
             alert("Errore durante l'aggiornamento: " + error.message);
@@ -207,6 +236,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         
         try {
             const response = await callApi(apiAction, { date: format(date, 'yyyy-MM-dd') });
+            clearPrioritiesCache();
             alert(response.message);
             onRefreshData();
         } catch (err) {
@@ -312,7 +342,8 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                         <p style={{textAlign: 'center', color: '#666'}}>Nessuna richiesta attiva per questo giorno.</p>
                     ) : (
                         sortedRequests.map(request => {
-                            const requestUser = users?.find(u => u.id === request.userId);
+                            const activeUsersList = usersWithPriority.length > 0 ? usersWithPriority : users;
+                            const requestUser = activeUsersList?.find(u => u.id === request.userId);
                             const isMyRequest = requestUser && loggedInUser.id === requestUser.id;
                             const requestDate = new Date(request.requestedDate);
                             const isPastRequest = isBefore(requestDate, today);

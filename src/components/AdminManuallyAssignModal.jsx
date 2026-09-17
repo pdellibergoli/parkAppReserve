@@ -8,7 +8,7 @@ import {
   startOfWeek, addDays 
 } from 'date-fns';
 import { it } from 'date-fns/locale';
-
+import { clearPrioritiesCache } from '../utils/priorityCache';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css'; 
 
@@ -75,6 +75,7 @@ const AdminManuallyAssignModal = ({
           userId: targetUserId,
           spaceId: targetSpaceId
         });
+        clearPrioritiesCache();
 
         // 1. Usa la richiesta restituita con l'ID reale dal Backend
         const realRequest = response?.request || response?.data?.request;

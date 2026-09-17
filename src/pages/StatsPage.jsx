@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { callApi } from '../services/api';
 import { getTextColor } from '../utils/colors';
+import { getCachedPriorities, setCachedPriorities } from '../utils/priorityCache';
 import UserAssignmentsModal from '../components/UserAssignmentsModal';
+import { useLoading } from '../context/LoadingContext';
 import { FaInfoCircle } from 'react-icons/fa';
 import './StatsPage.css';
 
@@ -18,53 +20,54 @@ const UserAvatar = ({ user }) => {
 
 const StatsPage = () => {
   const context = useOutletContext() || {};
-  const { sharedUsers = [], sharedSpaces = [], sharedRequests = [] } = context;
+  const { sharedSpaces = [] } = context;
 
-  // Stato per i dati caricati via API solo in caso di fallback (es. F5)
-  const [fetchedData, setFetchedData] = useState({ users: [], spaces: [], requests: [] });
-  const [loading, setLoading] = useState(sharedUsers.length === 0);
+  const { setIsLoading } = useLoading();
+  const [usersWithPriority, setUsersWithPriority] = useState([]);
+  const [spaces, setSpaces] = useState(sharedSpaces);
+  
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const [assignmentsForModal, setAssignmentsForModal] = useState([]);
 
-  // Se i dati sono in memoria usa quelli, altrimenti usa quelli scaricati via API
-  const allData = useMemo(() => {
-    if (sharedUsers.length > 0) {
-      return {
-        users: sharedUsers,
-        spaces: sharedSpaces,
-        requests: sharedRequests
-      };
-    }
-    return fetchedData;
-  }, [sharedUsers, sharedSpaces, sharedRequests, fetchedData]);
-
-  const hasMemoryData = sharedUsers.length > 0;
+  const hasFetchedRef = useRef(false);
+  
+  // CACHE IN MEMORIA PER GLI STORICI DEGLI UTENTI { userId: [requests] }
+  const userHistoryCacheRef = useRef({});
 
   useEffect(() => {
-    // Se i dati sono già presenti nel contesto, non fare nulla
-    if (hasMemoryData) {
-      setLoading(false);
-      return;
-    }
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
 
     let isMounted = true;
 
-    const fetchInitialData = async () => {
+    const loadStatsData = async () => {
       try {
         setLoading(true);
-        const [users, spaces, requests] = await Promise.all([
-          callApi('getUsersWithPriority'), 
-          callApi('getParkingSpaces'),
-          callApi('getRequests', {})
-        ]);
+
+        // 1. Priorità da cache o API
+        let priorityUsers = getCachedPriorities();
+        if (!priorityUsers) {
+          priorityUsers = await callApi('getUsersWithPriority');
+          setCachedPriorities(priorityUsers);
+        }
+
+        // 2. Parcheggi (se non in memoria)
+        let fetchedSpaces = sharedSpaces;
+        if (sharedSpaces.length === 0) {
+          fetchedSpaces = await callApi('getParkingSpaces');
+        }
+
         if (isMounted) {
-          setFetchedData({ users, spaces, requests });
+          setUsersWithPriority(priorityUsers || []);
+          setSpaces(fetchedSpaces || []);
         }
       } catch (err) {
         if (isMounted) {
+          console.error("Errore StatsPage:", err);
           setError("Impossibile caricare i dati delle statistiche.");
         }
       } finally {
@@ -74,18 +77,18 @@ const StatsPage = () => {
       }
     };
 
-    fetchInitialData();
+    loadStatsData();
 
     return () => {
       isMounted = false;
     };
-  }, [hasMemoryData]);
+  }, []);
 
-  const spaceMap = useMemo(() => new Map(allData.spaces.map(s => [s.id, s.number])), [allData.spaces]);
+  const spaceMap = useMemo(() => new Map(spaces.map(s => [s.id, s.number])), [spaces]);
 
   const priorityWindowDays = useMemo(() => {
-      return allData.users.length > 0 ? allData.users[0].windowDays : 30;
-  }, [allData.users]);
+      return usersWithPriority.length > 0 ? (usersWithPriority[0].windowDays || 30) : 30;
+  }, [usersWithPriority]);
 
   const calculateStartDate = (days) => {
     let date = new Date();
@@ -100,12 +103,11 @@ const StatsPage = () => {
   };
 
   const { userStats, startDateLabel } = useMemo(() => {
-    const { users } = allData;
-    if (!users.length) return { userStats: [], startDateLabel: '' };
+    if (!usersWithPriority.length) return { userStats: [], startDateLabel: '' };
 
     const startDate = calculateStartDate(priorityWindowDays);
 
-    const stats = users.map(user => ({
+    const stats = usersWithPriority.map(user => ({
       user,
       totalAssignments: user.recentAssignments || 0,
       totalRequests: user.recentRequests || 0,
@@ -119,13 +121,36 @@ const StatsPage = () => {
         userStats: sortedForCards,
         startDateLabel: startDate.toLocaleDateString('it-IT')
     };
-  }, [allData, priorityWindowDays]);
+  }, [usersWithPriority, priorityWindowDays]);
 
-  const handleOpenDetailsModal = (userData) => {
+  // APERTURA MODALE CON CONTROLLO CACHE PER UTENTE
+  const handleOpenDetailsModal = async (userData) => {
+      const userId = userData.user.id;
       setSelectedUserForModal(userData.user);
-      const userReqs = allData.requests.filter(r => r.userId === userData.user.id && r.status !== 'cancelled_by_user');
-      setAssignmentsForModal(userReqs); 
-      setIsDetailsModalOpen(true);
+
+      // 1. SE ESISTONO GIÀ I DATI IN CACHE PER QUESTO UTENTE, USALIA 0 MS
+      if (userHistoryCacheRef.current[userId]) {
+        setAssignmentsForModal(userHistoryCacheRef.current[userId]);
+        setIsDetailsModalOpen(true);
+        return;
+      }
+
+      // 2. SE ASSENTI, SCARICA E SALVA IN CACHE
+      setIsLoading(true);
+      try {
+        const userFullRequests = await callApi('getRequests', { userId });
+        const filteredReqs = (userFullRequests || []).filter(r => r.status !== 'cancelled_by_user');
+        
+        // Salva nel Ref della cache
+        userHistoryCacheRef.current[userId] = filteredReqs;
+        
+        setAssignmentsForModal(filteredReqs);
+        setIsDetailsModalOpen(true);
+      } catch (err) {
+        alert("Errore nel recupero dello storico utente: " + err.message);
+      } finally {
+        setIsLoading(false);
+      }
   };
 
   if (loading) return <div className="loading-container"><div className="spinner"></div></div>;

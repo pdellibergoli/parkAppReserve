@@ -89,19 +89,61 @@ function parseRequestData(e) {
  * Recupera in un'unica chiamata tutti i dati necessari all'avvio della HomePage
  */
 function getInitialData(payload) {
-  const requests = getRequestsForUser({});
-  const users = getUsersWithPriority();
-  const banners = getActiveCommunication();
+  const actualPayload = payload || {};
   
-  const parkingSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES); 
-  const temporaryAvailabilities = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY); 
+  // 1. Determina la data di riferimento (targetDate inviata dal frontend o data odierna)
+  let baseDate = new Date();
+  if (actualPayload.targetDate) {
+    const parts = String(actualPayload.targetDate).split('-');
+    if (parts.length === 3) {
+      baseDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+    }
+  }
+
+  // 2. Calcola i limiti del mese di riferimento
+  const startOfMonth = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const endOfMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+
+  // 3. Filtra le richieste storiche per l'intervallo mensile richiesto
+  const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
+  const monthlyRequests = allRequests.filter(req => {
+    if (!req || !req.requestedDate) return false;
+    const reqDate = normalizeDate(req.requestedDate);
+    return reqDate >= startOfMonth && reqDate <= endOfMonth;
+  });
+
+  // 4. Lettura rapida degli utenti senza calcolo di priorità
+  const users = getSheetAsJSON(CONFIG.SHEETS.USERS).map(u => {
+    delete u.password;
+    delete u.salt;
+    delete u.verificationToken;
+    delete u.resetToken;
+    delete u.resetTokenExpiry;
+    return u;
+  });
+
+  // 5. Parcheggi e disponibilità temporanee del mese di riferimento
+  const parkingSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
+  
+  const allTempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY);
+  const monthlyTempAvail = allTempAvail.filter(a => {
+    if (!a || !a.availableDate) return false;
+    const availDate = normalizeDate(a.availableDate);
+    return availDate >= startOfMonth && availDate <= endOfMonth;
+  });
+
+  // 6. Comunicazioni attive
+  const banners = getActiveCommunication();
 
   return {
-    requests: requests,
+    requests: monthlyRequests,
     users: users,
     banners: banners,
     parkingSpaces: parkingSpaces,
-    temporaryAvailabilities: temporaryAvailabilities
+    temporaryAvailabilities: monthlyTempAvail
   };
 }
 
