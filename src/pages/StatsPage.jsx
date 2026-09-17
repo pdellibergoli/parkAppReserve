@@ -20,7 +20,7 @@ const UserAvatar = ({ user }) => {
 
 const StatsPage = () => {
   const context = useOutletContext() || {};
-  const { sharedSpaces = [] } = context;
+  const { sharedSpaces = [], globalStatsCacheRef } = context;
 
   const { setIsLoading } = useLoading();
   const [usersWithPriority, setUsersWithPriority] = useState([]);
@@ -33,29 +33,32 @@ const StatsPage = () => {
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const [assignmentsForModal, setAssignmentsForModal] = useState([]);
 
-  const hasFetchedRef = useRef(false);
-  
-  // CACHE IN MEMORIA PER GLI STORICI DEGLI UTENTI { userId: [requests] }
+  // Cache per gli storici dei singoli utenti quando si apre la modale del dettaglio
   const userHistoryCacheRef = useRef({});
 
   useEffect(() => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
-
     let isMounted = true;
 
     const loadStatsData = async () => {
+      // 1. SE I DATI STATISTICHE SONO GIÀ IN CACHE GLOBALE, USALI A 0 MS
+      if (globalStatsCacheRef?.current) {
+        setUsersWithPriority(globalStatsCacheRef.current.usersWithPriority);
+        setSpaces(globalStatsCacheRef.current.spaces);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
 
-        // 1. Priorità da cache o API
+        // A. Priorità utenti (da localStorage o API)
         let priorityUsers = getCachedPriorities();
         if (!priorityUsers) {
           priorityUsers = await callApi('getUsersWithPriority');
           setCachedPriorities(priorityUsers);
         }
 
-        // 2. Parcheggi (se non in memoria)
+        // B. Parcheggi (da memoria condivisa o API)
         let fetchedSpaces = sharedSpaces;
         if (sharedSpaces.length === 0) {
           fetchedSpaces = await callApi('getParkingSpaces');
@@ -64,6 +67,14 @@ const StatsPage = () => {
         if (isMounted) {
           setUsersWithPriority(priorityUsers || []);
           setSpaces(fetchedSpaces || []);
+
+          // C. SALVA NELLA CACHE GLOBALE
+          if (globalStatsCacheRef) {
+            globalStatsCacheRef.current = {
+              usersWithPriority: priorityUsers || [],
+              spaces: fetchedSpaces || []
+            };
+          }
         }
       } catch (err) {
         if (isMounted) {
@@ -82,7 +93,7 @@ const StatsPage = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [sharedSpaces, globalStatsCacheRef]);
 
   const spaceMap = useMemo(() => new Map(spaces.map(s => [s.id, s.number])), [spaces]);
 
@@ -123,25 +134,21 @@ const StatsPage = () => {
     };
   }, [usersWithPriority, priorityWindowDays]);
 
-  // APERTURA MODALE CON CONTROLLO CACHE PER UTENTE
   const handleOpenDetailsModal = async (userData) => {
       const userId = userData.user.id;
       setSelectedUserForModal(userData.user);
 
-      // 1. SE ESISTONO GIÀ I DATI IN CACHE PER QUESTO UTENTE, USALIA 0 MS
       if (userHistoryCacheRef.current[userId]) {
         setAssignmentsForModal(userHistoryCacheRef.current[userId]);
         setIsDetailsModalOpen(true);
         return;
       }
 
-      // 2. SE ASSENTI, SCARICA E SALVA IN CACHE
       setIsLoading(true);
       try {
         const userFullRequests = await callApi('getRequests', { userId });
         const filteredReqs = (userFullRequests || []).filter(r => r.status !== 'cancelled_by_user');
         
-        // Salva nel Ref della cache
         userHistoryCacheRef.current[userId] = filteredReqs;
         
         setAssignmentsForModal(filteredReqs);

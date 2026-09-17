@@ -286,7 +286,7 @@ const HomePage = () => {
     handleOpenEditModal(request, actorId);
   };
 
-  if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
+  //if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
 
   return (
