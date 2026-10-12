@@ -97,7 +97,6 @@ Il backend gira interamente sul tuo account Google e utilizza un Google Sheet co
     * L'applicazione sarà ora in esecuzione su `http://localhost:5173` (o un'altra porta indicata dal terminale) e comunicherà con il tuo backend su Google Apps Script.
 
 ## Build per la Produzione
-
 Per creare una versione ottimizzata del frontend per il deploy:
 
 ```bash
