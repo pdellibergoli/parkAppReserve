@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
+import { FaRegEye, FaRegEyeSlash, FaRegCheckCircle, FaRegCircle } from 'react-icons/fa';
 import './SignupPage.css';
 
 const SignupPage = () => {
@@ -59,7 +59,7 @@ const SignupPage = () => {
     return (
       <div className="auth-container">
         <div className="auth-form success-view">
-          <CheckCircle2 size={64} color="#10b981" />
+          <FaRegCheckCircle size={64} color="#10b981" />
           <h2>Registrazione completata!</h2>
           <p>Ti abbiamo inviato un'email. Clicca sul link di conferma per attivare il tuo account prima di accedere.</p>
           <Link to="/login" className="btn-primary" style={{textDecoration: 'none', display: 'block', textAlign: 'center', marginTop: '1rem'}}>
@@ -101,7 +101,7 @@ const SignupPage = () => {
                 required 
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="eye-btn">
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <FaRegEyeSlash size={20} /> : <FaRegEye size={20} />}
               </button>
             </div>
           </div>
@@ -109,19 +109,19 @@ const SignupPage = () => {
           {/* Box Requisiti Password */}
           <div className="password-checker">
             <div className={`check-item ${checks.length ? 'valid' : ''}`}>
-              {checks.length ? <CheckCircle2 size={14} /> : <Circle size={14} />} 
+              {checks.length ? <FaRegCheckCircle size={14} /> : <FaRegCircle size={14} />} 
               <span>Almeno 6 caratteri</span>
             </div>
             <div className={`check-item ${checks.hasLetter ? 'valid' : ''}`}>
-              {checks.hasLetter ? <CheckCircle2 size={14} /> : <Circle size={14} />} 
+              {checks.hasLetter ? <FaRegCheckCircle size={14} /> : <FaRegCircle size={14} />} 
               <span>Almeno una lettera</span>
             </div>
             <div className={`check-item ${checks.hasNumber ? 'valid' : ''}`}>
-              {checks.hasNumber ? <CheckCircle2 size={14} /> : <Circle size={14} />} 
+              {checks.hasNumber ? <FaRegCheckCircle size={14} /> : <FaRegCircle size={14} />} 
               <span>Almeno un numero</span>
             </div>
             <div className={`check-item ${checks.hasSpecial ? 'valid' : ''}`}>
-              {checks.hasSpecial ? <CheckCircle2 size={14} /> : <Circle size={14} />} 
+              {checks.hasSpecial ? <FaRegCheckCircle size={14} /> : <FaRegCircle size={14} />} 
               <span>Simbolo speciale (=!@._*-)</span>
             </div>
             {!checks.noForbidden && password.length > 0 && (
@@ -139,7 +139,7 @@ const SignupPage = () => {
                 required 
               />
               <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="eye-btn">
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showConfirmPassword ? <FaRegEyeSlash size={20} /> : <FaRegEye size={20} />}
               </button>
             </div>
           </div>

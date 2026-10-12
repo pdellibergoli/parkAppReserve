@@ -19,7 +19,15 @@ const CONFIG = {
   TOKEN_EXPIRY: 3600000,
   ASSIGNMENT_HOUR: 19,
   LOOK_BACK_DAYS: 30,
-  LOG_LEVEL: "DEBUG"
+  LOG_LEVEL: "DEBUG",
+  // Cache di lettura dei fogli (vedi getSheetAsJSON)
+  CACHE: {
+    VERSION: 'v1',
+    // Rete di sicurezza: anche se un'invalidazione venisse persa, la cache vive al massimo questo.
+    TTL_SECONDS: 300,
+    // Massimo caratteri per chiave di cache (il limite di CacheService è 100.000)
+    CHUNK_SIZE: 90000
+  }
 };
 
 // =================================================================
@@ -152,6 +160,20 @@ function createJsonResponse(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// Azioni che NON scrivono nulla: per queste la cache dei fogli resta valida.
+// Tutto il resto (auth incluse) invalida la cache prima e dopo l'esecuzione.
+const READ_ONLY_ACTIONS = new Set([
+  'getInitialData',
+  'getUsers',
+  'getParkingSpaces',
+  'getAssignmentHistory',
+  'getUsersWithPriority',
+  'getRequests',
+  'getTemporaryAvailabilities',
+  'getParkingStatusForDate',
+  'getActiveCommunication'
+]);
+
 function routeAction(action, payload) {
   const routes = {
     // Autenticazione
@@ -206,7 +228,16 @@ function routeAction(action, payload) {
 
   const handler = routes[action];
   if (!handler) throw new Error("Azione non valida: " + action);
-  return handler();
+
+  const isReadOnly = READ_ONLY_ACTIONS.has(action);
+
+  // PRIMA: così le letture interne della logica di scrittura partono da dati freschi
+  if (!isReadOnly) clearAllSheetCaches_();
+  const result = handler();
+  // DOPO: la scrittura è persistita, la cache non deve più rispecchiare lo stato precedente
+  if (!isReadOnly) clearAllSheetCaches_();
+
+  return result;
 }
 
 // =================================================================
@@ -218,7 +249,129 @@ function hashPassword(password, salt) {
   return hash.map(byte => ('0' + (byte & 0xFF).toString(16)).slice(-2)).join('');
 }
 
+/**
+ * Cache di lettura dei fogli.
+ *
+ * Ogni richiesta al backend leggeva l'intero foglio con getDataRange().getValues():
+ * è l'operazione più lenta di Apps Script. I fogli letti vengono quindi messi in
+ * cache su due livelli:
+ *   1. _sheetMemCache  -> per la singola esecuzione (più letture nello stesso giro costano 0)
+ *   2. CacheService    -> condivisa fra le esecuzioni (TTL CONFIG.CACHE.TTL_SECONDS)
+ *
+ * La cache viene invalidata ad OGNI azione di scrittura (routeAction) e all'avvio/
+ * termine del trigger di assegnazione: la rete di sicurezza TTL copre solo i casi
+ * residui (es. modifiche fatte manualmente sul Google Sheet).
+ */
+const _sheetMemCache = {};
+
+function sheetCacheKey_(sheetName, index) {
+  return 'sheetcache_' + CONFIG.CACHE.VERSION + '_' + sheetName + '_' + index;
+}
+
+function sheetCacheMetaKey_(sheetName) {
+  return 'sheetcache_' + CONFIG.CACHE.VERSION + '_' + sheetName + '_meta';
+}
+
+function readSheetCache_(sheetName) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const meta = cache.get(sheetCacheMetaKey_(sheetName));
+    if (!meta) return null;
+
+    const chunkCount = parseInt(meta, 10);
+    if (!chunkCount || chunkCount < 1) return null;
+
+    const keys = [];
+    for (let i = 0; i < chunkCount; i++) keys.push(sheetCacheKey_(sheetName, i));
+    const chunks = cache.getAll(keys);
+
+    let json = '';
+    for (let i = 0; i < chunkCount; i++) {
+      const part = chunks[keys[i]];
+      // Se manca anche solo un pezzo la cache è inutilizzabile: si rilegge il foglio
+      if (part === null || part === undefined) return null;
+      json += part;
+    }
+    return JSON.parse(json);
+  } catch (e) {
+    Logger.log(`Cache letto non utilizzabile per '${sheetName}': ${e.message}`);
+    return null;
+  }
+}
+
+function writeSheetCache_(sheetName, rows) {
+  try {
+    const json = JSON.stringify(rows);
+    const cache = CacheService.getScriptCache();
+    const chunkCount = Math.max(1, Math.ceil(json.length / CONFIG.CACHE.CHUNK_SIZE));
+
+    // CacheService supporta al massimo 100 chiavi per putAll: oltre si salta la cache
+    if (chunkCount > 90) {
+      Logger.log(`Foglio '${sheetName}' troppo grande per la cache (${json.length} caratteri): non viene cachato.`);
+      return;
+    }
+
+    const payload = {};
+    for (let i = 0; i < chunkCount; i++) {
+      payload[sheetCacheKey_(sheetName, i)] = json.substr(i * CONFIG.CACHE.CHUNK_SIZE, CONFIG.CACHE.CHUNK_SIZE);
+    }
+
+    const metaKey = sheetCacheMetaKey_(sheetName);
+    payload[metaKey] = String(chunkCount);
+
+    // Elimina eventuali chunk residui di una versione precedente più lunga
+    const previous = parseInt(cache.get(metaKey), 10);
+    if (previous > chunkCount) {
+      const staleKeys = [];
+      for (let i = chunkCount; i < previous; i++) staleKeys.push(sheetCacheKey_(sheetName, i));
+      cache.removeAll(staleKeys);
+    }
+
+    cache.putAll(payload, CONFIG.CACHE.TTL_SECONDS);
+  } catch (e) {
+    Logger.log(`Cache non salvata per '${sheetName}': ${e.message}`);
+  }
+}
+
+function clearSheetCache_(sheetName) {
+  delete _sheetMemCache[sheetName];
+  try {
+    const cache = CacheService.getScriptCache();
+    const metaKey = sheetCacheMetaKey_(sheetName);
+    const keysToRemove = [metaKey];
+    const chunkCount = parseInt(cache.get(metaKey), 10);
+    if (chunkCount > 0) {
+      for (let i = 0; i < chunkCount; i++) keysToRemove.push(sheetCacheKey_(sheetName, i));
+    }
+    cache.removeAll(keysToRemove);
+  } catch (e) {
+    Logger.log(`Impossibile invalidare la cache di '${sheetName}': ${e.message}`);
+  }
+}
+
+function clearAllSheetCaches_() {
+  Object.keys(_sheetMemCache).forEach(name => delete _sheetMemCache[name]);
+  Object.keys(CONFIG.SHEETS).forEach(key => clearSheetCache_(CONFIG.SHEETS[key]));
+}
+
 function getSheetAsJSON(sheetName) {
+  if (Object.prototype.hasOwnProperty.call(_sheetMemCache, sheetName)) {
+    return _sheetMemCache[sheetName];
+  }
+
+  const cached = readSheetCache_(sheetName);
+  if (cached !== null) {
+    _sheetMemCache[sheetName] = cached;
+    return cached;
+  }
+
+  const rows = readSheetAsJSON_(sheetName);
+  _sheetMemCache[sheetName] = rows;
+  writeSheetCache_(sheetName, rows);
+  return rows;
+}
+
+function readSheetAsJSON_(sheetName) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return [];
   const data = sheet.getDataRange().getValues();
@@ -1047,11 +1200,15 @@ function adminUpdateRequestStatus(payload) {
  * Trigger automatico (es. alle 19:00): assegna i posti per domani.
  */
 function processPendingRequests() {
+  // Il trigger gira fuori da routeAction: invalida la cache a mano
+  clearAllSheetCaches_();
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowNorm = normalizeDate(tomorrow);
   logToClient(`AVVIO ASSEGNAZIONE AUTOMATICA per ${formatDate(tomorrowNorm)}`, "INFO");
   processRequestsForDate(tomorrowNorm);
+  // Le assegnazioni hanno scritto nei fogli: la cache non deve restare obsoleta
+  clearAllSheetCaches_();
 }
 
 /**

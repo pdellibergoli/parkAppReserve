@@ -1,12 +1,15 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import AddRequestModal from '../components/AddRequestModal';
-import EditRequestModal from '../components/EditRequestModal';
 import { getTextColor } from '../utils/colors';
 import './MainLayout.css';
 import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
 import logo from '../assets/logo.png';
+
+// Caricate solo quando servono: contengono react-day-picker, che altrimenti
+// finirebbe nel bundle iniziale
+const AddRequestModal = lazy(() => import('../components/AddRequestModal'));
+const EditRequestModal = lazy(() => import('../components/EditRequestModal'));
 
 const UserAvatar = ({ user }) => {
     const getInitials = () => {
@@ -34,7 +37,11 @@ const MainLayout = () => {
     const globalMonthCacheRef = useRef({});
     const globalStatsCacheRef = useRef(null);
 
-    const [sharedData, setSharedData] = useState({
+    // Dati condivisi fra layout, pagine e modali.
+    // REF e non state: aggiornarli non deve far ri-renderizzare il layout (e con
+    // l'Outlet tutte le pagine) ogni volta che i dati cambiano. Le modali li
+    // leggono all'apertura, quando il layout re-renderizza comunque.
+    const sharedDataRef = useRef({
         onUpdate: null,
         onDelete: null,
         usersList: [],
@@ -42,7 +49,7 @@ const MainLayout = () => {
     });
 
     const registerOptimisticHandlers = useCallback((data) => {
-        setSharedData(prev => ({ ...prev, ...data }));
+        Object.assign(sharedDataRef.current, data);
     }, []);
 
     const forceDataRefresh = useCallback(() => {
@@ -69,6 +76,8 @@ const MainLayout = () => {
     const handleMenuEnter = () => { clearTimeout(menuTimerRef.current); setUserMenuOpen(true); };
     const handleMenuLeave = () => { menuTimerRef.current = setTimeout(() => { setUserMenuOpen(false); }, 300); };
     const handleLogout = () => { logout(); navigate('/login'); };
+
+    const sharedData = sharedDataRef.current;
     
     return (
         <div className="main-layout">
@@ -130,22 +139,31 @@ const MainLayout = () => {
                 }} />
             </main>
 
-            <AddRequestModal
-                isOpen={isAddModalOpen}
-                onClose={handleCloseModals}
-                onRquestCreated={handleCloseModals}
-                onOptimisticUpdate={sharedData.onUpdate}
-                usersList={sharedData.usersList}
-                allRequests={sharedData.allRequests}
-            />
+            {/* Montate solo quando aperte: ne ritardano il caricamento */}
+            {isAddModalOpen && (
+                <Suspense fallback={null}>
+                    <AddRequestModal
+                        isOpen={isAddModalOpen}
+                        onClose={handleCloseModals}
+                        onRquestCreated={handleCloseModals}
+                        onOptimisticUpdate={sharedData.onUpdate}
+                        usersList={sharedData.usersList}
+                        allRequests={sharedData.allRequests}
+                    />
+                </Suspense>
+            )}
 
-            <EditRequestModal
-                isOpen={isEditModalOpen}
-                onClose={handleCloseModals}
-                onRequestUpdated={handleCloseModals}
-                requestData={requestToEdit}
-                onOptimisticUpdate={sharedData.onUpdate}
-            />
+            {isEditModalOpen && (
+                <Suspense fallback={null}>
+                    <EditRequestModal
+                        isOpen={isEditModalOpen}
+                        onClose={handleCloseModals}
+                        onRequestUpdated={handleCloseModals}
+                        requestData={requestToEdit}
+                        onOptimisticUpdate={sharedData.onUpdate}
+                    />
+                </Suspense>
+            )}
         </div>
     );
 };

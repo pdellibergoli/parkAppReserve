@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
@@ -8,18 +8,21 @@ import LoadingOverlay from './components/LoadingOverlay';
 // Layout
 import MainLayout from './layouts/MainLayout';
 
-// Pagine
+// Pagine pubbliche: restano nel bundle principale perché servono subito
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import HomePage from './pages/HomePage';
-import MyRequestsPage from './pages/MyRequestsPage';
-import ParkingSpacesPage from './pages/ParkingSpacesPage';
-import StatsPage from './pages/StatsPage';
-import ProfilePage from './pages/ProfilePage';
-import FulfillRequestPage from './pages/FulfillRequestPage';
+
+// Pagine protette: caricate su richiesta (calendar, day-picker e grafici
+// finiscono in chunk separati e non rallentano il primo caricamento)
+const HomePage = lazy(() => import('./pages/HomePage'));
+const MyRequestsPage = lazy(() => import('./pages/MyRequestsPage'));
+const ParkingSpacesPage = lazy(() => import('./pages/ParkingSpacesPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const FulfillRequestPage = lazy(() => import('./pages/FulfillRequestPage'));
 
 
 function LayoutRoute() {
@@ -63,6 +66,12 @@ function PublicRoute({ children }) {
   return children;
 }
 
+const RouteFallback = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', padding: '10vh 0' }}>
+    <div className="spinner" />
+  </div>
+);
+
 
 function App() {
   return (
@@ -71,34 +80,36 @@ function App() {
         <ThemeProvider>
           <Router>
             <LoadingOverlay />
-            <Routes>
-              {/* Rotte Pubbliche */}
-              <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-              <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
-              <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
-              <Route path="/request-reset" element={<PublicRoute><RequestPasswordResetPage /></PublicRoute>} />
-              <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                {/* Rotte Pubbliche */}
+                <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+                <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+                <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
+                <Route path="/request-reset" element={<PublicRoute><RequestPasswordResetPage /></PublicRoute>} />
+                <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
 
-              {/* Rotte protette DENTRO il layout principale */}
-              <Route element={<LayoutRoute />}>
-                <Route path="/" element={<HomePage />} />
-                <Route path="my-requests" element={<MyRequestsPage />} />
-                <Route path="parking-spaces" element={<ParkingSpacesPage />} />
-                <Route path="stats" element={<StatsPage />} />
-                <Route path="profile" element={<ProfilePage />} />
-              </Route>
+                {/* Rotte protette DENTRO il layout principale */}
+                <Route element={<LayoutRoute />}>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="my-requests" element={<MyRequestsPage />} />
+                  <Route path="parking-spaces" element={<ParkingSpacesPage />} />
+                  <Route path="stats" element={<StatsPage />} />
+                  <Route path="profile" element={<ProfilePage />} />
+                </Route>
 
-              {/* Rotta protetta FUORI dal layout principale */}
-              <Route 
-                path="/fulfill-request" 
-                element={
-                  <ProtectedRoute>
-                    <FulfillRequestPage />
-                  </ProtectedRoute>
-                } 
-              />
+                {/* Rotta protetta FUORI dal layout principale */}
+                <Route 
+                  path="/fulfill-request" 
+                  element={
+                    <ProtectedRoute>
+                      <FulfillRequestPage />
+                    </ProtectedRoute>
+                  } 
+                />
 
-            </Routes>
+              </Routes>
+            </Suspense>
           </Router>
         </ThemeProvider>
       </LoadingProvider>

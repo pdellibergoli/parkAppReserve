@@ -10,13 +10,15 @@ import './HomePage.css';
 
 import { clearPrioritiesCache } from '../utils/priorityCache';
 import { useOutletContext } from 'react-router-dom';
-import DayRequestsModal from '../components/DayRequestsModal';
 import SendCommunicationModal from '../components/SendCommunicationModal';
-import AdminManuallyAssignModal from '../components/AdminManuallyAssignModal'; 
 import { fetchData as apiFetchData, postData, callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
 import { useAuth } from '../context/AuthContext';
 import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus } from 'react-icons/fa';
+
+// Modali caricate solo quando aperte
+const DayRequestsModal = React.lazy(() => import('../components/DayRequestsModal'));
+const AdminManuallyAssignModal = React.lazy(() => import('../components/AdminManuallyAssignModal'));
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -25,6 +27,55 @@ const areDatesOnSameDay = (first, second) => {
   if (!first || !second) return false;
   return format(new Date(first), 'yyyy-MM-dd') === format(new Date(second), 'yyyy-MM-dd');
 };
+
+const dayKeyOf = (value) => format(new Date(value), 'yyyy-MM-dd');
+
+// Contenuto condiviso con le celle del calendario.
+// Definito a livello di modulo: il wrapper delle celle è lo STESSO tipo di componente
+// ad ogni render, così React aggiorna le celle senza smontarle/rimontarle.
+const CalendarUIContext = React.createContext(null);
+
+const DateCellWrapper = ({ children, value }) => {
+  const ui = React.useContext(CalendarUIContext);
+  const child = React.Children.only(children);
+
+  const dayInfo = ui ? ui.days.get(dayKeyOf(value)) : null;
+  const count = dayInfo ? dayInfo.count : 0;
+  const myRequestStatus = dayInfo ? dayInfo.myStatus : null;
+
+  const baseClass = child.props.className ? `${child.props.className} ` : '';
+
+  return React.cloneElement(
+    child,
+    {
+      onClick: (e) => {
+        if (child.props.onClick) child.props.onClick(e);
+        if (ui) ui.onDayClick(value);
+      },
+      className: `${baseClass}rbc-day-bg-clickable${count > 0 ? ' has-booking-badge' : ''}`,
+    },
+    <>
+      {child.props.children}
+      <div className="day-indicators-container">
+          {count > 0 && (
+            <div className="booking-badge-container">
+              <div className="booking-count-badge">{count}</div>
+            </div>
+          )}
+          {myRequestStatus && (
+              <div className="my-request-icon-container">
+                  <FaCar className={`my-request-icon status-${myRequestStatus}`} />
+              </div>
+          )}
+      </div>
+    </>
+  );
+};
+
+// Oggetti costanti: evitano di ricreare props ad ogni render del calendario
+const CALENDAR_COMPONENTS = { dateCellWrapper: DateCellWrapper };
+const CALENDAR_MESSAGES = { next: "Succ", previous: "Prec", today: "Oggi" };
+const CALENDAR_STYLE = { height: '75vh' };
 
 const HomePage = () => {
   const context = useOutletContext() || {};
@@ -182,10 +233,34 @@ const HomePage = () => {
     fetchData(date, false); // Tenta prima di usare la cache globale se disponibile
   }, [refreshKey]);
 
-  const handleDayClick = (clickedDate) => {
-    setSelectedDate(clickedDate); 
-    setIsDayModalOpen(true);
-  };
+  // Mappa data -> richieste: calcolata UNA VOLTA per render (invece di 42 filtri per cella)
+  const dayMap = useMemo(() => {
+    const requestsArray = Array.isArray(allRequests)
+      ? allRequests
+      : (allRequests?.data && Array.isArray(allRequests.data) ? allRequests.data : []);
+
+    const map = new Map();
+    for (const r of requestsArray) {
+      if (!r || !r.requestedDate) continue;
+      const key = dayKeyOf(r.requestedDate);
+      let info = map.get(key);
+      if (!info) {
+        info = { all: [], count: 0, myStatus: null };
+        map.set(key, info);
+      }
+      info.all.push(r);
+      if (r.status !== 'cancelled_by_user') {
+        info.count += 1;
+        if (user && info.myStatus === null && r.userId === user.id) {
+          info.myStatus = r.status;
+        }
+      }
+    }
+    return map;
+  }, [allRequests, user]);
+
+  // Lookup O(1) per gli utenti (usato nell'ordinamento della modale giorno)
+  const usersMap = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
 
   const totalParkingForSelectedDate = useMemo(() => {
     if (!selectedDate) return 0;
@@ -216,71 +291,29 @@ const HomePage = () => {
   };
   
   const requestsForSelectedDay = useMemo(() => {
-    const requestsArray = Array.isArray(allRequests) 
-      ? allRequests 
-      : (allRequests?.data && Array.isArray(allRequests.data) ? allRequests.data : []);
+    if (!selectedDate) return [];
 
-    if (!selectedDate || requestsArray.length === 0) return [];
+    const dayInfo = dayMap.get(dayKeyOf(selectedDate));
+    if (!dayInfo) return [];
 
-    return requestsArray
-      .filter(r => r && r.requestedDate && areDatesOnSameDay(r.requestedDate, selectedDate))
-      .sort((a, b) => {
-          const userA = users.find(u => u.id === a.userId);
-          const userB = users.find(u => u.id === b.userId);
-          return (userA?.firstName || '').localeCompare(userB?.firstName || '');
-      });
-  }, [selectedDate, allRequests, users]);
-  
-  const CustomDateCellWrapper = ({ children, value }) => {
-    const requestsOnDay = useMemo(() => {
-      const requestsArray = Array.isArray(allRequests) 
-        ? allRequests 
-        : (allRequests?.data && Array.isArray(allRequests.data) ? allRequests.data : []);
+    return [...dayInfo.all].sort((a, b) => {
+      const nameA = usersMap.get(a.userId)?.firstName || '';
+      const nameB = usersMap.get(b.userId)?.firstName || '';
+      return nameA.localeCompare(nameB);
+    });
+  }, [selectedDate, dayMap, usersMap]);
 
-      return requestsArray.filter(r => 
-        r &&
-        r.requestedDate && 
-        areDatesOnSameDay(r.requestedDate, value) &&
-        r.status !== 'cancelled_by_user'
-      );
-    }, [value]);
+  const handleDayClick = useCallback((clickedDate) => {
+    setSelectedDate(clickedDate);
+    setIsDayModalOpen(true);
+  }, []);
 
-    const count = requestsOnDay.length;
+  // Contesto memoizzato: le celle si aggiornano SOLO quando cambiano i dati
+  const calendarUIValue = useMemo(
+    () => ({ days: dayMap, user, onDayClick: handleDayClick }),
+    [dayMap, user, handleDayClick]
+  );
 
-    const myRequestStatus = useMemo(() => {
-      if (!user || count === 0) return null;
-      const myRequest = requestsOnDay.find(request => request.userId === user.id);
-      return myRequest ? myRequest.status : null;
-    }, [requestsOnDay, count]);
-    
-    const child = React.Children.only(children);
-    return React.cloneElement(
-      child,
-      {
-        onClick: (e) => {
-          if (child.props.onClick) child.props.onClick(e);
-          handleDayClick(value);
-        },
-        className: `${child.props.className} rbc-day-bg-clickable ${count > 0 ? 'has-booking-badge' : ''}`,
-      },
-      <>
-        {child.props.children} 
-        <div className="day-indicators-container">
-            {count > 0 && (
-              <div className="booking-badge-container">
-                <div className="booking-count-badge">{count}</div>
-              </div>
-            )}
-            {myRequestStatus && (
-                <div className="my-request-icon-container">
-                    <FaCar className={`my-request-icon status-${myRequestStatus}`} />
-                </div>
-            )}
-        </div>
-      </>
-    );
-  };
-  
   const handleEditRequest = (request, actorId = null) => {
     setIsDayModalOpen(false);
     handleOpenEditModal(request, actorId);
@@ -310,20 +343,22 @@ const HomePage = () => {
       )}
       
       <div className="calendar-container">
-        <Calendar
-          localizer={localizer}
-          events={[]}
-          style={{ height: '75vh' }}
-          culture='it'
-          messages={{ next: "Succ", previous: "Prec", today: "Oggi" }}
-          components={{ dateCellWrapper: CustomDateCellWrapper }}
-          date={date}
-          view="month"
-          onNavigate={handleNavigate}
-          views={['month']}
-          selectable={true}
-          onSelectSlot={(slotInfo) => handleDayClick(slotInfo.start)}
-        />
+        <CalendarUIContext.Provider value={calendarUIValue}>
+          <Calendar
+            localizer={localizer}
+            events={[]}
+            style={CALENDAR_STYLE}
+            culture='it'
+            messages={CALENDAR_MESSAGES}
+            components={CALENDAR_COMPONENTS}
+            date={date}
+            view="month"
+            onNavigate={handleNavigate}
+            views={['month']}
+            selectable={true}
+            onSelectSlot={(slotInfo) => handleDayClick(slotInfo.start)}
+          />
+        </CalendarUIContext.Provider>
       </div>
 
       <div className="calendar-legend">
@@ -356,18 +391,22 @@ const HomePage = () => {
         </button>
       </div>
 
-      <DayRequestsModal
-        isOpen={isDayModalOpen}
-        onClose={() => setIsDayModalOpen(false)}
-        requests={requestsForSelectedDay}
-        selectedDate={selectedDate}
-        users={users}
-        totalParkingSpaces={totalParkingForSelectedDate}
-        onEdit={handleEditRequest}
-        onRefreshData={handleRefreshDataAndCache}
-        onOptimisticUpdate={handleOptimisticUpdate}
-        onOptimisticDelete={handleOptimisticDelete}
-      />
+      {isDayModalOpen && (
+        <React.Suspense fallback={null}>
+          <DayRequestsModal
+            isOpen={isDayModalOpen}
+            onClose={() => setIsDayModalOpen(false)}
+            requests={requestsForSelectedDay}
+            selectedDate={selectedDate}
+            users={users}
+            totalParkingSpaces={totalParkingForSelectedDate}
+            onEdit={handleEditRequest}
+            onRefreshData={handleRefreshDataAndCache}
+            onOptimisticUpdate={handleOptimisticUpdate}
+            onOptimisticDelete={handleOptimisticDelete}
+          />
+        </React.Suspense>
+      )}
 
       <SendCommunicationModal 
         isOpen={isCommModalOpen} 
@@ -375,15 +414,17 @@ const HomePage = () => {
         onBannerCreated={(newBanner) => setActiveBanners(prev => [newBanner, ...prev])} 
       />
 
-      {user?.isAdmin && (
-        <AdminManuallyAssignModal 
-          isOpen={isAdminAssignOpen}
-          onClose={() => setIsAdminAssignOpen(false)}
-          onRefreshData={handleRefreshDataAndCache}
-          onOptimisticUpdate={handleOptimisticUpdate}
-          usersList={users}
-          parkingSpaces={parkingSpaces}
-        />
+      {user?.isAdmin && isAdminAssignOpen && (
+        <React.Suspense fallback={null}>
+          <AdminManuallyAssignModal 
+            isOpen={isAdminAssignOpen}
+            onClose={() => setIsAdminAssignOpen(false)}
+            onRefreshData={handleRefreshDataAndCache}
+            onOptimisticUpdate={handleOptimisticUpdate}
+            usersList={users}
+            parkingSpaces={parkingSpaces}
+          />
+        </React.Suspense>
       )}
     </>
   );
