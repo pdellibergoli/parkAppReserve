@@ -456,8 +456,10 @@ button:disabled, .btn:disabled {
 /* Icon Buttons */
 .icon-btn { color: var(--text-color-secondary); }
 .icon-btn.edit-btn { color: var(--secondary-text-color); background-color: var(--secondary-color); }
+.icon-btn.disable-btn { color: #ffffff; background-color: #e67e22; }
 .icon-btn.delete-btn { color: #fce8e6; background-color: var(--primary-color); } /* Mantenuto per visibilità rosso */
 .icon-btn.edit-btn:hover { color: var(--secondary-color) !important; background-color: var(--bg-color-hover); }
+.icon-btn.disable-btn:hover { color: #e67e22 !important; background-color: var(--bg-color-hover); }
 .icon-btn.delete-btn:hover { color: var(--primary-color) !important; background-color: rgba(222, 31, 60, 0.1); }
 .delete-space-btn { color: var(--text-color-secondary); } /* ParkingSpacesPage */
 .delete-space-btn:hover { color: var(--primary-color); background-color: rgba(222, 31, 60, 0.1); }

@@ -1,83 +1,121 @@
-Questa guida è pensata per le persone che utilizzeranno l'applicazione, spiegando le funzionalità in modo semplice.
+Questa guida è pensata per le persone che utilizzano l'applicazione e per gli amministratori, spiegando ogni funzionalità in modo semplice e chiaro.
 
 ---
 
 # 🚗 Guida Utente di Park App Reserve
 
-Benvenuto in Park App Reserve! Questa guida ti aiuterà a capire come utilizzare l'applicazione per richiedere e gestire le tue prenotazioni di parcheggio.
+Benvenuto in Park App Reserve! Questa guida ti aiuterà a capire come utilizzare al meglio l'applicazione per richiedere, gestire e visualizzare le tue prenotazioni di parcheggio.
+
+---
 
 ## 1. Accesso e Registrazione
 
-Prima di iniziare, devi avere un account.
+Per accedere al sistema è necessario disporre di un account registrato e verificato.
 
-* **Registrazione:** Dalla pagina di Login, clicca su "Registrati". Inserisci il tuo nome, cognome (opzionale), email e una password.
-* **Verifica Email:** Dopo la registrazione, riceverai un'email. Clicca sul link al suo interno per verificare il tuo account. Questo passo è obbligatorio per poter accedere.
-* **Accesso (Login):** Una volta verificato, puoi accedere con la tua email e password.
-* **Password Dimenticata:** Se hai dimenticato la password, puoi cliccare su "Password dimenticata?" nella pagina di login per ricevere un'email e reimpostarla.
+* **Registrazione:** Dalla schermata di Login, clicca su "Registrati". Inserisci nome, cognome (opzionale), email aziendale e una password sicura.
+* **Verifica Email:** Riceverai un'email contenente un link di verifica. Clicca sul link per attivare l'account. Questo passaggio è obbligatorio prima del primo accesso. Se non ricevi l'email, puoi richiederne un nuovo invio dalla pagina di login.
+* **Accesso (Login):** Una volta verificato l'account, accedi con la tua email e password.
+* **Password Dimenticata:** Se dimentichi la password, clicca su "Password dimenticata?" nella pagina di login per ricevere un'email con il link di ripristino (valido per 1 ora).
 
-## 2. La Schermata Principale (Calendario)
+---
 
-Dopo l'accesso, vedrai il **Calendario**.
+## 2. La Schermata Principale (Calendario & Dashboard)
 
-* **Pallino Rosso:** Un pallino rosso con un numero su un giorno indica il numero totale di richieste inviate da tutti gli utenti per quel giorno.
-* **Icona Auto (La tua Richiesta):** Un'icona a forma di auto indica che tu hai una richiesta per quel giorno. Il colore dell'icona mostra lo stato:
-    * **Verde:** La tua richiesta è stata **Assegnata**.
-    * **Grigio:** La tua richiesta è **In Attesa**.
-    * **Rosso:** La tua richiesta è stata **Non Assegnata** (purtroppo i posti erano esauriti).
-* **Dettagli del Giorno:** Cliccando su un qualsiasi giorno del calendario, si aprirà una finestra (modale) che mostra l'elenco di tutte le persone che hanno fatto richiesta per quella data e il loro stato.
+Dopo il login, atterrerai sulla **Homepage** con la vista mensile del calendario:
+
+* **Banner di Comunicazione:** Se un amministratore ha pubblicato una comunicazione di servizio attiva per il periodo corrente, comparirà un banner informativo in cima alla pagina.
+* **Pallino Rosso sul Giorno:** Indica il numero totale di richieste inviate da tutti i colleghi per quella data.
+* **Icona Auto (La tua Richiesta):** Indica che hai inviato una richiesta per quel giorno. Il colore indica lo stato:
+  * 🟢 **Verde (Assegnata):** Ti è stato assegnato un parcheggio.
+  * ⚪/🔘 **Grigio (In Attesa):** La richiesta è registrata ed è in attesa dell'assegnazione automatica serale.
+  * 🔴 **Rosso (Non Assegnata):** Purtroppo per quella data i posti disponibili erano esauriti.
+* **Dettagli del Giorno:** Cliccando su un giorno qualsiasi del calendario, si apre una finestra (modale) che mostra:
+  * Il numero totale di posti auto effettivamente disponibili per quel giorno.
+  * L'elenco di tutti gli utenti che hanno fatto richiesta e il relativo stato.
+  * **Stima Probabilità di Assegnazione:** Per le richieste del giorno successivo ancora "In attesa", viene mostrata una percentuale stimata di probabilità di ricevere il posto. Questa percentuale è calcolata automaticamente dal sistema in base alla priorità dell'utente (chi ha avuto meno assegnazioni negli ultimi 30 giorni ha una probabilità più alta).
+
+---
 
 ## 3. Inviare e Gestire le Richieste
 
 ### Inviare una Nuova Richiesta
+Puoi inviare una richiesta in qualsiasi momento:
+1. Cliccando il pulsante circolare rosso **+ Invia richiesta** in basso a destra nel Calendario.
+2. Oppure andando alla pagina "Le mie richieste" e cliccando lo stesso pulsante.
 
-Puoi inviare una richiesta in due modi:
-1.  Cliccando il bottone **+ Invia richiesta** fluttuante in basso a destra nel Calendario.
-2.  Andando alla pagina "Le mie richieste" e cliccando lo stesso bottone.
+Nella finestra potrai:
+* Selezionare una o più date dal calendario.
+* Cliccare su "+ Aggiungi un'altra data" per richiedere più giorni contemporaneamente.
+* Cliccare su **"Invia Richieste"** per confermare.
 
-Si aprirà una finestra dove potrai:
-* Selezionare una data dal calendario.
-* Cliccare su "+ Aggiungi un'altra data" per inviare più richieste contemporaneamente.
-* Cliccare "Invia Richiesta/e" per confermare.
+> [!NOTE]
+> **Orario di Assegnazione:** Il sistema processa automaticamente tutte le richieste in sospeso la sera precedente al giorno richiesto (alle ore **19:00**). Se inserisci una richiesta per il giorno stesso dopo questo orario, verrai messo in coda e il sistema tenterà l'assegnazione solo se un posto dovesse liberarsi.
 
-**Nota:** L'assegnazione avviene automaticamente la sera prima del giorno richiesto (es. alle 19:00). Se invii una richiesta per il giorno stesso dopo questo orario, verrai messo in lista d'attesa.
+### Gestire le Richieste Esistenti ("Le mie richieste")
+Cliccando sulla seconda icona della barra di navigazione in alto (icona elenco/richieste), accederai alla schermata riepilogativa delle tue richieste:
+* **Modifica Data (Icona Matita):** Puoi modificare la data di una richiesta solo se questa è ancora "In attesa".
+* **Cancellazione (Icona Cestino):**
+  * Se la richiesta è "In attesa", viene semplicemente rimossa.
+  * Se la richiesta è già **"Assegnata"**, cancellandola liberi il posto: il sistema provvederà **immediatamente e in automatico a riassegnare il parcheggio** al primo collega in attesa con priorità maggiore!
+* **Cancellazione Multipla:** Seleziona le caselle di controllo a sinistra delle richieste desiderate e clicca sul pulsante **"Cancella Selezionati"** in alto per annullarle tutte in un colpo solo.
 
-### Gestire le Richieste Esistenti
-
-Vai alla pagina **Le mie richieste** (cliccando sulla seconda icona nella barra di navigazione).
-
-Qui vedrai l'elenco di tutte le tue richieste, ordinate dalla più recente. Per ogni richiesta futura, puoi:
-
-* **Modificare (Icona Matita):** Puoi farlo solo se la richiesta è ancora "In attesa". Ti permetterà di cambiare la data.
-* **Cancellare (Icona Cestino):**
-    * Se la richiesta è "In attesa", la cancellerai.
-    * Se la richiesta è "Assegnata", la annullerai. **Questo è molto importante** perché libera il tuo posto e permette al sistema di riassegnarlo a qualcuno in lista d'attesa.
-* **Selezione Multipla:** Puoi usare le caselle di controllo a sinistra per selezionare più richieste (in attesa o assegnate) e cancellarle in blocco usando il bottone "Cancella Selezionati" in alto.
+---
 
 ## 4. Il tuo Profilo
 
-Clicca sul tuo nome o avatar in alto a destra e poi su "Profilo".
+Clicca sul tuo nome o avatar in alto a destra e seleziona **"Profilo"**:
+* **Tema Chiaro / Scuro:** Seleziona la modalità visiva preferita.
+* **Colore Primario:** Scegli il colore d'accento dell'applicazione (bottoni, elementi attivi, indicatori).
+* **Stile Avatar:** Cambia il colore di sfondo delle tue iniziali per riconoscerlo facilmente nei dettagli giornalieri.
+* **Dati Personali:** Aggiorna nome, cognome ed email.
+* **Modifica Password:** Imposta una nuova password inserendo quella attuale.
 
-In questa pagina puoi:
-* **Cambiare Tema:** Scegliere tra modalità "Chiaro" e "Scuro".
-* **Cambiare Colore Primario:** Scegliere il colore principale dell'interfaccia (es. il rosso dei bottoni).
-* **Cambiare Stile Avatar:** Scegliere il colore di sfondo del tuo avatar.
-* **Modificare Informazioni:** Aggiornare nome, cognome ed email.
-* **Modificare Password:** Impostare una nuova password per il tuo account.
+---
 
 ## 5. Statistiche
 
-La pagina **Statistiche** mostra la cronologia di tutte le assegnazioni avvenute.
+Cliccando sull'icona grafico nella barra di navigazione, visualizzerai la pagina **Statistiche**:
+* Visualizza una scheda riassuntiva per ciascun utente con il totale delle assegnazioni ricevute.
+* **Filtro Date:** Puoi filtrare i dati per visualizzare "Sempre", "Ultimi 7 giorni", "Ultimo mese" o specificare un intervallo personalizzato.
+* **Dettaglio Utente:** Cliccando sulla scheda di un collega (o sulla tua), si aprirà un pop-up con l'elenco puntuale di tutte le date, i posti auto assegnati e lo storico degli ultimi 30 giorni lavorativi.
 
-* Mostra una scheda per ogni utente, con il totale delle assegnazioni ricevute.
-* Puoi filtrare i risultati per data (Sempre, Ultimi 7 giorni, Ultimo mese, o un intervallo personalizzato).
-* Cliccando sulla scheda di un utente, puoi vedere l'elenco dettagliato di tutte le date e i parcheggi che gli sono stati assegnati in quel periodo.
+---
 
-## 6. Funzioni da Amministratore (Solo Admin)
+## 6. Funzioni Amministratore (Solo Account Admin)
 
-Se il tuo account è un amministratore, vedrai una terza icona nella barra di navigazione, **Parcheggi**.
+Se il tuo account dispone dei privilegi di amministratore, avrai accesso a strumenti e controlli dedicati in diverse parti dell'app:
 
-In questa pagina puoi:
-* Aggiungere nuovi posti auto.
-* Eliminare posti auto esistenti (questo annullerà le assegnazioni future per quel posto).
-* **Impostare un posto come "Fisso":** Un posto "Fisso" non viene mai assegnato automaticamente. È riservato (ad esempio per la direzione o per esigenze specifiche).
-* **Gestire Disponibilità (Icona Calendario):** Per i posti *non fissi*, se sai che un giorno specifico quel posto sarà comunque disponibile (magari la persona che lo usa di solito è in ferie), puoi aggiungerlo qui. Questo lo rende disponibile per l'assegnazione automatica in quella data.
+### A. Pagina "Parcheggi" (Terza icona nella barra di navigazione)
+In questa pagina puoi gestire la flotta dei parcheggi aziendali:
+* **Aggiungere un Posto:** Inserisci il nome/numero (es. "Posto 12") e clicca su "Aggiungi".
+* **Rinominare un Posto (Icona Matita):** Modifica il nome del posto direttamente in linea.
+* **Eliminare un Posto (Icona Cestino):** Rimuove definitivamente il parcheggio dal sistema e annulla le eventuali prenotazioni future su di esso.
+* **Impostare Posto "Fisso":**
+  * Spuntando la casella **Fisso**, il posto è considerato disponibile per le assegnazioni di default tutti i giorni lavorativi.
+  * Deselezionando la casella, il posto è **Non Fisso** (non disponibile di default).
+* **Disabilitazione Temporanea (Icona Calendario Arancione `-` per Posti Fissi):**
+  * Se un posto fisso non può essere utilizzato per qualche giorno (es. ferie del titolare, manutenzione, chiusure), clicca sull'icona calendario arancione.
+  * Seleziona le date desiderate: in quei giorni il posto risulterà disabilitato e non verrà assegnato a nessuno.
+  * Se quel giorno il posto era già stato assegnato a un collega, il sistema proverà automaticamente a trasferirlo su un altro posto libero.
+* **Disponibilità Temporanea (Icona Calendario Blu/Verde `+` per Posti Non Fissi):**
+  * Clicca sull'icona calendario per indicare le date in cui il posto non fisso diventa eccezionalmente disponibile per essere assegnato agli utenti.
+
+### B. Pulsanti Fluttuanti Amministratore (Homepage)
+Oltre al tasto per inviare richieste, gli admin vedono due pulsanti aggiuntivi in basso a destra:
+1. **Assegna Posto (Icona Scudo):**
+   * Apre la modale di assegnazione manuale: seleziona un utente, un posto auto e una o più date.
+   * Consente di forzare l'assegnazione diretta anche saltando la lista d'attesa.
+2. **Comunicazione (Icona Megafono):**
+   * Invia un messaggio broadcast a tutti gli utenti verificati tramite email.
+   * Può facoltativamente creare un **Banner Persistente** in Homepage definendo una data di inizio e di fine validità.
+   * Gli amministratori possono eliminare un banner in qualsiasi momento cliccando sulla "X" in alto a destra del banner stesso.
+
+### C. Gestione Admin nella Modale del Giorno (Calendario)
+Cliccando su un qualsiasi giorno nel calendario della Homepage, gli admin vedono il pulsante **"Abilita Modifiche Admin" (icona chiave inglese)**:
+* **Azioni Rapide di Gruppo:**
+  * **Cancella Richieste:** Cancella in blocco tutte le richieste in attesa e non assegnate per quella data.
+  * **Reset Assegnazioni:** Riporta tutte le richieste assegnate allo stato "In attesa" e ripulisce lo storico del giorno (notificando via email gli utenti).
+  * **Avvia Assegnazione:** Avvia manualmente l'elaborazione dell'algoritmo di assegnazione sul momento (utile per il giorno successivo o per la mattina stessa).
+* **Cambio Stato Individuale:**
+  * Puoi modificare lo stato di qualsiasi singola richiesta (es. impostarla su *Assegnata* o *Non assegnata*).
+  * Una finestra di conferma ti chiederà se applicare la **Logica Automatica** (assegnando il primo posto libero o riassegnando automaticamente se liberato) oppure **Forzare solo il cambio stato** (permettendo anche overbooking manuali).

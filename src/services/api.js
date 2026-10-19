@@ -21,6 +21,7 @@ const READ_ONLY_ACTIONS = new Set([
   'getUsersWithPriority',
   'getRequests',
   'getTemporaryAvailabilities',
+  'getTemporaryUnavailabilities',
   'getParkingStatusForDate',
   'getActiveCommunication'
 ]);

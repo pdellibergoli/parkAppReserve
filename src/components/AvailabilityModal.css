@@ -146,3 +146,42 @@
 .modal-calendar-container .rdp-day_disabled:hover {
   background-color: transparent !important;
 }
+
+/* --- MODALITÀ DISABILITAZIONE TEMPORANEA (POSTI FISSI) --- */
+.unavailability-mode .modal-calendar-container {
+  border-color: rgba(230, 126, 34, 0.4);
+}
+
+.unavailability-mode .modal-calendar-container .rdp-day_selected,
+.unavailability-mode .modal-calendar-container .rdp-day_selected:hover {
+  background-color: #e67e22 !important;
+  color: #ffffff !important;
+}
+
+.unavailability-mode .submit-btn {
+  background-color: #e67e22;
+}
+
+.unavailability-mode .submit-btn:hover {
+  background-color: #d35400;
+}
+
+.modal-notice {
+  font-size: 0.9rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+
+.modal-notice.warning {
+  background-color: rgba(230, 126, 34, 0.12);
+  color: #d35400;
+  border: 1px solid rgba(230, 126, 34, 0.3);
+}
+
+.modal-notice.info {
+  background-color: rgba(52, 152, 219, 0.12);
+  color: #2980b9;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}

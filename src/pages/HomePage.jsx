@@ -106,6 +106,7 @@ const HomePage = () => {
 
   const [parkingSpaces, setParkingSpaces] = useState([]);
   const [temporaryAvailabilities, setTemporaryAvailabilities] = useState([]);
+  const [temporaryUnavailabilities, setTemporaryUnavailabilities] = useState([]);
 
   // Usiamo il Ref globale o un fallback locale
   const localCacheRef = useRef({});
@@ -181,7 +182,8 @@ const HomePage = () => {
       setUsers(cached.users);
       setActiveBanners(cached.banners);
       setParkingSpaces(cached.parkingSpaces);
-      setTemporaryAvailabilities(cached.temporaryAvailabilities);
+      setTemporaryAvailabilities(cached.temporaryAvailabilities || []);
+      setTemporaryUnavailabilities(cached.temporaryUnavailabilities || []);
       setLoading(false);
       return;
     }
@@ -200,12 +202,14 @@ const HomePage = () => {
       const fetchedBanners = initialData?.banners || [];
       const fetchedSpaces = initialData?.parkingSpaces || [];
       const fetchedTempAvail = initialData?.temporaryAvailabilities || [];
+      const fetchedTempUnavail = initialData?.temporaryUnavailabilities || [];
 
       setAllRequests(fetchedRequests);
       setUsers(fetchedUsers);
       setActiveBanners(fetchedBanners);
       setParkingSpaces(fetchedSpaces);
       setTemporaryAvailabilities(fetchedTempAvail);
+      setTemporaryUnavailabilities(fetchedTempUnavail);
 
       // SALVA NEL REF GLOBALE
       monthCacheRef.current[monthKey] = {
@@ -213,7 +217,8 @@ const HomePage = () => {
         users: fetchedUsers,
         banners: fetchedBanners,
         parkingSpaces: fetchedSpaces,
-        temporaryAvailabilities: fetchedTempAvail
+        temporaryAvailabilities: fetchedTempAvail,
+        temporaryUnavailabilities: fetchedTempUnavail
       };
     } catch (err) {
       console.error("[HomePage Error]:", err);
@@ -266,15 +271,32 @@ const HomePage = () => {
     if (!selectedDate) return 0;
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const fixedCount = parkingSpaces.filter(s => s.isFixed || s.type === 'fixed').length;
+
+    // Posti fissi
+    const fixedSpaces = parkingSpaces.filter(s => s.isFixed || s.type === 'fixed');
+
+    // Posti fissi disabilitati per questa data
+    const disabledFixedSpaceIds = new Set(
+      temporaryUnavailabilities
+        .filter(u => {
+          if (!u || !u.unavailableDate) return false;
+          const unavailDateStr = format(new Date(u.unavailableDate), 'yyyy-MM-dd');
+          return unavailDateStr === dateStr;
+        })
+        .map(u => u.parkingSpaceId)
+    );
+
+    const activeFixedCount = fixedSpaces.filter(s => !disabledFixedSpaceIds.has(s.id)).length;
     
+    // Posti non fissi con disponibilità temporanea per questa data
     const tempCount = temporaryAvailabilities.filter(a => {
+      if (!a || !a.availableDate) return false;
       const availDateStr = format(new Date(a.availableDate), 'yyyy-MM-dd');
       return availDateStr === dateStr;
     }).length;
 
-    return fixedCount + tempCount;
-  }, [selectedDate, parkingSpaces, temporaryAvailabilities]);
+    return activeFixedCount + tempCount;
+  }, [selectedDate, parkingSpaces, temporaryAvailabilities, temporaryUnavailabilities]);
 
   const handleDeleteBanner = async (bannerId) => {
     if (window.confirm("Sei sicuro di voler cancellare questa comunicazione?")) {

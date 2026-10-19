@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { callApi } from '../services/api';
-import { FaTrashAlt, FaCalendarPlus, FaPencilAlt, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaTrashAlt, FaCalendarPlus, FaCalendarMinus, FaPencilAlt, FaCheck, FaTimes } from 'react-icons/fa';
 import AvailabilityModal from '../components/AvailabilityModal';
 import './ParkingSpacesPage.css';
 
@@ -210,7 +210,16 @@ const ParkingSpacesPage = () => {
                       />
                     </div>
                     
-                    {space.isFixed !== true && (
+                    {space.isFixed === true ? (
+                      <button 
+                        className="icon-btn disable-btn"
+                        onClick={() => handleOpenAvailabilityModal(space)}
+                        title={`Disabilita temporaneamente ${space.number}`}
+                        disabled={isDeleting || isEditing}
+                      >
+                        <FaCalendarMinus />
+                      </button>
+                    ) : (
                       <button 
                         className="icon-btn edit-btn"
                         onClick={() => handleOpenAvailabilityModal(space)}

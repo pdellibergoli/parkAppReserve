@@ -9,6 +9,7 @@ const CONFIG = {
     REQUESTS: "ParkingRequests",
     ASSIGNMENT_HISTORY: "AssignmentHistory",
     TEMPORARY_AVAILABILITY: "TemporaryAvailability",
+    TEMPORARY_UNAVAILABILITY: "TemporaryUnavailability",
     COMMUNICATIONS: "Communications"
   },
   BASE_URL: "https://park-app-reserve.vercel.app/",
@@ -133,7 +134,7 @@ function getInitialData(payload) {
     return u;
   });
 
-  // 5. Parcheggi e disponibilità temporanee del mese di riferimento
+  // 5. Parcheggi, disponibilità e indisponibilità temporanee del mese di riferimento
   const parkingSpaces = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES);
   
   const allTempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY);
@@ -141,6 +142,13 @@ function getInitialData(payload) {
     if (!a || !a.availableDate) return false;
     const availDate = normalizeDate(a.availableDate);
     return availDate >= startOfMonth && availDate <= endOfMonth;
+  });
+
+  const allTempUnavail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY);
+  const monthlyTempUnavail = allTempUnavail.filter(u => {
+    if (!u || !u.unavailableDate) return false;
+    const unavailDate = normalizeDate(u.unavailableDate);
+    return unavailDate >= startOfMonth && unavailDate <= endOfMonth;
   });
 
   // 6. Comunicazioni attive
@@ -151,7 +159,8 @@ function getInitialData(payload) {
     users: users,
     banners: banners,
     parkingSpaces: parkingSpaces,
-    temporaryAvailabilities: monthlyTempAvail
+    temporaryAvailabilities: monthlyTempAvail,
+    temporaryUnavailabilities: monthlyTempUnavail
   };
 }
 
@@ -170,6 +179,7 @@ const READ_ONLY_ACTIONS = new Set([
   'getUsersWithPriority',
   'getRequests',
   'getTemporaryAvailabilities',
+  'getTemporaryUnavailabilities',
   'getParkingStatusForDate',
   'getActiveCommunication'
 ]);
@@ -215,6 +225,11 @@ function routeAction(action, payload) {
     'getTemporaryAvailabilities': () => getTemporaryAvailabilities(payload),
     'removeTemporaryAvailability': () => removeTemporaryAvailability(payload),
     'getParkingStatusForDate': () => getParkingStatusForDate(payload),
+
+    // Disabilitazioni temporanee (posti fissi)
+    'addTemporaryUnavailability': () => addTemporaryUnavailability(payload),
+    'getTemporaryUnavailabilities': () => getTemporaryUnavailabilities(payload),
+    'removeTemporaryUnavailability': () => removeTemporaryUnavailability(payload),
 
     // Azioni Admin
     'adminCancelAllRequestsForDate': () => adminCancelAllRequestsForDate(payload),
@@ -384,8 +399,20 @@ function readSheetAsJSON_(sheetName) {
   });
 }
 
+function getOrCreateSheet_(sheetName, defaultHeaders) {
+  let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(sheetName);
+    if (defaultHeaders && defaultHeaders.length > 0) {
+      sheet.appendRow(defaultHeaders);
+    }
+  }
+  return sheet;
+}
+
 function findRowByColumn(sheetName, columnName, value) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return null;
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
   const colIndex = headers.indexOf(columnName);
@@ -717,6 +744,7 @@ function deleteParkingSpace(payload) {
 
   const today = normalizeDate(new Date());
   removeTemporaryAvailabilitiesForSpace(spaceId, today);
+  removeTemporaryUnavailabilitiesForSpace(spaceId, today);
   cancelFutureAssignmentsForSpace(spaceId, today);
 
   const result = findRowByColumn(CONFIG.SHEETS.PARKING_SPACES, 'id', spaceId);
@@ -732,6 +760,16 @@ function deleteParkingSpace(payload) {
 
 function removeTemporaryAvailabilitiesForSpace(spaceId, fromDate) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.TEMPORARY_AVAILABILITY);
+  if (!sheet) return;
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][1] === spaceId && normalizeDate(data[i][2]) >= fromDate) sheet.deleteRow(i + 1);
+  }
+}
+
+function removeTemporaryUnavailabilitiesForSpace(spaceId, fromDate) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY);
+  if (!sheet) return;
   const data = sheet.getDataRange().getValues();
   for (let i = data.length - 1; i >= 1; i--) {
     if (data[i][1] === spaceId && normalizeDate(data[i][2]) >= fromDate) sheet.deleteRow(i + 1);
@@ -761,6 +799,15 @@ function updateParkingSpaceFixedStatus(payload) {
 
   const result = findRowByColumn(CONFIG.SHEETS.PARKING_SPACES, 'id', spaceId);
   if (!result) throw new Error("Parcheggio non trovato.");
+
+  const today = normalizeDate(new Date());
+  if (isFixed) {
+    // Diventando fisso, rimuove le disponibilità temporanee future
+    removeTemporaryAvailabilitiesForSpace(spaceId, today);
+  } else {
+    // Diventando non fisso, rimuove le disabilitazioni temporanee future
+    removeTemporaryUnavailabilitiesForSpace(spaceId, today);
+  }
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.PARKING_SPACES);
   updateCell(sheet, result.row, 'isFixed', isFixed, result.headers);
@@ -798,8 +845,11 @@ function getParkingStatusForDate(payload) {
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);
   const tempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
     .filter(avail => normalizeDate(avail.availableDate).toDateString() === dateString);
+  const tempUnavail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY)
+    .filter(unavail => normalizeDate(unavail.unavailableDate).toDateString() === dateString);
+  const disabledSpaceIds = new Set(tempUnavail.map(u => u.parkingSpaceId));
 
-  const fixedSpacesCount = allSpaces.filter(s => s.isFixed === true).length;
+  const fixedSpacesCount = allSpaces.filter(s => s.isFixed === true && !disabledSpaceIds.has(s.id)).length;
   const tempSpacesCount = new Set(tempAvail.map(a => a.parkingSpaceId)).size;
   const totalSpaces = fixedSpacesCount + tempSpacesCount;
 
@@ -1030,8 +1080,10 @@ function fulfillParkingRequest(payload) {
   const spaceObj = allSpaces.find(s => s.id === spaceId);
   const hasTempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
     .some(avail => avail.parkingSpaceId === spaceId && normalizeDate(avail.availableDate).toDateString() === dateString);
+  const hasTempUnavail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY)
+    .some(unavail => unavail.parkingSpaceId === spaceId && normalizeDate(unavail.unavailableDate).toDateString() === dateString);
 
-  if (!spaceObj || (spaceObj.isFixed !== true && !hasTempAvail)) {
+  if (!spaceObj || (spaceObj.isFixed === true && hasTempUnavail) || (spaceObj.isFixed !== true && !hasTempAvail)) {
     throw new Error("Il parcheggio che si sta tentando di cedere non è più disponibile.");
   }
 
@@ -1160,10 +1212,21 @@ function adminUpdateRequestStatus(payload) {
     if (!preventAutoLogic) {
         const spaceObj = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES).find(s => s.id === currentSpaceId);
         if (spaceObj) {
-          const bestCandidate = findBestCandidate(requestDate);
-          if (bestCandidate) {
-            logToClient(`Riassegnazione al miglior candidato: ${bestCandidate.userId}`);
-            assignParking(bestCandidate, { id: currentSpaceId, number: currentSpaceNum });
+          const dateString = requestDate.toDateString();
+          const hasTempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
+            .some(avail => avail.parkingSpaceId === currentSpaceId && normalizeDate(avail.availableDate).toDateString() === dateString);
+          const hasTempUnavail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY)
+            .some(unavail => unavail.parkingSpaceId === currentSpaceId && normalizeDate(unavail.unavailableDate).toDateString() === dateString);
+          const isSpaceAvailable = (spaceObj.isFixed === true && !hasTempUnavail) || (spaceObj.isFixed !== true && hasTempAvail);
+
+          if (isSpaceAvailable) {
+            const bestCandidate = findBestCandidate(requestDate);
+            if (bestCandidate) {
+              logToClient(`Riassegnazione al miglior candidato: ${bestCandidate.userId}`);
+              assignParking(bestCandidate, { id: currentSpaceId, number: currentSpaceNum });
+            }
+          } else {
+            logToClient(`Il posto ${currentSpaceNum} non è disponibile per riassegnazione in questa data.`);
           }
         }
     } else {
@@ -1271,10 +1334,14 @@ function getAvailableSpacesForDate(date) {
   const tempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
     .filter(avail => normalizeDate(avail.availableDate).toDateString() === dateString);
 
-  const fixedSpaces = allSpaces.filter(s => s.isFixed === true);
+  const tempUnavail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY)
+    .filter(unavail => normalizeDate(unavail.unavailableDate).toDateString() === dateString);
+  const disabledSpaceIds = new Set(tempUnavail.map(u => u.parkingSpaceId));
+
+  const fixedSpaces = allSpaces.filter(s => s.isFixed === true && !disabledSpaceIds.has(s.id));
   const tempSpaces = tempAvail
     .map(avail => allSpaces.find(space => space.id === avail.parkingSpaceId))
-    .filter(Boolean);
+    .filter(space => space && !disabledSpaceIds.has(space.id));
 
   const assignedSpaceIds = new Set(
     allRequests
@@ -1377,8 +1444,10 @@ function cancelAssignmentAndReassign(payload) {
   const dateString = requestDate.toDateString();
   const hasTempAvail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
     .some(avail => avail.parkingSpaceId === cancelledSpaceId && normalizeDate(avail.availableDate).toDateString() === dateString);
+  const hasTempUnavail = getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY)
+    .some(unavail => unavail.parkingSpaceId === cancelledSpaceId && normalizeDate(unavail.unavailableDate).toDateString() === dateString);
 
-  const isReassignable = spaceObj && (spaceObj.isFixed === true || hasTempAvail);
+  const isReassignable = spaceObj && ((spaceObj.isFixed === true && !hasTempUnavail) || (spaceObj.isFixed !== true && hasTempAvail));
   let reassigned = false;
 
   if (isReassignable) {
@@ -1424,7 +1493,13 @@ function checkOverbookingForDate(date) {
     r.status !== 'cancelled_by_user'
   ).length;
 
-  const fixedSpaces = allSpaces.filter(s => s.isFixed === true).length;
+  const tempUnavailIds = new Set(
+    getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY)
+      .filter(u => normalizeDate(u.unavailableDate).toDateString() === dateString)
+      .map(u => u.parkingSpaceId)
+  );
+
+  const fixedSpaces = allSpaces.filter(s => s.isFixed === true && !tempUnavailIds.has(s.id)).length;
   const tempSpaceIds = new Set(
     getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_AVAILABILITY)
       .filter(avail => normalizeDate(avail.availableDate).toDateString() === dateString)
@@ -1561,6 +1636,128 @@ function removeTemporaryAvailability(payload) {
   return {
     message: "Disponibilità rimossa con successo." +
       (cancelledAssignment ? " L'assegnazione collegata è stata annullata." : "")
+  };
+}
+
+// =================================================================
+// GESTIONE DISABILITAZIONI TEMPORANEE (POSTI FISSI)
+// =================================================================
+
+function addTemporaryUnavailability(payload) {
+  const { spaceId, date } = payload;
+  if (!spaceId || !date) throw new Error("ID del parcheggio e data sono obbligatori.");
+
+  const targetDate = normalizeDate(date);
+  const dateString = targetDate.toDateString();
+  const unavailSheet = getOrCreateSheet_(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY, ['unavailabilityId', 'parkingSpaceId', 'unavailableDate']);
+  const newId = "unavail_" + Utilities.getUuid();
+
+  unavailSheet.appendRow([newId, spaceId, targetDate]);
+  SpreadsheetApp.flush();
+
+  // Se per quella data il posto era già stato assegnato a un utente, riassegna o annulla l'assegnazione
+  const requestsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
+  const requestsData = requestsSheet.getDataRange().getValues();
+  const requestsHeaders = requestsData[0];
+  let cancelledAssignment = false;
+  let reassignedToSpace = null;
+
+  for (let i = requestsData.length - 1; i >= 1; i--) {
+    const req = {};
+    requestsHeaders.forEach((header, index) => req[header] = requestsData[i][index]);
+
+    if (
+      req.status === 'assigned' &&
+      req.assignedParkingSpaceId === spaceId &&
+      normalizeDate(req.requestedDate).toDateString() === dateString
+    ) {
+      logToClient(`Posto fisso ${spaceId} disabilitato: gestione assegnazione esistente per ${req.userId}.`);
+      
+      const availableSpaces = getAvailableSpacesForDate(targetDate);
+      if (availableSpaces.length > 0) {
+        const replacementSpace = availableSpaces[0];
+        logToClient(`Riassegnazione immediata dell'utente ${req.userId} al posto ${replacementSpace.number}`);
+        updateCell(requestsSheet, i + 1, 'assignedParkingSpaceId', replacementSpace.id, requestsHeaders);
+        updateCell(requestsSheet, i + 1, 'assignedParkingSpaceNumber', replacementSpace.number, requestsHeaders);
+
+        removeFromHistory(req.userId, targetDate);
+        const historySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.ASSIGNMENT_HISTORY);
+        if (historySheet) historySheet.appendRow([req.userId, targetDate, replacementSpace.id]);
+
+        sendSuccessEmail(req.userId, targetDate, replacementSpace.number);
+        reassignedToSpace = replacementSpace.number;
+      } else {
+        logToClient(`Nessun posto disponibile in sostituzione: annullamento assegnazione.`);
+        updateCell(requestsSheet, i + 1, 'status', 'not_assigned', requestsHeaders);
+        updateCell(requestsSheet, i + 1, 'assignedParkingSpaceId', '', requestsHeaders);
+        updateCell(requestsSheet, i + 1, 'assignedParkingSpaceNumber', '', requestsHeaders);
+        removeFromHistory(req.userId, targetDate);
+        sendFailureEmail(req.userId, targetDate);
+        cancelledAssignment = true;
+      }
+      break;
+    }
+  }
+
+  if (cancelledAssignment && !checkOverbookingForDate(targetDate)) {
+    logToClient(`Nessun overbooking dopo la disabilitazione. Pulizia storico.`);
+    clearHistoryForDate(targetDate);
+  }
+
+  let msg = "Disabilitazione temporanea aggiunta.";
+  if (reassignedToSpace) {
+    msg += ` L'assegnazione esistente per questa data è stata trasferita al posto ${reassignedToSpace}.`;
+  } else if (cancelledAssignment) {
+    msg += " L'assegnazione esistente per questa data è stata annullata.";
+  }
+
+  return {
+    message: msg,
+    unavailability: {
+      unavailabilityId: newId,
+      parkingSpaceId: spaceId,
+      unavailableDate: targetDate
+    }
+  };
+}
+
+function getTemporaryUnavailabilities(payload) {
+  const { spaceId } = payload;
+  if (!spaceId) throw new Error("ID del parcheggio non fornito.");
+
+  const today = normalizeDate(new Date());
+  return getSheetAsJSON(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY)
+    .filter(unavail => unavail.parkingSpaceId === spaceId && normalizeDate(unavail.unavailableDate) >= today)
+    .sort((a, b) => normalizeDate(a.unavailableDate) - normalizeDate(b.unavailableDate));
+}
+
+function removeTemporaryUnavailability(payload) {
+  const { unavailabilityId } = payload;
+  if (!unavailabilityId) throw new Error("ID della disabilitazione non fornito.");
+
+  const result = findRowByColumn(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY, 'unavailabilityId', unavailabilityId);
+  if (!result) throw new Error("Disabilitazione non trovata.");
+
+  const spaceId = result.data[result.headers.indexOf('parkingSpaceId')];
+  const targetDate = normalizeDate(result.data[result.headers.indexOf('unavailableDate')]);
+
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.TEMPORARY_UNAVAILABILITY).deleteRow(result.row);
+  logToClient(`Disabilitazione ${unavailabilityId} rimossa per il parcheggio ${spaceId}.`);
+
+  const today = normalizeDate(new Date());
+  if (targetDate.getTime() === today.getTime()) {
+    logToClient("Posto fisso riabilitato per oggi. Tentativo di assegnazione immediata.");
+    const candidate = findBestCandidate(targetDate);
+    if (candidate) {
+      const spaceDetails = getSheetAsJSON(CONFIG.SHEETS.PARKING_SPACES).find(s => s.id === spaceId);
+      if (spaceDetails) assignParking(candidate, spaceDetails);
+    }
+  }
+
+  handleInstantReassignment(spaceId, targetDate);
+
+  return {
+    message: "Disabilitazione rimossa con successo. Il parcheggio è nuovamente disponibile."
   };
 }
 

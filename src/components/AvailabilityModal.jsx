@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
-import { format, isBefore, startOfToday, getDay, parseISO } from 'date-fns';
+import { format, startOfToday } from 'date-fns';
 import { it } from 'date-fns/locale';
 
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import './AvailabilityModal.css'; // Useremo questo per gli stili del calendario
+import './AvailabilityModal.css';
 
 // Funzione helper per formattare la data come chiave
 const formatDateKey = (date) => format(date, 'yyyy-MM-dd');
@@ -20,48 +20,59 @@ const AvailabilityModal = ({ isOpen, onClose, space, onSave }) => {
   // Stato per le date selezionate nel calendario (oggetti Date)
   const [selectedDates, setSelectedDates] = useState([]);
   
-  // Stato per memorizzare le disponibilità originali caricate (con ID)
+  // Stato per memorizzare le disponibilità/disabilitazioni originali caricate (con ID)
   // Formato: [{ id: 'avail_123', date: DateObject }, ...]
-  const [existingAvailabilities, setExistingAvailabilities] = useState([]);
+  const [existingEntries, setExistingEntries] = useState([]);
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const today = startOfToday();
 
-  // Carica le disponibilità esistenti quando la modale si apre
+  const isFixed = space?.isFixed === true;
+
+  // Carica le disponibilità o disabilitazioni esistenti quando la modale si apre
   useEffect(() => {
     if (isOpen && space) {
-      // Resetta gli stati
       setError('');
       setSubmitLoading(false);
       setCurrentMonth(new Date());
       setIsLoading(true);
 
-      const fetchAvailabilities = async () => {
+      const fetchEntries = async () => {
         try {
-          const data = await callApi('getTemporaryAvailabilities', { spaceId: space.id });
+          const action = isFixed ? 'getTemporaryUnavailabilities' : 'getTemporaryAvailabilities';
+          const data = await callApi(action, { spaceId: space.id });
+          const items = Array.isArray(data) ? data : [];
           
-          // Converti le stringhe di data in oggetti Date
-          const availDates = data.map(avail => new Date(avail.availableDate));
+          const dateField = isFixed ? 'unavailableDate' : 'availableDate';
+          const idField = isFixed ? 'unavailabilityId' : 'availabilityId';
+
+          const dates = items
+            .filter(item => item && item[dateField])
+            .map(item => new Date(item[dateField]));
+            
+          const mappedEntries = items
+            .filter(item => item && item[dateField] && item[idField])
+            .map(item => ({
+              id: item[idField],
+              date: new Date(item[dateField])
+            }));
           
-          // Salva i dati originali (con ID) per il confronto al salvataggio
-          const availData = data.map(avail => ({
-            id: avail.availabilityId,
-            date: new Date(avail.availableDate)
-          }));
+          setSelectedDates(dates);
+          setExistingEntries(mappedEntries);
           
-          setSelectedDates(availDates); // Imposta il calendario con le date esistenti
-          setExistingAvailabilities(availData); // Salva lo stato originale
-          
-        } catch (err) {
-          setError("Impossibile caricare le disponibilità esistenti.");
+        } catch {
+          setError(isFixed 
+            ? "Impossibile caricare le disabilitazioni esistenti." 
+            : "Impossibile caricare le disponibilità esistenti."
+          );
         } finally {
           setIsLoading(false);
         }
       };
       
-      fetchAvailabilities();
+      fetchEntries();
     }
-  }, [isOpen, space, setIsLoading]);
+  }, [isOpen, space, isFixed, setIsLoading]);
 
   // Gestione salvataggio
   const handleSubmit = async (e) => {
@@ -71,36 +82,31 @@ const AvailabilityModal = ({ isOpen, onClose, space, onSave }) => {
     setSubmitLoading(true);
 
     try {
-      // 1. Crea Set di stringhe 'yyyy-MM-dd' per un confronto facile
-      const originalDateSet = new Set(existingAvailabilities.map(a => formatDateKey(a.date)));
+      const originalDateSet = new Set(existingEntries.map(a => formatDateKey(a.date)));
       const newDateSet = new Set(selectedDates.map(formatDateKey));
 
-      // 2. Trova le date da AGGIUNGERE
-      // (Date che sono in newDateSet ma non in originalDateSet)
       const datesToAdd = selectedDates.filter(date => !originalDateSet.has(formatDateKey(date)));
-
-      // 3. Trova le date da RIMUOVERE
-      // (Date che erano in originalDateSet ma non più in newDateSet)
-      // Abbiamo bisogno dei loro ID per l'API
-      const idsToRemove = existingAvailabilities
-        .filter(avail => !newDateSet.has(formatDateKey(avail.date)))
+      const idsToRemove = existingEntries
+        .filter(entry => !newDateSet.has(formatDateKey(entry.date)))
         .map(a => a.id);
 
-      // 4. Esegui le chiamate API in parallelo
+      const addAction = isFixed ? 'addTemporaryUnavailability' : 'addTemporaryAvailability';
+      const removeAction = isFixed ? 'removeTemporaryUnavailability' : 'removeTemporaryAvailability';
+      const removeIdKey = isFixed ? 'unavailabilityId' : 'availabilityId';
+
       const addPromises = datesToAdd.map(date => 
-        callApi('addTemporaryAvailability', { 
+        callApi(addAction, { 
           spaceId: space.id, 
-          date: formatDateKey(date) // Invia come stringa
+          date: formatDateKey(date)
         })
       );
       
-      const removePromises = idsToRemove.map(availabilityId => 
-        callApi('removeTemporaryAvailability', { availabilityId })
+      const removePromises = idsToRemove.map(id => 
+        callApi(removeAction, { [removeIdKey]: id })
       );
 
       await Promise.all([...addPromises, ...removePromises]);
 
-      // Chiudi e aggiorna la pagina principale
       onSave();
       onClose();
 
@@ -112,16 +118,36 @@ const AvailabilityModal = ({ isOpen, onClose, space, onSave }) => {
     }
   };
 
-  // Definisci i giorni disabilitati (passato e weekend)
+  // Definisci i giorni disabilitati dal calendario (passato e weekend)
   const disabledDays = [
     { before: today }, 
     { dayOfWeek: [0, 6] }
   ];
 
+  const modalTitle = isFixed 
+    ? `Disabilita Temporaneamente ${space?.number || ''}`
+    : `Gestisci Disponibilità per ${space?.number || ''}`;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Gestisci Disponibilità per ${space?.number || ''}`}>
-      <form onSubmit={handleSubmit} className="availability-form">
-        <p>Seleziona o deseleziona i giorni in cui questo parcheggio è disponibile.</p>
+    <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
+      <form onSubmit={handleSubmit} className={`availability-form ${isFixed ? 'unavailability-mode' : ''}`}>
+        <p>
+          {isFixed
+            ? 'Seleziona o deseleziona i giorni in cui questo parcheggio fisso sarà disabilitato.'
+            : 'Seleziona o deseleziona i giorni in cui questo parcheggio non fisso è disponibile.'}
+        </p>
+
+        <div className={`modal-notice ${isFixed ? 'warning' : 'info'}`}>
+          {isFixed ? (
+            <>
+              <strong>⚠️ Posto Fisso:</strong> I giorni selezionati saranno <strong>disabilitati</strong> e non verranno assegnati per le richieste.
+            </>
+          ) : (
+            <>
+              <strong>ℹ️ Posto Non Fisso:</strong> I giorni selezionati saranno <strong>disponibili</strong> per essere assegnati alle richieste.
+            </>
+          )}
+        </div>
         
         <div className="form-group">
           <div className="modal-calendar-container">
@@ -150,7 +176,7 @@ const AvailabilityModal = ({ isOpen, onClose, space, onSave }) => {
             Annulla
           </button>
           <button type="submit" className="submit-btn" disabled={submitLoading}>
-            {submitLoading ? <div className="spinner-small"></div> : 'Salva Modifiche'}
+            {submitLoading ? <div className="spinner-small"></div> : (isFixed ? 'Salva Disabilitazioni' : 'Salva Modifiche')}
           </button>
         </div>
       </form>

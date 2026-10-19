@@ -145,3 +145,13 @@
   color: var(--bg-mod-btn) !important;
   background-color: #fae3ca;
 }
+
+.icon-btn.disable-btn {
+  background-color: #e67e22;
+  color: #ffffff;
+}
+
+.icon-btn.disable-btn:hover {
+  background-color: rgba(230, 126, 34, 0.15) !important;
+  color: #e67e22 !important;
+}
