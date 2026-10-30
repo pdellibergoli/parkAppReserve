@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLoading } from '../context/LoadingContext';
+import { useLoading } from '../context/useLoading';
 import './LoadingOverlay.css';
 
 const LoadingOverlay = () => {

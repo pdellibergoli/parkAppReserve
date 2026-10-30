@@ -31,7 +31,7 @@ const ParkingSpacesPage = () => {
     try {
       setError('');
       setParkingSpaces(sortSpaces(await callApi('getParkingSpaces')));
-    } catch (err) {
+    } catch {
       setError("Impossibile caricare l'elenco dei parcheggi.");
     } finally {
       setLoading(false);

@@ -3,8 +3,6 @@ import Modal from './Modal';
 import './UserAssignmentsModal.css';
 
 const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap, windowDays = 30 }) => {
-  if (!user) return null;
-
   const { startDate, today, filteredRequests } = useMemo(() => {
     const dToday = new Date();
     dToday.setHours(23, 59, 59, 999);
@@ -34,6 +32,8 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
 
     return { startDate: dStart, today: dToday, filteredRequests: filtered };
   }, [userAssignments, windowDays]);
+
+  if (!user) return null;
 
   const getStatusStyle = (status) => {
     switch (status) {

@@ -1,8 +1,7 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AuthContext } from './useAuth';
 import { callApi } from '../services/api';
 import { clearDataStore } from '../services/dataStore';
-
-const AuthContext = createContext(null);
 
 const SESSION_DURATION = 30 * 60 * 1000; 
 
@@ -97,9 +96,4 @@ export const AuthProvider = ({ children }) => {
       {!loading && children}
     </AuthContext.Provider>
   );
-};
-
-
-export const useAuth = () => {
-  return useContext(AuthContext);
 };

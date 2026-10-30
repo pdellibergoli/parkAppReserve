@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { callApi } from '../services/api';
-import { useLoading } from '../context/LoadingContext';
+import { useLoading } from '../context/useLoading';
 import { format, startOfToday } from 'date-fns';
 import { it } from 'date-fns/locale';
 

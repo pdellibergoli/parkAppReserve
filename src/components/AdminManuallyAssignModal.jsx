@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
-import { useLoading } from '../context/LoadingContext';
+import { useLoading } from '../context/useLoading';
 import { callApi } from '../services/api';
 import { 
   format, isBefore, startOfToday, getDay, parseISO, 
@@ -18,7 +18,6 @@ const formatDateKey = (date) => format(date, 'yyyy-MM-dd');
 const AdminManuallyAssignModal = ({ 
   isOpen, 
   onClose, 
-  onRefreshData, 
   onOptimisticUpdate,
   usersList = [],      // Prop ricevuta senza chiamate di rete
   parkingSpaces = []   // Prop ricevuta senza chiamate di rete

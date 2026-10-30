@@ -62,10 +62,15 @@ Le email non vengono recapitate: finiscono in Mailpit, su http://localhost:8025.
 |---|---|
 | `npm run dev` | Avvia app e API |
 | `npm test` | Esegue i test del backend sul database `parkapp_test`, che viene azzerato |
+| `npm run test:e2e` | Esegue i test end-to-end nel browser sulla build di produzione, con il database `parkapp_e2e` |
+| `npm run test:e2e:dates` | Ripete i test end-to-end con l'orologio simulato su date critiche: fine mese, fine anno, cambio d'ora |
+| `npm run test:e2e:ui` | Come sopra, con l'interfaccia di Playwright per seguire i test passo passo |
 | `npm run db:up` / `db:down` | Avvia o ferma i servizi Docker, i dati restano nel volume |
 | `npm run db:migrate` | Applica le migrazioni mancanti |
 | `npm run db:reset` | Cancella e ricrea il database di sviluppo. Funziona solo su un database locale |
 | `npm run assign` | Esegue l'assegnazione serale per domani, in locale non c'è il cron. Accetta una data: `npm run assign -- 2026-11-02` |
+
+I test end-to-end sono in `tests/e2e/` e richiedono Postgres e Mailpit attivi (`npm run db:up`). La prima volta installa il browser con `npx playwright install chromium`. Il report di un'esecuzione si apre con `npx playwright show-report`.
 
 Per modificare lo schema aggiungi un file numerato in `db/migrations/`, ad esempio `002_nome.sql`, ed esegui `npm run db:migrate`. `npm run preview` serve solo il frontend: per le API usa `npm run dev`.
 

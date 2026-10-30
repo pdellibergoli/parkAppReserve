@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
-import { useAuth } from '../context/AuthContext';
-import { useLoading } from '../context/LoadingContext';
+import { useAuth } from '../context/useAuth';
+import { useLoading } from '../context/useLoading';
 import { callApi } from '../services/api';
 import { 
   format, isBefore, startOfToday, getDay, parseISO, 
@@ -20,7 +20,6 @@ const formatDateKey = (date) => format(date, 'yyyy-MM-dd');
 const AddRequestModal = ({ 
   isOpen, 
   onClose, 
-  onRquestCreated, 
   onOptimisticUpdate, 
   usersList = [], 
   allRequests = [] 

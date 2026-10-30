@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Modal from './Modal';
-import { useAuth } from '../context/AuthContext';
-import { useLoading } from '../context/LoadingContext';
+import { useAuth } from '../context/useAuth';
+import { useLoading } from '../context/useLoading';
 import { callApi } from '../services/api';
 import { format, isBefore, startOfToday, isToday, isTomorrow } from 'date-fns';
 import { getTextColor } from '../utils/colors';
@@ -80,7 +80,7 @@ const AdminActions = ({ selectedDate, onAdminAction, isLoading, hasPendingReques
     );
 };
 
-const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEdit, totalParkingSpaces, onCancel, onRefreshData, onOptimisticUpdate, onOptimisticDelete }) => {
+const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEdit, totalParkingSpaces, onRefreshData, onOptimisticUpdate, onOptimisticDelete }) => {
     const { user: loggedInUser } = useAuth();
     const { setIsLoading } = useLoading();
     

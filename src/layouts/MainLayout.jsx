@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { getTextColor } from '../utils/colors';
 import { preloadAppPages } from '../utils/preload';
 import { useQuery } from '../hooks/useQuery';
@@ -122,7 +122,6 @@ const MainLayout = () => {
                     <AddRequestModal
                         isOpen={isAddModalOpen}
                         onClose={handleCloseModals}
-                        onRquestCreated={handleCloseModals}
                         onOptimisticUpdate={applyRequestUpdate}
                         usersList={reference?.users}
                         allRequests={cachedMonthRequests()}

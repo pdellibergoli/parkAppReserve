@@ -14,8 +14,8 @@ import { callApi } from '../services/api';
 import { invalidateData } from '../services/dataStore';
 import { applyRequestDelete, applyRequestUpdate, monthQuery, prefetch, referenceQuery } from '../services/queries';
 import { useQuery } from '../hooks/useQuery';
-import { useLoading } from '../context/LoadingContext';
-import { useAuth } from '../context/AuthContext';
+import { useLoading } from '../context/useLoading';
+import { useAuth } from '../context/useAuth';
 import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus } from 'react-icons/fa';
 
 // Modali caricate solo quando aperte
@@ -320,7 +320,6 @@ const HomePage = () => {
           <AdminManuallyAssignModal 
             isOpen={isAdminAssignOpen}
             onClose={() => setIsAdminAssignOpen(false)}
-            onRefreshData={invalidateData}
             onOptimisticUpdate={applyRequestUpdate}
             usersList={users}
             parkingSpaces={parkingSpaces}

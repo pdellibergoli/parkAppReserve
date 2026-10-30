@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useLoading } from '../context/LoadingContext';
+import { useAuth } from '../context/useAuth';
+import { useLoading } from '../context/useLoading';
 import { callApi } from '../services/api';
 import { MY_REQUESTS_PAGE_SIZE, myRequestsQuery, prefetch } from '../services/queries';
 import { useQuery } from '../hooks/useQuery';

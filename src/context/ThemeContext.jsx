@@ -1,7 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useAuth } from './AuthContext'; // Importa useAuth per accedere ai dati utente
-
-const ThemeContext = createContext();
+import React, { useState, useEffect } from 'react';
+import { ThemeContext } from './useTheme';
+import { useAuth } from './useAuth'; // Importa useAuth per accedere ai dati utente
 
 const DEFAULT_PRIMARY_COLOR = '#DE1F3C';
 
@@ -84,8 +83,4 @@ export const ThemeProvider = ({ children }) => {
       {children}
     </ThemeContext.Provider>
   );
-};
-
-export const useTheme = () => {
-  return useContext(ThemeContext);
 };

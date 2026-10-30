@@ -4,7 +4,7 @@ import { getTextColor } from '../utils/colors';
 import { fetchQuery, prioritiesQuery, referenceQuery, userHistoryQuery } from '../services/queries';
 import { useQuery } from '../hooks/useQuery';
 import UserAssignmentsModal from '../components/UserAssignmentsModal';
-import { useLoading } from '../context/LoadingContext';
+import { useLoading } from '../context/useLoading';
 import { FaInfoCircle } from 'react-icons/fa';
 import './StatsPage.css';
 
