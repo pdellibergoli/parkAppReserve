@@ -1,7 +1,10 @@
-import React, { useState, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getTextColor } from '../utils/colors';
+import { preloadAppPages } from '../utils/preload';
+import { useQuery } from '../hooks/useQuery';
+import { applyRequestUpdate, cachedMonthRequests, monthQuery, prefetch, referenceQuery } from '../services/queries';
 import './MainLayout.css';
 import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
 import logo from '../assets/logo.png';
@@ -31,45 +34,30 @@ const MainLayout = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [requestToEdit, setRequestToEdit] = useState(null);
-    const [refreshKey, setRefreshKey] = useState(0);
 
-    // CACHE GLOBALE DEI MESI (In memoria tra i cambi di pagina)
-    const globalMonthCacheRef = useRef({});
-    const globalStatsCacheRef = useRef(null);
+    const { data: reference } = useQuery(referenceQuery());
 
-    // Dati condivisi fra layout, pagine e modali.
-    // REF e non state: aggiornarli non deve far ri-renderizzare il layout (e con
-    // l'Outlet tutte le pagine) ogni volta che i dati cambiano. Le modali li
-    // leggono all'apertura, quando il layout re-renderizza comunque.
-    const sharedDataRef = useRef({
-        onUpdate: null,
-        onDelete: null,
-        usersList: [],
-        allRequests: []
-    });
+    // I dati partono insieme al codice delle pagine, senza aspettarlo
+    const isAdmin = user?.isAdmin === true;
+    useEffect(() => {
+        prefetch(monthQuery(new Date()));
+        preloadAppPages(isAdmin);
+    }, [isAdmin]);
 
-    const registerOptimisticHandlers = useCallback((data) => {
-        Object.assign(sharedDataRef.current, data);
-    }, []);
-
-    const forceDataRefresh = useCallback(() => {
-        globalMonthCacheRef.current = {};
-        globalStatsCacheRef.current = null;
-        setRefreshKey(prevKey => prevKey + 1);
-    }, []);
+    // Oggetto stabile: le pagine non si ri-renderizzano quando cambia solo lo stato del layout
+    const outletContext = useMemo(() => ({
+        handleOpenAddModal: () => setIsAddModalOpen(true),
+        handleOpenEditModal: (request, actorId = null) => {
+            setRequestToEdit({ ...request, actorId });
+            setIsEditModalOpen(true);
+        },
+    }), []);
 
     const handleCloseModals = () => {
         setIsAddModalOpen(false);
         setIsEditModalOpen(false);
         setRequestToEdit(null);
     };
-
-    const handleOpenEditModal = (request, actorId = null) => {
-        setRequestToEdit({ ...request, actorId: actorId });
-        setIsEditModalOpen(true);
-    };
-
-    const handleOpenAddModal = () => setIsAddModalOpen(true);
     
     const [isUserMenuOpen, setUserMenuOpen] = useState(false);
     const menuTimerRef = useRef(null);
@@ -77,8 +65,6 @@ const MainLayout = () => {
     const handleMenuLeave = () => { menuTimerRef.current = setTimeout(() => { setUserMenuOpen(false); }, 300); };
     const handleLogout = () => { logout(); navigate('/login'); };
 
-    const sharedData = sharedDataRef.current;
-    
     return (
         <div className="main-layout">
             <header className="main-header">
@@ -124,19 +110,10 @@ const MainLayout = () => {
             </nav>
 
             <main className="main-content">
-                <Outlet context={{ 
-                    globalMonthCacheRef,
-                    globalStatsCacheRef,
-                    handleOpenAddModal, 
-                    handleOpenEditModal, 
-                    forceDataRefresh, 
-                    refreshKey,
-                    handleCloseModals,
-                    registerOptimisticHandlers,
-                    sharedUsers: sharedData.usersList,
-                    sharedSpaces: sharedData.parkingSpaces,
-                    sharedRequests: sharedData.allRequests
-                }} />
+                {/* Confine proprio: mentre si scarica una pagina il layout resta visibile e i dati partono */}
+                <Suspense fallback={<div className="loading-container"><div className="spinner"></div></div>}>
+                    <Outlet context={outletContext} />
+                </Suspense>
             </main>
 
             {/* Montate solo quando aperte: ne ritardano il caricamento */}
@@ -146,9 +123,9 @@ const MainLayout = () => {
                         isOpen={isAddModalOpen}
                         onClose={handleCloseModals}
                         onRquestCreated={handleCloseModals}
-                        onOptimisticUpdate={sharedData.onUpdate}
-                        usersList={sharedData.usersList}
-                        allRequests={sharedData.allRequests}
+                        onOptimisticUpdate={applyRequestUpdate}
+                        usersList={reference?.users}
+                        allRequests={cachedMonthRequests()}
                     />
                 </Suspense>
             )}
@@ -160,7 +137,7 @@ const MainLayout = () => {
                         onClose={handleCloseModals}
                         onRequestUpdated={handleCloseModals}
                         requestData={requestToEdit}
-                        onOptimisticUpdate={sharedData.onUpdate}
+                        onOptimisticUpdate={applyRequestUpdate}
                     />
                 </Suspense>
             )}

@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLoading } from '../context/LoadingContext';
 import { callApi } from '../services/api';
+import { MY_REQUESTS_PAGE_SIZE, myRequestsQuery, prefetch } from '../services/queries';
+import { useQuery } from '../hooks/useQuery';
 import { format, isBefore, startOfToday } from 'date-fns';
 import { FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
 import './MyRequestsPage.css';
+
+const NO_REQUESTS = [];
 
 const capitalizeFirstLetter = (string) => {
     if (!string) return '';
@@ -13,33 +17,49 @@ const capitalizeFirstLetter = (string) => {
 }
 
 const MyRequestsPage = () => {
-  const { handleOpenAddModal, handleOpenEditModal, refreshKey, forceDataRefresh } = useOutletContext();
+  const { handleOpenAddModal, handleOpenEditModal } = useOutletContext();
   const { user } = useAuth();
-  const { setIsLoading, isLoading } = useLoading();
+  const { setIsLoading } = useLoading();
 
-  const [myRequests, setMyRequests] = useState([]);
-  const [selectedRequests, setSelectedRequests] = useState([]);
-  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const { data: pageData, error, isLoading: isPageLoading } = useQuery(myRequestsQuery(user.id, page));
+  const [selection, setSelection] = useState([]);
 
+  // Mentre arriva una nuova pagina resta visibile la precedente: niente lista che lampeggia
+  const lastDataRef = useRef(null);
+  if (pageData) lastDataRef.current = pageData;
+  const data = pageData ?? lastDataRef.current;
+
+  const myRequests = data?.requests ?? NO_REQUESTS;
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / MY_REQUESTS_PAGE_SIZE));
+  const isLoading = isPageLoading && !data;
+
+  const goToPage = (nextPage) => {
+    setPage(nextPage);
+    setSelection([]);
+    window.scrollTo({ top: 0 });
+  };
+
+  // Dopo una cancellazione l'ultima pagina può sparire
   useEffect(() => {
-    const fetchMyRequests = async () => {
-        setIsLoading(true);
-        try {
-            const requests = await callApi('getRequests', { userId: user.id });
-            requests.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
-            setMyRequests(requests);
-            setSelectedRequests([]);
-        } catch (err) {
-            setError('Impossibile caricare le tue richieste.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    fetchMyRequests();
-  }, [user.id, setIsLoading, refreshKey]);
-  
+    if (pageData && page > totalPages) setPage(totalPages);
+  }, [pageData, page, totalPages]);
+
+  // La pagina successiva è la più probabile: quando l'utente ci arriva è già pronta
+  const userId = user.id;
+  const hasNextPage = page < totalPages;
+  useEffect(() => {
+    if (pageData && hasNextPage) prefetch(myRequestsQuery(userId, page + 1));
+  }, [pageData, hasNextPage, userId, page]);
+
+  // Una richiesta sparita dopo un aggiornamento non resta selezionata
+  const selectedRequests = useMemo(() => (
+    selection.filter((id) => myRequests.some((r) => r.requestId === id))
+  ), [selection, myRequests]);
+
   const handleSelectionChange = (requestId) => {
-      setSelectedRequests(prev => 
+      setSelection(prev => 
           prev.includes(requestId)
               ? prev.filter(id => id !== requestId)
               : [...prev, requestId]
@@ -54,7 +74,7 @@ const MyRequestsPage = () => {
       setIsLoading(true);
       try {
         await callApi('cancelMultipleRequests', { requestIds });
-        forceDataRefresh(); // Ricarica i dati dopo la cancellazione
+        setSelection([]);
       } catch (err) {
         alert(`Errore: ${err.message}`);
       } finally {
@@ -74,7 +94,7 @@ const MyRequestsPage = () => {
   }
 
   if (isLoading) return <div className="loading-container"><div className="spinner"></div></div>;
-  if (error) return <p className="error-message">{error}</p>;
+  if (error && !data) return <p className="error-message">Impossibile caricare le tue richieste.</p>;
 
   const today = startOfToday();
 
@@ -160,6 +180,14 @@ const MyRequestsPage = () => {
               );
             })}
           </ul>
+        )}
+
+        {totalPages > 1 && (
+          <nav className="pagination" aria-label="Pagine delle richieste">
+            <button onClick={() => goToPage(page - 1)} disabled={page === 1}>Precedente</button>
+            <span>Pagina {page} di {totalPages} ({total} richieste)</span>
+            <button onClick={() => goToPage(page + 1)} disabled={page >= totalPages}>Successiva</button>
+          </nav>
         )}
       </div>
     </>

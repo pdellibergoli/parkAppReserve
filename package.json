@@ -7,10 +7,18 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --env-file=.env.local --test --test-concurrency=1 tests/backend.test.js",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:migrate": "node --env-file=.env.local scripts/migrate.js",
+    "db:reset": "node --env-file=.env.local scripts/reset-dev-db.js",
+    "assign": "node --env-file=.env.local scripts/run-assignment.js"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
+    "nodemailer": "^10.3.1",
+    "pg": "^8.23.1",
     "react": "^19.1.1",
     "react-big-calendar": "^1.19.4",
     "react-day-picker": "^9.11.1",

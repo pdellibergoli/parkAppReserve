@@ -6,7 +6,7 @@ Park App Reserve è un'applicazione web full-stack progettata per la gestione e 
 
 * **Autenticazione Utente:** Registrazione sicura con hashing password e salt, verifica via e-mail e recupero password.
 * **Sistema di Richieste:** Gli utenti possono inviare richieste singole o multiple per date future, visualizzarle, modificarle o cancellarle.
-* **Assegnazione Automatica & Algoritmo di Priorità:** Esecuzione automatica programmata la sera prima del giorno richiesto (es. alle 19:00). La priorità favorisce chi ha avuto meno assegnazioni negli ultimi 30 giorni lavorativi (*success rate* più basso).
+* **Assegnazione Automatica & Algoritmo di Priorità:** Esecuzione automatica programmata la sera prima del giorno richiesto (alle 19:00). La priorità favorisce chi ha avuto meno assegnazioni negli ultimi 30 giorni lavorativi (*success rate* più basso).
 * **Riassegnazione Istantanea:** Se un utente cancella un posto già assegnato, il sistema lo riassegna automaticamente al primo candidato in attesa.
 * **Vista Calendario & Dashboard:** Calendario interattivo con conteggio richieste, indicatori di stato (Assegnata, In Attesa, Non Assegnata), stima percentuale di probabilità di assegnazione per l'indomani e banner di comunicazioni.
 * **Gestione Amministratore:**
@@ -23,107 +23,81 @@ Park App Reserve è un'applicazione web full-stack progettata per la gestione e 
 
 ## Stack Tecnologico
 
-1. **Frontend:**
-   * [**React 19**](https://reactjs.org/) (con [Vite](https://vitejs.dev/))
-   * [**React Router 7**](https://reactrouter.com/) per la navigazione
-   * [**React Big Calendar**](https://github.com/jquense/react-big-calendar) per la vista calendario
-   * [**React Day Picker**](https://daypicker.dev/) per la selezione date nelle modali
-   * [**date-fns**](https://date-fns.org/) per la manipolazione delle date
-   * [**react-icons**](https://react-icons.github.io/react-icons/) per la grafica
-   * CSS personalizzato con variabili per temi chiaro e scuro
+* **Frontend:** React 19 con Vite, React Router 7, React Big Calendar, React Day Picker, date-fns, react-icons, CSS con variabili per temi chiaro e scuro.
+* **Backend:** funzioni serverless Node nella cartella `api/`, logica in `server/`.
+* **Database:** PostgreSQL, con il driver `pg`.
+* **Email:** SMTP con Nodemailer.
+* **Assegnazione serale:** Vercel Cron.
 
-2. **Backend:**
-   * [**Google Apps Script (GAS)**](https://developers.google.com/apps-script) come API REST serverless
-   * [**Google Sheets**](https://www.google.com/sheets/about/) come database
+```
+api/            Endpoint HTTP: /api/rpc (tutte le azioni) e /api/cron/assign
+server/         Logica di business, accesso al database, email
+db/migrations/  Schema del database in file SQL numerati
+scripts/        Migrazioni, dati di sviluppo, assegnazione manuale
+src/            Applicazione React
+tests/          Test del backend su Postgres
+```
 
----
-
-## Configurazione del Progetto
-
-Il progetto richiede la configurazione del backend su Google Sheets/Apps Script e successivamente del frontend React.
-
-### 1. Configurazione del Backend (Google Apps Script)
-
-Il backend gira interamente sul tuo account Google e utilizza un Google Sheet come database.
-
-#### A. Crea il Google Sheet e le schede (Tab)
-Crea un nuovo foglio Google e aggiungi le seguenti schede con i nomi esatti e le relative colonne nella prima riga (intestazioni):
-
-| Nome Scheda | Colonne Richieste (Riga 1) | Note |
-|---|---|---|
-| **`Users`** | `id`, `firstName`, `lastName`, `mail`, `password`, `salt`, `isVerified`, `verificationToken`, `resetToken`, `resetTokenExpiry`, `isAdmin`, `avatarColor`, `createdAt` | Contiene gli account utente. |
-| **`ParkingSpaces`** | `id`, `number`, `isFixed` | Elenco posti auto. `isFixed` è booleano (`TRUE`/`FALSE`). |
-| **`ParkingRequests`** | `requestId`, `userId`, `requestedDate`, `status`, `assignedParkingSpaceId`, `assignedParkingSpaceNumber` | Richieste inviate (`status`: `pending`, `assigned`, `not_assigned`, `cancelled_by_user`). |
-| **`AssignmentHistory`** | `userId`, `assignmentDate`, `parkingSpaceId` | Storico assegnazioni per il calcolo della priorità. |
-| **`TemporaryAvailability`** | `availabilityId`, `parkingSpaceId`, `availableDate` | Date in cui un posto **non fisso** è reso disponibile. |
-| **`TemporaryUnavailability`** | `unavailabilityId`, `parkingSpaceId`, `unavailableDate` | Date in cui un posto **fisso** è temporaneamente disabilitato (creata anche in automatico dallo script se assente). |
-| **`Communications`** | `id`, `message`, `isPersistent`, `startDate`, `endDate`, `createdAt` | Banner persistenti e comunicazioni admin. |
-
-> [!NOTE]
-> La scheda `Bookings` presente in vecchie note era legacy: il sistema attuale utilizza esclusivamente `ParkingRequests`.
-
-#### B. Crea il Progetto Apps Script
-1. Dal foglio Google, vai su **Estensioni** > **Apps Script**.
-2. Sostituisci il codice presente incollando l'intero contenuto di [`src/services/back-end.gs`](src/services/back-end.gs).
-3. **Importante:** In cima allo script, nella costante `CONFIG`, imposta `BASE_URL` con l'indirizzo pubblico del tuo frontend (o `http://localhost:5173/` durante lo sviluppo locale):
-   ```javascript
-   BASE_URL: "https://il-tuo-dominio.vercel.app/", // o "http://localhost:5173/"
-   ```
-   Questo garantisce che i link inviati via email (verifica account e recupero password) puntino correttamente alla tua applicazione.
-
-#### C. Configura il Trigger Giornaliero (Assegnazione Automatica)
-1. Nella barra laterale di Apps Script, clicca sull'icona **Trigger** (sveglia).
-2. Clicca su **Aggiungi trigger** in basso a destra.
-3. Imposta i parametri:
-   * **Funzione da eseguire:** `processPendingRequests`
-   * **Distribuzione da eseguire:** `Head`
-   * **Origine dell'evento:** `Basato sull'ora`
-   * **Tipo di trigger basato sull'ora:** `Timer giornaliero`
-   * **Ora del giorno:** Seleziona l'intervallo desiderato (es. *19:00 - 20:00*, coerente con `CONFIG.ASSIGNMENT_HOUR = 19`).
-4. Salva il trigger e concedi i permessi richiesti.
-
-#### D. Esegui il Deploy come Web App
-1. In alto a destra, clicca su **Distribuisci** > **Nuova distribuzione**.
-2. Clicca sull'icona a ingranaggio e seleziona **Applicazione web**.
-3. Configura:
-   * **Descrizione:** es. `Park App Backend v1`
-   * **Esegui come:** `Me (il tuo indirizzo email)`
-   * **Chi ha accesso:** `Chiunque` (necessario affinché il frontend possa dialogare con l'API).
-4. Clicca su **Distribuisci** e copia l'**URL dell'applicazione web** (termina con `/exec`).
-
-#### E. Creazione del Primo Utente Amministratore
-Tutti i nuovi utenti registrati hanno `isAdmin` impostato su `FALSE`. Per creare il primo amministratore:
-1. Registrati normalmente tramite l'applicazione e conferma l'email.
-2. Apri il tuo foglio Google, vai nella scheda **`Users`**.
-3. Trova la riga del tuo account e imposta la cella nella colonna **`isAdmin`** a **`TRUE`** (o `true`).
-4. Ricarica l'applicazione: vedrai comparire gli strumenti amministratore.
+Il browser chiama `POST /api/rpc` con `{ action, payload }`. Le credenziali del database e dell'SMTP restano sul server: nessuna variabile ha il prefisso `VITE_`, quindi non finiscono nel bundle.
 
 ---
 
-### 2. Configurazione del Frontend (React)
+## Sviluppo in locale
 
-1. **Installa le dipendenze:**
-   ```bash
-   npm install
-   ```
+Servono Node 22 e Docker Desktop in esecuzione.
 
-2. **Crea il file delle variabili d'ambiente (`.env`):**
-   Nella root del progetto crea un file `.env` e incolla l'URL dell'applicazione web ottenuto dal deploy di Apps Script:
-   ```env
-   VITE_GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/IL_TUO_ID_DISTRIBUZIONE/exec
-   ```
+```bash
+npm install
+cp .env.example .env.local   # i valori predefiniti puntano ai servizi Docker locali
+npm run db:up                # avvia Postgres (porta 5434) e Mailpit
+npm run db:reset             # crea lo schema e carica i dati di esempio
+npm run dev                  # app e API su http://localhost:5173
+```
 
-3. **Avvia in modalità sviluppo:**
-   ```bash
-   npm run dev
-   ```
-   L'app sarà disponibile su `http://localhost:5173`.
+Accesso con `admin@parkapp.local` (amministratore) o `mario@parkapp.local`, password `Password123!`.
 
-4. **Build per la Produzione:**
-   ```bash
-   npm run build
-   ```
-   I file ottimizzati per la distribuzione verranno generati nella cartella `dist/`.
+Le email non vengono recapitate: finiscono in Mailpit, su http://localhost:8025. I link di verifica e di recupero password si aprono da lì.
+
+| Comando | Cosa fa |
+|---|---|
+| `npm run dev` | Avvia app e API |
+| `npm test` | Esegue i test del backend sul database `parkapp_test`, che viene azzerato |
+| `npm run db:up` / `db:down` | Avvia o ferma i servizi Docker, i dati restano nel volume |
+| `npm run db:migrate` | Applica le migrazioni mancanti |
+| `npm run db:reset` | Cancella e ricrea il database di sviluppo. Funziona solo su un database locale |
+| `npm run assign` | Esegue l'assegnazione serale per domani, in locale non c'è il cron. Accetta una data: `npm run assign -- 2026-11-02` |
+
+Per modificare lo schema aggiungi un file numerato in `db/migrations/`, ad esempio `002_nome.sql`, ed esegui `npm run db:migrate`. `npm run preview` serve solo il frontend: per le API usa `npm run dev`.
+
+Il primo amministratore di un database nuovo si imposta dal database:
+
+```sql
+UPDATE users SET is_admin = TRUE WHERE mail = 'nome@azienda.it';
+```
+
+---
+
+## Produzione
+
+Il progetto si pubblica su Vercel così com'è: `api/` diventa funzioni serverless, `vercel.json` definisce i cron. Servono un database Postgres raggiungibile da Vercel (ad esempio Neon) e un servizio SMTP.
+
+Variabili da impostare su Vercel:
+
+| Variabile | Valore |
+|---|---|
+| `DATABASE_URL` | Stringa di connessione al database di produzione, con pooling se disponibile |
+| `APP_BASE_URL` | Indirizzo pubblico dell'app, usato nei link delle email |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` | Accesso al servizio SMTP |
+| `MAIL_FROM`, `MAIL_REPLY_TO` | Mittente e indirizzo di risposta |
+| `CRON_SECRET` | Stringa casuale lunga: Vercel la invia al cron, che senza di essa rifiuta la chiamata |
+
+Lo schema si applica dalla propria macchina prima del deploy:
+
+```bash
+DATABASE_URL="<stringa di produzione>" node scripts/migrate.js
+```
+
+I cron di Vercel sono in UTC: `vercel.json` ne pianifica due, alle 17 e alle 18 UTC, e `/api/cron/assign` procede solo se a Roma sono le 19, così l'orario resta giusto con ora legale e solare.
 
 ---
 
@@ -132,7 +106,7 @@ Tutti i nuovi utenti registrati hanno `isAdmin` impostato su `FALSE`. Per creare
 L'assegnazione automatica giornaliera si basa su un principio di **equità distributiva**:
 
 1. **Calcolo della Priorità:**
-   Per ogni utente con richieste in sospeso (`pending`), il sistema analizza gli ultimi 30 giorni lavorativi (`CONFIG.LOOK_BACK_DAYS = 30`):
+   Per ogni utente con richieste in sospeso (`pending`), il sistema analizza gli ultimi 30 giorni lavorativi (`CONFIG.LOOK_BACK_DAYS`):
    $$\text{Success Rate} = \frac{\text{Posti Assegnati}}{\text{Richieste Effettuate}}$$
    Gli utenti con il tasso di successo più basso hanno la priorità più alta. A parità di punteggio, l'ordine è casuale.
 2. **Capacità Disponibile:**
@@ -141,3 +115,5 @@ L'assegnazione automatica giornaliera si basa su un principio di **equità distr
    I posti disponibili vengono assegnati in ordine di priorità. Agli utenti a cui non è stato possibile assegnare un posto viene impostato lo stato `not_assigned` e inviata una notifica email.
 4. **Riassegnazione Dinamica:**
    Se un utente assegnato cancella la propria prenotazione, il sistema la riassegna automaticamente e immediatamente al primo utente in attesa (`pending` o `not_assigned`) per quella data con la priorità più alta.
+
+I calcoli su giorni e orari usano sempre il fuso `Europe/Rome`, indipendentemente da dove gira il server.

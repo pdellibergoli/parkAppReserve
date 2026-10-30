@@ -248,3 +248,27 @@
 .booking-card.status-cancelled_by_user.selected {
   background-color: var(--error-bg) !important;
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
+  color: var(--text-color-secondary);
+}
+
+.pagination button {
+  padding: 8px 16px;
+  border: 1px solid var(--border-color-input);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

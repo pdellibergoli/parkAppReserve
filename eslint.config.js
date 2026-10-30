@@ -26,4 +26,11 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    files: ['api/**/*.js', 'server/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'vite.config.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      globals: globals.node,
+    },
+  },
 ])

@@ -5,10 +5,12 @@ import { useLoading } from '../context/LoadingContext';
 import { callApi } from '../services/api';
 import { format, isBefore, startOfToday, isToday, isTomorrow } from 'date-fns';
 import { getTextColor } from '../utils/colors';
-import { getCachedPriorities, setCachedPriorities } from '../utils/priorityCache';
+import { prioritiesQuery } from '../services/queries';
+import { useQuery } from '../hooks/useQuery';
 import { FaPencilAlt, FaTrashAlt, FaLock, FaWrench } from 'react-icons/fa';
-import { clearPrioritiesCache } from '../utils/priorityCache';
 import './DayRequestsModal.css';
+
+const NO_USERS = [];
 
 const Avatar = ({ user }) => {
     const getInitials = () => {
@@ -85,8 +87,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
     const [isAdminMode, setIsAdminMode] = useState(false);
     const [adminLoading, setAdminLoading] = useState(false);
 
-    // STATO PER UTENTI ARRICCHITI CON PRIORITÀ CARICATA DA CACHE/API
-    const [usersWithPriority, setUsersWithPriority] = useState([]);
+    const { data: usersWithPriority = NO_USERS } = useQuery(prioritiesQuery());
 
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
 
@@ -95,33 +96,11 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
     const dateTitle = format(requestDateObj, 'dd/MM/yyyy');
     const isPastDate = isBefore(requestDateObj, today);
 
-    // 1. CARICAMENTO CON CACHE DI LOCALSTORAGE (10 MINUTI)
     useEffect(() => {
         if (!isOpen) {
             setIsAdminMode(false);
             setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
-            return;
         }
-
-        const loadPriorities = async () => {
-            // A. Tenta prima la lettura dalla Cache Locale
-            const cachedData = getCachedPriorities();
-            if (cachedData) {
-                setUsersWithPriority(cachedData);
-                return;
-            }
-
-            // B. Se assente o scaduta (>10 min), invoca il Backend
-            try {
-                const freshData = await callApi('getUsersWithPriority');
-                setUsersWithPriority(freshData);
-                setCachedPriorities(freshData); // Salva in cache
-            } catch (err) {
-                console.error("Errore recupero priorità:", err);
-            }
-        };
-
-        loadPriorities();
     }, [isOpen]);
 
     const filteredRequests = useMemo(() => {
@@ -208,7 +187,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                 actorId: loggedInUser.id,
                 preventAutoLogic: preventAutoLogic 
             });
-            clearPrioritiesCache();
 
         } catch (error) {
             alert("Errore durante l'aggiornamento: " + error.message);
@@ -236,7 +214,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         
         try {
             const response = await callApi(apiAction, { date: format(date, 'yyyy-MM-dd') });
-            clearPrioritiesCache();
             alert(response.message);
             onRefreshData();
         } catch (err) {

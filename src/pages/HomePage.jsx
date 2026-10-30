@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -8,10 +8,12 @@ import it from 'date-fns/locale/it';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './HomePage.css';
 
-import { clearPrioritiesCache } from '../utils/priorityCache';
+import { addMonths } from 'date-fns';
 import { useOutletContext } from 'react-router-dom';
-import SendCommunicationModal from '../components/SendCommunicationModal';
-import { fetchData as apiFetchData, postData, callApi } from '../services/api';
+import { callApi } from '../services/api';
+import { invalidateData } from '../services/dataStore';
+import { applyRequestDelete, applyRequestUpdate, monthQuery, prefetch, referenceQuery } from '../services/queries';
+import { useQuery } from '../hooks/useQuery';
 import { useLoading } from '../context/LoadingContext';
 import { useAuth } from '../context/AuthContext';
 import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus } from 'react-icons/fa';
@@ -19,14 +21,12 @@ import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus } from '
 // Modali caricate solo quando aperte
 const DayRequestsModal = React.lazy(() => import('../components/DayRequestsModal'));
 const AdminManuallyAssignModal = React.lazy(() => import('../components/AdminManuallyAssignModal'));
+const SendCommunicationModal = React.lazy(() => import('../components/SendCommunicationModal'));
 
 const locales = { 'it': it };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
-const areDatesOnSameDay = (first, second) => {
-  if (!first || !second) return false;
-  return format(new Date(first), 'yyyy-MM-dd') === format(new Date(second), 'yyyy-MM-dd');
-};
+const EMPTY_LIST = [];
 
 const dayKeyOf = (value) => format(new Date(value), 'yyyy-MM-dd');
 
@@ -78,174 +78,52 @@ const CALENDAR_MESSAGES = { next: "Succ", previous: "Prec", today: "Oggi" };
 const CALENDAR_STYLE = { height: '75vh' };
 
 const HomePage = () => {
-  const context = useOutletContext() || {};
-  const { 
-    globalMonthCacheRef, // RECUPERATO DAL CONTESTO
-    handleOpenAddModal, 
-    handleOpenEditModal, 
-    refreshKey, 
-    forceDataRefresh,
-    registerOptimisticHandlers 
-  } = context;
+  const { handleOpenAddModal, handleOpenEditModal } = useOutletContext() || {};
 
   const { setIsLoading } = useLoading();
-  const { user } = useAuth(); 
-  
-  const [allRequests, setAllRequests] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { user } = useAuth();
 
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [date, setDate] = useState(new Date());
 
-  const [activeBanners, setActiveBanners] = useState([]);
   const [isCommModalOpen, setIsCommModalOpen] = useState(false);
   const [isAdminAssignOpen, setIsAdminAssignOpen] = useState(false);
 
-  const [parkingSpaces, setParkingSpaces] = useState([]);
-  const [temporaryAvailabilities, setTemporaryAvailabilities] = useState([]);
-  const [temporaryUnavailabilities, setTemporaryUnavailabilities] = useState([]);
+  const reference = useQuery(referenceQuery());
+  const month = useQuery(monthQuery(date));
 
-  // Usiamo il Ref globale o un fallback locale
-  const localCacheRef = useRef({});
-  const monthCacheRef = globalMonthCacheRef || localCacheRef;
+  const users = reference.data?.users ?? EMPTY_LIST;
+  const parkingSpaces = reference.data?.parkingSpaces ?? EMPTY_LIST;
+  const activeBanners = reference.data?.banners ?? EMPTY_LIST;
+  const allRequests = month.data?.requests ?? EMPTY_LIST;
+  const temporaryAvailabilities = month.data?.temporaryAvailabilities ?? EMPTY_LIST;
+  const temporaryUnavailabilities = month.data?.temporaryUnavailabilities ?? EMPTY_LIST;
 
-  // Pulisce le cache in memoria quando c'e una modifica ai dati
-  const handleRefreshDataAndCache = useCallback(() => {
-    clearPrioritiesCache();
-    monthCacheRef.current = {}; 
-    if (typeof forceDataRefresh === 'function') {
-      forceDataRefresh();
-    }
-  }, [forceDataRefresh, monthCacheRef]);
+  const isFirstLoad = reference.isLoading || month.isLoading;
+  const error = (reference.error && !reference.data) || (month.error && !month.data)
+    ? 'Impossibile caricare i dati.'
+    : '';
 
-  const handleOptimisticUpdate = useCallback((updatedRequest) => {
-    if (!updatedRequest) return;
-    clearPrioritiesCache();
-    monthCacheRef.current = {}; 
-    setAllRequests(prev => {
-      const array = Array.isArray(prev) ? prev : [];
-      
-      const index = array.findIndex(r => 
-        (r.requestId && r.requestId === updatedRequest.requestId) ||
-        (r.userId === updatedRequest.userId && areDatesOnSameDay(r.requestedDate, updatedRequest.requestedDate))
-      );
-
-      if (index !== -1) {
-        const next = [...array];
-        next[index] = { ...next[index], ...updatedRequest };
-        return next;
-      }
-      return [...array, updatedRequest];
-    });
-  }, [monthCacheRef]);
-
-  const handleOptimisticDelete = useCallback((requestIdToDelete) => {
-    clearPrioritiesCache();
-    monthCacheRef.current = {}; 
-    setAllRequests(prev => {
-      const array = Array.isArray(prev) ? prev : [];
-      return array.filter(r => r.requestId !== requestIdToDelete);
-    });
-  }, [monthCacheRef]);
-
+  // L'overlay compare solo se non c'è nulla da mostrare: gli aggiornamenti in background sono invisibili
   useEffect(() => {
-    if (typeof registerOptimisticHandlers === 'function') {
-      registerOptimisticHandlers({
-        onUpdate: handleOptimisticUpdate,
-        onDelete: handleOptimisticDelete,
-        usersList: users,
-        allRequests: allRequests
-      });
-    }
-  }, [registerOptimisticHandlers, handleOptimisticUpdate, handleOptimisticDelete, users, allRequests]);
-
-  const executeApi = useCallback(async (action, payload = {}, method = 'POST') => {
-    if (typeof callApi === 'function') {
-      return await callApi(action, payload, method);
-    }
-    if (method === 'POST') {
-      return await postData(action, payload);
-    }
-    return await apiFetchData(action, payload);
-  }, []);
-
-  const fetchData = useCallback(async (targetDate = date, isForced = false) => {
-    const monthKey = format(targetDate, 'yyyy-MM');
-
-    // SE IL MESE È GIÀ SALVATO IN CACHE GLOBALE E NON È UN REFRESH FORZATO: 0 MS!
-    if (!isForced && monthCacheRef.current[monthKey]) {
-      const cached = monthCacheRef.current[monthKey];
-      setAllRequests(cached.requests);
-      setUsers(cached.users);
-      setActiveBanners(cached.banners);
-      setParkingSpaces(cached.parkingSpaces);
-      setTemporaryAvailabilities(cached.temporaryAvailabilities || []);
-      setTemporaryUnavailabilities(cached.temporaryUnavailabilities || []);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+    if (!isFirstLoad) return undefined;
     setIsLoading(true);
-    setError('');
-    try {
-      const initialData = await executeApi('getInitialData', { 
-        userId: user?.id,
-        targetDate: format(targetDate, 'yyyy-MM-dd') 
-      });
+    return () => setIsLoading(false);
+  }, [isFirstLoad, setIsLoading]);
 
-      const fetchedRequests = initialData?.requests || [];
-      const fetchedUsers = initialData?.users || [];
-      const fetchedBanners = initialData?.banners || [];
-      const fetchedSpaces = initialData?.parkingSpaces || [];
-      const fetchedTempAvail = initialData?.temporaryAvailabilities || [];
-      const fetchedTempUnavail = initialData?.temporaryUnavailabilities || [];
-
-      setAllRequests(fetchedRequests);
-      setUsers(fetchedUsers);
-      setActiveBanners(fetchedBanners);
-      setParkingSpaces(fetchedSpaces);
-      setTemporaryAvailabilities(fetchedTempAvail);
-      setTemporaryUnavailabilities(fetchedTempUnavail);
-
-      // SALVA NEL REF GLOBALE
-      monthCacheRef.current[monthKey] = {
-        requests: fetchedRequests,
-        users: fetchedUsers,
-        banners: fetchedBanners,
-        parkingSpaces: fetchedSpaces,
-        temporaryAvailabilities: fetchedTempAvail,
-        temporaryUnavailabilities: fetchedTempUnavail
-      };
-    } catch (err) {
-      console.error("[HomePage Error]:", err);
-      setError('Impossibile caricare i dati.');
-    } finally {
-      setLoading(false);
-      setIsLoading(false);
-    }
-  }, [executeApi, user?.id, date, setIsLoading, monthCacheRef]);
-
-  const handleNavigate = async (newDate) => {
-    setDate(newDate);
-    await fetchData(newDate); 
-  };
-
+  // Il mese successivo è il più consultato per le nuove richieste
+  const monthLoaded = !month.isLoading;
   useEffect(() => {
-    fetchData(date, false); // Tenta prima di usare la cache globale se disponibile
-  }, [refreshKey]);
+    if (monthLoaded) prefetch(monthQuery(addMonths(date, 1)));
+  }, [monthLoaded, date]);
+
+  const handleNavigate = (newDate) => setDate(newDate);
 
   // Mappa data -> richieste: calcolata UNA VOLTA per render (invece di 42 filtri per cella)
   const dayMap = useMemo(() => {
-    const requestsArray = Array.isArray(allRequests)
-      ? allRequests
-      : (allRequests?.data && Array.isArray(allRequests.data) ? allRequests.data : []);
-
     const map = new Map();
-    for (const r of requestsArray) {
+    for (const r of allRequests) {
       if (!r || !r.requestedDate) continue;
       const key = dayKeyOf(r.requestedDate);
       let info = map.get(key);
@@ -302,8 +180,7 @@ const HomePage = () => {
     if (window.confirm("Sei sicuro di voler cancellare questa comunicazione?")) {
       setIsLoading(true);
       try {
-        await executeApi('deleteCommunication', { id: bannerId }, 'POST');
-        setActiveBanners(prev => prev.filter(b => b.id !== bannerId)); 
+        await callApi('deleteCommunication', { id: bannerId });
       } catch (err) {
         alert(`Errore: ${err.message}`);
       } finally {
@@ -341,7 +218,6 @@ const HomePage = () => {
     handleOpenEditModal(request, actorId);
   };
 
-  //if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
   if (error) return <p className="error-message">{error}</p>;
 
   return (
@@ -423,26 +299,29 @@ const HomePage = () => {
             users={users}
             totalParkingSpaces={totalParkingForSelectedDate}
             onEdit={handleEditRequest}
-            onRefreshData={handleRefreshDataAndCache}
-            onOptimisticUpdate={handleOptimisticUpdate}
-            onOptimisticDelete={handleOptimisticDelete}
+            onRefreshData={invalidateData}
+            onOptimisticUpdate={applyRequestUpdate}
+            onOptimisticDelete={applyRequestDelete}
           />
         </React.Suspense>
       )}
 
-      <SendCommunicationModal 
-        isOpen={isCommModalOpen} 
-        onClose={() => setIsCommModalOpen(false)} 
-        onBannerCreated={(newBanner) => setActiveBanners(prev => [newBanner, ...prev])} 
-      />
+      {isCommModalOpen && (
+        <React.Suspense fallback={null}>
+          <SendCommunicationModal
+            isOpen={isCommModalOpen}
+            onClose={() => setIsCommModalOpen(false)}
+          />
+        </React.Suspense>
+      )}
 
       {user?.isAdmin && isAdminAssignOpen && (
         <React.Suspense fallback={null}>
           <AdminManuallyAssignModal 
             isOpen={isAdminAssignOpen}
             onClose={() => setIsAdminAssignOpen(false)}
-            onRefreshData={handleRefreshDataAndCache}
-            onOptimisticUpdate={handleOptimisticUpdate}
+            onRefreshData={invalidateData}
+            onOptimisticUpdate={applyRequestUpdate}
             usersList={users}
             parkingSpaces={parkingSpaces}
           />

@@ -1,12 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { callApi } from '../services/api';
+import { peekData } from '../services/dataStore';
 import { FaTrashAlt, FaCalendarPlus, FaCalendarMinus, FaPencilAlt, FaCheck, FaTimes } from 'react-icons/fa';
 import AvailabilityModal from '../components/AvailabilityModal';
 import './ParkingSpacesPage.css';
 
+const sortSpaces = (spaces) => spaces
+  .filter(space => space && space.id && space.number)
+  .sort((a, b) => String(a.number).localeCompare(String(b.number), undefined, { numeric: true }));
+
 const ParkingSpacesPage = () => {
-  const [parkingSpaces, setParkingSpaces] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Se i posti sono già in memoria la pagina appare subito; poi si riallinea col server
+  const [parkingSpaces, setParkingSpaces] = useState(() => sortSpaces(peekData('reference')?.parkingSpaces ?? []));
+  const [loading, setLoading] = useState(parkingSpaces.length === 0);
   const [error, setError] = useState('');
   const [newSpaceName, setNewSpaceName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -23,14 +29,8 @@ const ParkingSpacesPage = () => {
 
   const fetchParkingSpaces = useCallback(async () => {
     try {
-      setLoading(true);
       setError('');
-      let spaces = await callApi('getParkingSpaces');
-      spaces = spaces.filter(space => space && space.id && space.number);
-      spaces.sort((a, b) => 
-        String(a.number).localeCompare(String(b.number), undefined, { numeric: true })
-      );
-      setParkingSpaces(spaces);
+      setParkingSpaces(sortSpaces(await callApi('getParkingSpaces')));
     } catch (err) {
       setError("Impossibile caricare l'elenco dei parcheggi.");
     } finally {

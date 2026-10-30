@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { callApi } from '../services/api';
+import React, { useState, useMemo } from 'react';
+import { format } from 'date-fns';
 import { getTextColor } from '../utils/colors';
-import { getCachedPriorities, setCachedPriorities } from '../utils/priorityCache';
+import { fetchQuery, prioritiesQuery, referenceQuery, userHistoryQuery } from '../services/queries';
+import { useQuery } from '../hooks/useQuery';
 import UserAssignmentsModal from '../components/UserAssignmentsModal';
 import { useLoading } from '../context/LoadingContext';
 import { FaInfoCircle } from 'react-icons/fa';
 import './StatsPage.css';
+
+const EMPTY_LIST = [];
 
 const UserAvatar = ({ user }) => {
   const getInitials = () => {
@@ -19,81 +21,19 @@ const UserAvatar = ({ user }) => {
 };
 
 const StatsPage = () => {
-  const context = useOutletContext() || {};
-  const { sharedSpaces = [], globalStatsCacheRef } = context;
-
   const { setIsLoading } = useLoading();
-  const [usersWithPriority, setUsersWithPriority] = useState([]);
-  const [spaces, setSpaces] = useState(sharedSpaces);
-  
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+
+  const priorities = useQuery(prioritiesQuery());
+  const reference = useQuery(referenceQuery());
+
+  const usersWithPriority = priorities.data ?? EMPTY_LIST;
+  const spaces = reference.data?.parkingSpaces ?? EMPTY_LIST;
+  const loading = priorities.isLoading;
+  const error = priorities.error && !priorities.data ? 'Impossibile caricare i dati delle statistiche.' : '';
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const [assignmentsForModal, setAssignmentsForModal] = useState([]);
-
-  // Cache per gli storici dei singoli utenti quando si apre la modale del dettaglio
-  const userHistoryCacheRef = useRef({});
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadStatsData = async () => {
-      // 1. SE I DATI STATISTICHE SONO GIÀ IN CACHE GLOBALE, USALI A 0 MS
-      if (globalStatsCacheRef?.current) {
-        setUsersWithPriority(globalStatsCacheRef.current.usersWithPriority);
-        setSpaces(globalStatsCacheRef.current.spaces);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-
-        // A. Priorità utenti (da localStorage o API)
-        let priorityUsers = getCachedPriorities();
-        if (!priorityUsers) {
-          priorityUsers = await callApi('getUsersWithPriority');
-          setCachedPriorities(priorityUsers);
-        }
-
-        // B. Parcheggi (da memoria condivisa o API)
-        let fetchedSpaces = sharedSpaces;
-        if (sharedSpaces.length === 0) {
-          fetchedSpaces = await callApi('getParkingSpaces');
-        }
-
-        if (isMounted) {
-          setUsersWithPriority(priorityUsers || []);
-          setSpaces(fetchedSpaces || []);
-
-          // C. SALVA NELLA CACHE GLOBALE
-          if (globalStatsCacheRef) {
-            globalStatsCacheRef.current = {
-              usersWithPriority: priorityUsers || [],
-              spaces: fetchedSpaces || []
-            };
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.error("Errore StatsPage:", err);
-          setError("Impossibile caricare i dati delle statistiche.");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadStatsData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [sharedSpaces, globalStatsCacheRef]);
 
   const spaceMap = useMemo(() => new Map(spaces.map(s => [s.id, s.number])), [spaces]);
 
@@ -138,20 +78,12 @@ const StatsPage = () => {
       const userId = userData.user.id;
       setSelectedUserForModal(userData.user);
 
-      if (userHistoryCacheRef.current[userId]) {
-        setAssignmentsForModal(userHistoryCacheRef.current[userId]);
-        setIsDetailsModalOpen(true);
-        return;
-      }
-
       setIsLoading(true);
       try {
-        const userFullRequests = await callApi('getRequests', { userId });
-        const filteredReqs = (userFullRequests || []).filter(r => r.status !== 'cancelled_by_user');
-        
-        userHistoryCacheRef.current[userId] = filteredReqs;
-        
-        setAssignmentsForModal(filteredReqs);
+        // La modale mostra solo la finestra di priorità: il resto dello storico non serve
+        const fromDate = format(calculateStartDate(priorityWindowDays), 'yyyy-MM-dd');
+        const requests = await fetchQuery(userHistoryQuery(userId, fromDate));
+        setAssignmentsForModal(requests.filter(r => r.status !== 'cancelled_by_user'));
         setIsDetailsModalOpen(true);
       } catch (err) {
         alert("Errore nel recupero dello storico utente: " + err.message);
