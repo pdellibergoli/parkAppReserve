@@ -1,5 +1,5 @@
 import { devices } from '@playwright/test';
-import { ADMIN, DAY_AFTER, NEXT_DAY, USER, expect, login, openDay, pickDay, shown, test } from './helpers.js';
+import { ADMIN, DAY_AFTER, NEXT_DAY, USER, calendarCell, expect, login, openDay, pickDay, shown, test } from './helpers.js';
 
 test.use({ ...devices['Pixel 7'] });
 
@@ -43,6 +43,22 @@ test('nessuna pagina scorre di lato', async ({ page }) => {
   await page.goto('/profile');
   await expect(page.locator('.profile-card').first()).toBeVisible();
   expect(await horizontalOverflow(page), 'profilo').toBeLessThanOrEqual(1);
+});
+
+test('su un telefono basso gli indicatori del giorno restano dentro la cella', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 560 });
+  await login(page, USER);
+  const cell = await calendarCell(page, NEXT_DAY);
+  const badge = cell.locator('.booking-count-badge');
+  await expect(badge).toBeVisible();
+
+  const cellBox = await cell.boundingBox();
+  const indicators = await cell.locator('.booking-count-badge, .my-request-icon').all();
+  for (const indicator of indicators) {
+    const box = await indicator.boundingBox();
+    expect(box.y + box.height).toBeLessThanOrEqual(cellBox.y + cellBox.height);
+  }
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });
 
 test('la modale del giorno resta dentro lo schermo', async ({ page }) => {

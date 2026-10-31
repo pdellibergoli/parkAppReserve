@@ -508,6 +508,38 @@ html body {
     .calendar-legend { border-radius: var(--radius-md); }
   }
 
+  /* Portatili e finestre basse: le righe non bastano per impilare numero, contatore e auto.
+     Sotto 880px di altezza un mese da 6 righe scende sotto l'altezza necessaria. */
+  @media (min-width: 769px) and (max-height: 880px) {
+    .rbc-calendar { min-height: 480px; }
+
+    .day-indicators-container {
+      flex-direction: row;
+      gap: 0.4rem;
+      height: 100%;
+      padding-top: 0;
+    }
+
+    .booking-badge-container { width: auto; }
+    .booking-count-badge { width: 24px; height: 24px; font-size: 0.8rem; }
+    .my-request-icon-container { margin-top: 0; }
+  }
+
+  /* Telefoni: la cella resta stretta, quindi gli indicatori restano impilati.
+     L'altezza minima garantisce 6 righe da almeno 79px anche su schermi bassi. */
+  @media (max-width: 768px) {
+    #root { padding: 1rem; }
+
+    .rbc-calendar { min-height: 650px; }
+    .day-indicators-container { padding-top: 32px; }
+
+    .main-header { gap: 0.5rem; }
+    .header-right { gap: 0.5rem; }
+    .logo-img { height: 30px; }
+    .navbar-paypal { padding: 0.4rem 0.7rem; }
+    .mobile-menu-toggle { padding: 0.25rem; }
+  }
+
   /* --- Pulsanti fluttuanti --- */
   .floating-btn {
     border-radius: 999px;
