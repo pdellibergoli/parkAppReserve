@@ -26,7 +26,7 @@ export const ThemeProvider = ({ children }) => {
   const { user } = useAuth(); // Accedi ai dati utente
 
   // Stato per il tema light/dark
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   // Stato per il colore primario
   const [primaryColor, setPrimaryColorState] = useState(DEFAULT_PRIMARY_COLOR);
 
@@ -36,7 +36,7 @@ export const ThemeProvider = ({ children }) => {
     const savedColor = localStorage.getItem('primaryColor');
 
     // Usa le preferenze dell'utente se disponibili, altrimenti quelle salvate o default
-    const initialTheme = user?.preferredTheme || savedTheme || 'light';
+    const initialTheme = user?.preferredTheme || savedTheme || 'dark';
     const initialColor = user?.primaryColor || savedColor || DEFAULT_PRIMARY_COLOR;
     
     setTheme(initialTheme);

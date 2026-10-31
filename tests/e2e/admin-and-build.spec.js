@@ -65,7 +65,7 @@ test('profilo: il tema scelto viene salvato sul server', async ({ page, request 
   await expect.poll(async () => {
     const users = await rpc(request, 'getUsers');
     return users.find((user) => user.mail === USER).preferredTheme;
-  }).toBe('dark');
+  }).toBe('light');
 });
 
 test('nessuna pagina invia segreti al browser: API senza hash, bundle senza codice del server', async ({ request }) => {

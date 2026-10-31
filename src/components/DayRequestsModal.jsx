@@ -282,7 +282,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                             
                             <button 
                                 className="cancel-btn block-btn" 
-                                style={{ marginTop: '1.2rem', width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', cursor: 'pointer' }} 
+                                style={{ marginTop: '1.2rem', width: '100%', padding: '10px', cursor: 'pointer' }}
                                 onClick={() => setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null })}
                             >
                                 Annulla e mantieni stato precedente
@@ -316,7 +316,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                 
                 <div className="day-bookings-list">
                     {sortedRequests.length === 0 ? (
-                        <p style={{textAlign: 'center', color: '#666'}}>Nessuna richiesta attiva per questo giorno.</p>
+                        <p style={{textAlign: 'center', color: 'var(--text-color-secondary)'}}>Nessuna richiesta attiva per questo giorno.</p>
                     ) : (
                         sortedRequests.map(request => {
                             const activeUsersList = usersWithPriority.length > 0 ? usersWithPriority : users;
