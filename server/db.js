@@ -8,12 +8,33 @@ pg.types.setTypeParser(pg.types.builtins.DATE, (value) => value);
 // evita senza costi percepibili che due operazioni assegnino lo stesso posto.
 const WRITE_LOCK_ID = 727001;
 
+export function isLocalDatabase(connectionString) {
+  return ['localhost', '127.0.0.1', '::1', '[::1]'].includes(new URL(connectionString).hostname);
+}
+
+function connectionConfig() {
+  const ca = process.env.DATABASE_CA_CERT;
+  // I database locali non usano TLS: il certificato vale solo per quelli remoti
+  if (!ca || isLocalDatabase(process.env.DATABASE_URL)) return { connectionString: process.env.DATABASE_URL };
+
+  // I parametri SSL dell'URL prevarrebbero sull'opzione ssl, quindi vanno tolti
+  const url = new URL(process.env.DATABASE_URL);
+  for (const param of ['ssl', 'sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'uselibpqcompat']) {
+    url.searchParams.delete(param);
+  }
+  return {
+    connectionString: url.toString(),
+    // Alcuni pannelli salvano il certificato su una riga sola, con \n letterali
+    ssl: { ca: ca.replace(/\\n/g, '\n'), rejectUnauthorized: true },
+  };
+}
+
 export function getPool() {
   // Su globalThis perché in sviluppo Vite ricarica i moduli del server ad ogni modifica
   if (!globalThis.__parkAppPool) {
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL non impostata.');
     const pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
+      ...connectionConfig(),
       max: Number(process.env.PG_POOL_MAX) || 5,
     });
     // Senza listener, una connessione inattiva chiusa dal server farebbe terminare il processo

@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isLocalDatabase } from '../../server/db.js';
 
 const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'db', 'migrations');
 
@@ -38,8 +39,7 @@ export async function runMigrations(pool) {
 
 /** Protegge i comandi distruttivi: agiscono solo su database in esecuzione su questa macchina. */
 export function assertLocalDatabase(connectionString) {
-  const { hostname } = new URL(connectionString);
-  if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(hostname)) {
-    throw new Error(`Operazione consentita solo su un database locale (host: ${hostname}).`);
+  if (!isLocalDatabase(connectionString)) {
+    throw new Error(`Operazione consentita solo su un database locale (host: ${new URL(connectionString).hostname}).`);
   }
 }

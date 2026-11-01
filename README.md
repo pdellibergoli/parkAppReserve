@@ -84,13 +84,15 @@ UPDATE users SET is_admin = TRUE WHERE mail = 'nome@azienda.it';
 
 ## Produzione
 
-Il progetto si pubblica su Vercel così com'è: `api/` diventa funzioni serverless, `vercel.json` definisce i cron. Servono un database Postgres raggiungibile da Vercel (ad esempio Neon) e un servizio SMTP.
+Il progetto si pubblica su Vercel così com'è: `api/` diventa funzioni serverless, `vercel.json` definisce i cron. Servono un database Postgres raggiungibile da Vercel (Supabase) e un servizio SMTP.
 
 Variabili da impostare su Vercel:
 
 | Variabile | Valore |
 |---|---|
-| `DATABASE_URL` | Stringa di connessione al database di produzione, con pooling se disponibile |
+| `DATABASE_URL` | Stringa **Transaction pooler** (porta 6543) dal pulsante *Connect* di Supabase, con la password al posto del segnaposto |
+| `DATABASE_CA_CERT` | Contenuto del certificato scaricato da Supabase, in *Database settings* → *SSL Configuration* |
+| `PG_POOL_MAX` | `1`, come consigliato da Supabase per le funzioni serverless |
 | `APP_BASE_URL` | Indirizzo pubblico dell'app, usato nei link delle email |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` | Accesso al servizio SMTP |
 | `MAIL_FROM`, `MAIL_REPLY_TO` | Mittente e indirizzo di risposta |
@@ -99,8 +101,10 @@ Variabili da impostare su Vercel:
 Lo schema si applica dalla propria macchina prima del deploy:
 
 ```bash
-DATABASE_URL="<stringa di produzione>" node scripts/migrate.js
+DATABASE_URL="<stringa Session pooler>" DATABASE_CA_CERT="$(cat <certificato>.crt)" node scripts/migrate.js
 ```
+
+Le migrazioni usano la stringa **Session pooler** (porta 5432) perché la connessione diretta di Supabase, sul piano Free, è solo IPv6.
 
 I cron di Vercel sono in UTC: `vercel.json` ne pianifica due, alle 17 e alle 18 UTC, e `/api/cron/assign` procede solo se a Roma sono le 19, così l'orario resta giusto con ora legale e solare.
 
