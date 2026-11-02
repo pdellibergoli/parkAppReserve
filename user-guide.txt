@@ -19,7 +19,32 @@ Per accedere al sistema è necessario disporre di un account registrato e verifi
 
 ---
 
-## 2. La Schermata Principale (Calendario & Dashboard)
+## 2. Regolamento Aziendale e Accettazione Obbligatoria
+
+Per garantire una gestione trasparente, equa ed efficiente degli stalli auto disponibili presso la sede di Chiasso, tutti i collaboratori sono tenuti a rispettare le linee guida operative aziendali.
+
+* **Regolamento Salvato su Database:** Il testo e le versioni del regolamento sono archiviati direttamente nel database (foglio Google, scheda `Regulations`). Questo permette di aggiornare le linee guida in qualsiasi momento.
+* **Valido per Nuovi Iscritti e Utenti Esistenti:** Chiunque acceda all'applicazione (sia i nuovi registrati che gli utenti già registrati in precedenza) visualizzerà il popup al primo login e dovrà accettare il regolamento per poter prenotare un posto auto.
+* **Rilascio di Nuove Versioni e Ri-accettazione Obbligatoria:** Se un amministratore modifica il regolamento e pubblica una nuova versione (es. da `v1.0` a `v2.0`), il sistema invalida automaticamente le precedenti accettazioni:
+  * Al login o al primo accesso successivo, l'utente visualizzerà l'avviso di nuova versione.
+  * L'utente dovrà accettare la nuova versione del regolamento per poter continuare a effettuare richieste di parcheggio.
+* **Condizione per le Richieste:**
+  * Se accetti il regolamento: puoi utilizzare tutte le funzionalità dell'app, inclusa la prenotazione dei posti auto.
+  * Se rifiuti o chiudi senza accettare: puoi comunque navigare il sito (consultare il calendario, le richieste passate, le statistiche e il tuo profilo), ma **non avrai la possibilità di fare richieste di parcheggio** finché non lo accetti. Cliccando su "+ Invia richiesta" o sui banner di avviso, ti verrà riaperto il regolamento per permetterti di accettarlo.
+* **Consultazione Sempre Disponibile:** Puoi rileggere il testo integrale del regolamento in qualsiasi momento:
+  * Dal menu a tendina dell'avatar in alto a destra, cliccando su **"Regolamento"**.
+  * Dalla pagina **"Profilo"**, all'interno della scheda dedicata "Regolamento Aziendale", dove è indicata anche la versione e la data/ora in cui lo hai sottoscritto.
+* **Gestione Amministratore:** Gli admin possono modificare il testo e la versione del regolamento direttamente dall'app (tramite il pulsante *"Modifica Regolamento (Admin)"* nella modale) oppure editando direttamente la scheda `Regulations` nel foglio Google.
+
+### I 4 Principi del Regolamento:
+1. **Canale Unico di Prenotazione e Rispetto dell'Applicazione:** L'assegnazione avviene unicamente tramite l'app Park App Reserve. Le richieste concordate con le Business Manager o con l'Amministrazione devono essere formalizzate a sistema.
+2. **Criteri di Idoneità alla Richiesta:** Richieste inserite esclusivamente nei giorni di reale presenza fisica in sede e per chi viaggia effettivamente in automobile (vietato richiedere se si viaggia con mezzi pubblici, a piedi, in bici o moto). Cancellazione tempestiva in caso di smart working, malattia o cambio mezzo.
+3. **Soste Brevi (2–3 Ore):** Per soste temporanee di 2–3 ore non serve alcuna prenotazione su app; verificare che lo stallo non sia già assegnato a un collega per la giornata.
+4. **Urgenze e Casi Eccezionali:** Flessibilità, dialogo e possibilità di accordo diretto con cessione del posto tramite l'apposita funzione in app.
+
+---
+
+## 3. La Schermata Principale (Calendario & Dashboard)
 
 Dopo il login, atterrerai sulla **Homepage** con la vista mensile del calendario:
 
@@ -36,7 +61,7 @@ Dopo il login, atterrerai sulla **Homepage** con la vista mensile del calendario
 
 ---
 
-## 3. Inviare e Gestire le Richieste
+## 4. Inviare e Gestire le Richieste
 
 ### Inviare una Nuova Richiesta
 Puoi inviare una richiesta in qualsiasi momento:
@@ -61,7 +86,7 @@ Cliccando sulla seconda icona della barra di navigazione in alto (icona elenco/r
 
 ---
 
-## 4. Il tuo Profilo
+## 5. Il tuo Profilo
 
 Clicca sul tuo nome o avatar in alto a destra e seleziona **"Profilo"**:
 * **Tema Chiaro / Scuro:** Seleziona la modalità visiva preferita.
@@ -69,10 +94,11 @@ Clicca sul tuo nome o avatar in alto a destra e seleziona **"Profilo"**:
 * **Stile Avatar:** Cambia il colore di sfondo delle tue iniziali per riconoscerlo facilmente nei dettagli giornalieri.
 * **Dati Personali:** Aggiorna nome, cognome ed email.
 * **Modifica Password:** Imposta una nuova password inserendo quella attuale.
+* **Regolamento Aziendale:** Consulta lo stato di accettazione del regolamento e rivedi il testo in qualsiasi momento.
 
 ---
 
-## 5. Statistiche
+## 6. Statistiche
 
 Cliccando sull'icona grafico nella barra di navigazione, visualizzerai la pagina **Statistiche**:
 * Visualizza una scheda riassuntiva per ciascun utente con il totale delle assegnazioni ricevute.
@@ -81,7 +107,7 @@ Cliccando sull'icona grafico nella barra di navigazione, visualizzerai la pagina
 
 ---
 
-## 6. Funzioni Amministratore (Solo Account Admin)
+## 7. Funzioni Amministratore (Solo Account Admin)
 
 Se il tuo account dispone dei privilegi di amministratore, avrai accesso a strumenti e controlli dedicati in diverse parti dell'app:
 

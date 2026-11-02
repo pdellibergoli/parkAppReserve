@@ -222,6 +222,24 @@ const HomePage = () => {
 
   return (
     <>
+      {!hasAcceptedRules && (
+        <div className="rules-reminder-banner">
+          <div className="rules-reminder-content">
+            <FaExclamationTriangle className="rules-reminder-icon" />
+            <span>
+              Non hai ancora accettato il regolamento aziendale per l'utilizzo dei parcheggi. Non potrai effettuare richieste finché non lo accetti.
+            </span>
+          </div>
+          <button 
+            type="button" 
+            className="rules-reminder-btn" 
+            onClick={() => handleOpenRulesModal(false)}
+          >
+            Leggi e Accetta
+          </button>
+        </div>
+      )}
+
       {activeBanners.length > 0 && (
         <div className="banners-wrapper">
           {activeBanners.map(banner => (

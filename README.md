@@ -17,7 +17,8 @@ Park App Reserve è un'applicazione web full-stack progettata per la gestione e 
   * Gestione richieste del giorno dalla modale: cambio stato manuale, logica automatica o overbooking forzato, cancellazione massiva e reset assegnazioni.
   * Invio comunicazioni broadcast a tutti gli utenti (via email e/o tramite banner persistenti con intervallo di date in Homepage).
 * **Statistiche:** Storico delle assegnazioni e conteggi aggregati per utente con filtri temporali personalizzati e dettaglio prenotazioni.
-* **Profilo Utente:** Personalizzazione di avatar, colore primario dell'interfaccia e tema (chiaro/scuro).
+* **Regolamento Aziendale:** Visualizzazione del regolamento per la sede di Chiasso al login con accettazione obbligatoria per poter inserire richieste di parcheggio.
+* **Profilo Utente:** Personalizzazione di avatar, colore primario dell'interfaccia, tema (chiaro/scuro) e consultazione dello stato di accettazione del regolamento.
 
 ---
 
