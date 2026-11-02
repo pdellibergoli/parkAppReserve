@@ -333,8 +333,8 @@ const ProfilePage = () => {
             {!hasAcceptedRules && (
               <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
                 {user?.acceptedRulesVersion
-                  ? `È stata rilasciata la versione v${activeRegulation?.version || '1.0'}. Devi accettarla per poter inviare richieste.`
-                  : "È necessario accettare il regolamento per poter inviare richieste di parcheggio."
+                  ? `È stata rilasciata la versione v${activeRegulation?.version || '1.0'}. Devi accettarla per poter ricevere assegnazioni e inviare richieste.`
+                  : "È necessario accettare il regolamento per poter usufruire del servizio e ricevere assegnazioni di parcheggio."
                 }
               </p>
             )}

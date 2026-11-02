@@ -212,6 +212,12 @@ export async function fulfillParkingRequest(ctx, { requestId, donorUserId }) {
   if (request.status === 'assigned') throw new AppError('Questa richiesta ha già un parcheggio assegnato.');
   if (request.status === 'cancelled_by_user') throw new AppError("Questa richiesta è stata annullata dall'utente.");
 
+  const activeReg = await getActiveRegulation(ctx.db);
+  const { rows: recipientRows } = await ctx.db.query('SELECT accepted_rules_version FROM users WHERE id = $1', [request.user_id]);
+  if (!recipientRows[0] || recipientRows[0].accepted_rules_version !== activeReg?.version) {
+    throw new AppError("Il destinatario non ha ancora accettato il regolamento aziendale e non può ricevere il parcheggio.");
+  }
+
   const { rows: donorRows } = await ctx.db.query(
     `SELECT * FROM parking_requests WHERE user_id = $1 AND requested_date = $2 AND status = 'assigned' LIMIT 1`,
     [donorUserId, day]

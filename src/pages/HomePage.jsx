@@ -227,7 +227,7 @@ const HomePage = () => {
           <div className="rules-reminder-content">
             <FaExclamationTriangle className="rules-reminder-icon" />
             <span>
-              Non hai ancora accettato il regolamento aziendale per l'utilizzo dei parcheggi. Non potrai effettuare richieste finché non lo accetti.
+              Non hai ancora accettato il regolamento aziendale per l'utilizzo dei parcheggi. Non potrai ricevere assegnazioni né effettuare richieste finché non lo accetti.
             </span>
           </div>
           <button 

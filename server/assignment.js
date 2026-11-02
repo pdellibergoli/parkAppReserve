@@ -1,6 +1,8 @@
 import { CONFIG } from './config.js';
 import { addDays, currentHour, formatDay, today, windowStartDay } from './dates.js';
 import { sendFailureEmail, sendSuccessEmail } from './emails.js';
+import { AppError } from './errors.js';
+import { getActiveRegulation } from './regulations.js';
 
 /**
  * Statistiche di priorità per utente, nella finestra degli ultimi N giorni lavorativi.
@@ -117,6 +119,12 @@ export async function clearHistoryForDate(db, day) {
 
 /** Aggiorna la richiesta, registra nello storico, invia l'email. */
 export async function assignParking(ctx, request, space) {
+  const activeReg = await getActiveRegulation(ctx.db);
+  const { rows } = await ctx.db.query('SELECT accepted_rules_version FROM users WHERE id = $1', [request.user_id]);
+  if (!rows[0] || rows[0].accepted_rules_version !== activeReg?.version) {
+    throw new AppError("L'utente non ha accettato il regolamento aziendale e non può ricevere un'assegnazione.");
+  }
+
   await updateRequestStatus(ctx.db, request.request_id, 'assigned', space.id, space.number);
   await addToHistory(ctx.db, request.user_id, request.requested_date, space.id);
   await sendSuccessEmail(ctx, request.user_id, request.requested_date, space.number);
@@ -140,11 +148,14 @@ export async function checkOverbookingForDate(db, day) {
 }
 
 export async function findBestCandidate(db, day, excludeUserId = null) {
+  const activeReg = await getActiveRegulation(db);
   const { rows } = await db.query(
-    `SELECT * FROM parking_requests
-      WHERE requested_date = $1 AND status IN ('not_assigned', 'pending')
-        AND user_id IS DISTINCT FROM $2`,
-    [day, excludeUserId]
+    `SELECT r.* FROM parking_requests r
+       JOIN users u ON u.id = r.user_id
+      WHERE r.requested_date = $1 AND r.status IN ('not_assigned', 'pending')
+        AND r.user_id IS DISTINCT FROM $2
+        AND u.accepted_rules_version = $3`,
+    [day, excludeUserId, activeReg?.version]
   );
   if (rows.length === 0) return null;
   return (await sortByPriority(db, rows))[0];
@@ -152,8 +163,12 @@ export async function findBestCandidate(db, day, excludeUserId = null) {
 
 /** Motore di assegnazione: richieste pending del giorno, in ordine di priorità. */
 export async function processRequestsForDate(ctx, day) {
+  const activeReg = await getActiveRegulation(ctx.db);
   const { rows: pending } = await ctx.db.query(
-    `SELECT * FROM parking_requests WHERE status = 'pending' AND requested_date = $1`,
+    `SELECT r.*, u.accepted_rules_version
+       FROM parking_requests r
+       JOIN users u ON u.id = r.user_id
+      WHERE r.status = 'pending' AND r.requested_date = $1`,
     [day]
   );
   if (pending.length === 0) {
@@ -161,8 +176,11 @@ export async function processRequestsForDate(ctx, day) {
     return { assigned: 0, failed: 0 };
   }
 
+  const eligible = pending.filter((r) => r.accepted_rules_version === activeReg?.version);
+  const ineligible = pending.filter((r) => r.accepted_rules_version !== activeReg?.version);
+
   const spaces = await getAvailableSpacesForDate(ctx.db, day);
-  const ordered = await sortByPriority(ctx.db, pending);
+  const ordered = await sortByPriority(ctx.db, eligible);
 
   let assigned = 0;
   let failed = 0;
@@ -176,6 +194,13 @@ export async function processRequestsForDate(ctx, day) {
       failed++;
     }
   }
+
+  for (const request of ineligible) {
+    await updateRequestStatus(ctx.db, request.request_id, 'not_assigned');
+    await sendFailureEmail(ctx, request.user_id, day);
+    failed++;
+  }
+
   console.log(`Assegnazione ${formatDay(day)}: ${assigned} assegnati, ${failed} non assegnati.`);
   return { assigned, failed };
 }
