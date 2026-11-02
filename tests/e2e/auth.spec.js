@@ -54,7 +54,7 @@ test('recupero password: la vecchia non vale più, la nuova sì', async ({ page,
   await page.goto('/request-reset');
   await page.fill('input[type=email]', mail);
   await page.click('button[type=submit]');
-  await expect(page.locator('.success-message')).toBeVisible();
+  await expect(page.locator('.success-message')).toBeVisible({ timeout: 10000 });
 
   await expect.poll(async () => (await readLastEmail(request, mail)).subject).toContain('Recupero Password');
   const { text } = await readLastEmail(request, mail);

@@ -9,6 +9,18 @@ export function setMailTransport(customTransport) {
 
 function getTransport() {
   if (!transport) {
+    if (process.env.SMTP_HOST === 'mock' || process.env.SMTP_HOST === 'console') {
+      transport = {
+        async sendMail({ to, subject, text }) {
+          console.log(`\n================= EMAIL (${to}) =================`);
+          console.log(`Oggetto: ${subject}`);
+          console.log(`Testo:\n${text}`);
+          console.log(`====================================================\n`);
+          return { messageId: `mock-${Date.now()}` };
+        },
+      };
+      return transport;
+    }
     if (!process.env.SMTP_HOST) throw new Error('SMTP_HOST non impostata.');
     transport = nodemailer.createTransport({
       host: process.env.SMTP_HOST,

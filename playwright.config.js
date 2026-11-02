@@ -34,6 +34,11 @@ export default defineConfig({
       DATABASE_URL: process.env.E2E_DATABASE_URL ?? '',
       APP_BASE_URL: `${BASE_URL}/`,
       CRON_SECRET: 'e2e-cron-secret',
+      SMTP_HOST: 'localhost',
+      SMTP_PORT: '1025',
+      SMTP_USER: '',
+      SMTP_PASS: '',
+      SMTP_SECURE: 'false',
     },
   },
 });
