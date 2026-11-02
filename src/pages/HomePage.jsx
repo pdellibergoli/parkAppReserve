@@ -16,7 +16,7 @@ import { applyRequestDelete, applyRequestUpdate, monthQuery, prefetch, reference
 import { useQuery } from '../hooks/useQuery';
 import { useLoading } from '../context/useLoading';
 import { useAuth } from '../context/useAuth';
-import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus } from 'react-icons/fa';
+import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus, FaExclamationTriangle } from 'react-icons/fa';
 
 // Modali caricate solo quando aperte
 const DayRequestsModal = React.lazy(() => import('../components/DayRequestsModal'));
@@ -78,10 +78,10 @@ const CALENDAR_MESSAGES = { next: "Succ", previous: "Prec", today: "Oggi" };
 const CALENDAR_STYLE = { height: '75vh' };
 
 const HomePage = () => {
-  const { handleOpenAddModal, handleOpenEditModal } = useOutletContext() || {};
+  const { handleOpenAddModal, handleOpenEditModal, handleOpenRulesModal } = useOutletContext() || {};
 
   const { setIsLoading } = useLoading();
-  const { user } = useAuth();
+  const { user, hasAcceptedRules } = useAuth();
 
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);

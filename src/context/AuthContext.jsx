@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AuthContext } from './useAuth';
 import { callApi } from '../services/api';
 import { clearDataStore } from '../services/dataStore';

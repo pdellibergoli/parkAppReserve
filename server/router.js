@@ -9,17 +9,19 @@ import { AppError } from './errors.js';
 import { flushOutbox } from './mailer.js';
 import { availabilityToApi, historyToApi, requestToApi, unavailabilityToApi } from './mappers.js';
 import * as parking from './parking.js';
+import * as regulations from './regulations.js';
 import * as requests from './requests.js';
 import * as users from './users.js';
 
 /** Dati che non dipendono dal mese: si caricano una volta e cambiano di rado. */
 async function getReferenceData(ctx) {
-  const [usersList, parkingSpaces, banners] = await Promise.all([
+  const [usersList, parkingSpaces, banners, activeRegulation] = await Promise.all([
     users.getAllUsers(ctx.db),
     parking.getParkingSpaces(ctx.db),
     communications.getActiveCommunication(ctx.db),
+    regulations.getActiveRegulation(ctx.db),
   ]);
-  return { users: usersList, parkingSpaces, banners };
+  return { users: usersList, parkingSpaces, banners, activeRegulation };
 }
 
 /** Dati del calendario per un mese. Le richieste annullate non vengono mai mostrate. */
@@ -63,6 +65,7 @@ const POOL_ACTIONS = {
   getTemporaryUnavailabilities: availability.getTemporaryUnavailabilities,
   getParkingStatusForDate: parking.getParkingStatusForDate,
   getActiveCommunication: (ctx) => communications.getActiveCommunication(ctx.db),
+  getActiveRegulation: (ctx) => regulations.getActiveRegulation(ctx.db),
   // Invia molte email e scrive una sola riga: non deve bloccare le altre scritture durante l'invio
   sendAdminCommunication: communications.sendAdminCommunication,
 };
@@ -75,6 +78,8 @@ const TRANSACTION_ACTIONS = {
   resetPassword: auth.resetPassword,
 
   updateUserProfile: users.updateUserProfile,
+  acceptRules: regulations.acceptRules,
+  updateRegulation: regulations.updateRegulation,
 
   addParkingSpace: parking.addParkingSpace,
   deleteParkingSpace: parking.deleteParkingSpace,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { 
   FaFileContract, 
   FaCheckCircle, 
@@ -105,7 +105,7 @@ const RulesModal = ({ isOpen, onClose, onAcceptSuccess, isReadOnly = false }) =>
 
     return paragraphs.map((paragraph, pIdx) => {
       // Se il blocco inizia con un numero di sezione es. "1. " o "1.⁠ "
-      const sectionMatch = paragraph.match(/^(\d+[\.\⁠\s]+[^\n]+)/);
+      const sectionMatch = paragraph.match(/^(\d+[.\s\u2060]+[^\n]+)/);
       if (sectionMatch) {
         const sectionTitle = sectionMatch[1];
         const rest = paragraph.slice(sectionTitle.length).trim();

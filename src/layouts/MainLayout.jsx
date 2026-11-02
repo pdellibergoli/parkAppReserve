@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { getTextColor } from '../utils/colors';
@@ -47,14 +47,48 @@ const MainLayout = () => {
         preloadAppPages(isAdmin);
     }, [isAdmin]);
 
+    const activeVersion = activeRegulation?.version || '1.0';
+
+    // Al login mostra automaticamente il regolamento se l'utente non ha ancora accettato l'ultima versione attiva
+    useEffect(() => {
+        if (user && !hasAcceptedRules) {
+            const dismissed = sessionStorage.getItem(`parkingAppRulesDismissed_${activeVersion}`);
+            if (!dismissed) {
+                setRulesReadOnly(false);
+                setIsRulesModalOpen(true);
+            }
+        }
+    }, [user, hasAcceptedRules, activeVersion]);
+
+    const handleOpenRulesModal = useCallback((readOnly = false) => {
+        setRulesReadOnly(readOnly);
+        setIsRulesModalOpen(true);
+    }, []);
+
+    const handleCloseRulesModal = useCallback(() => {
+        sessionStorage.setItem(`parkingAppRulesDismissed_${activeVersion}`, 'true');
+        setIsRulesModalOpen(false);
+    }, [activeVersion]);
+
+    const handleOpenAddModal = useCallback(() => {
+        if (!hasAcceptedRules) {
+            setRulesReadOnly(false);
+            setIsRulesModalOpen(true);
+            return;
+        }
+        setIsAddModalOpen(true);
+    }, [hasAcceptedRules]);
+
     // Oggetto stabile: le pagine non si ri-renderizzano quando cambia solo lo stato del layout
     const outletContext = useMemo(() => ({
-        handleOpenAddModal: () => setIsAddModalOpen(true),
+        handleOpenAddModal,
         handleOpenEditModal: (request, actorId = null) => {
             setRequestToEdit({ ...request, actorId });
             setIsEditModalOpen(true);
         },
-    }), []);
+        handleOpenRulesModal,
+        hasAcceptedRules,
+    }), [handleOpenAddModal, handleOpenRulesModal, hasAcceptedRules]);
 
     const handleCloseModals = () => {
         setIsAddModalOpen(false);

@@ -17,8 +17,8 @@ const capitalizeFirstLetter = (string) => {
 }
 
 const MyRequestsPage = () => {
-  const { handleOpenAddModal, handleOpenEditModal } = useOutletContext();
-  const { user } = useAuth();
+  const { handleOpenAddModal, handleOpenEditModal, handleOpenRulesModal } = useOutletContext() || {};
+  const { user, hasAcceptedRules } = useAuth();
   const { setIsLoading } = useLoading();
 
   const [page, setPage] = useState(1);
