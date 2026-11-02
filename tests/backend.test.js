@@ -790,11 +790,18 @@ describe('regolamento aziendale', () => {
     // Eseguiamo il motore di assegnazione
     const result = await processPendingRequests(TOMORROW);
     assert.equal(result.assigned, 1);
-    assert.equal(result.failed, 1);
+    assert.equal(result.failed, 0);
 
     // Solo chi ha accettato ha ottenuto il posto
     assert.equal((await statusOf('req_accettato')).status, 'assigned');
-    assert.equal((await statusOf('req_non_accettato')).status, 'not_assigned');
+    assert.equal((await statusOf('req_non_accettato')).status, 'rules_not_accepted');
+
+    // Verifica che rules_not_accepted non entri nelle statistiche di priorità (non deve aumentare richieste)
+    const usersWithPriority = await handleAction('getUsersWithPriority');
+    const uSenzaRegola = usersWithPriority.find((u) => u.id === 'u_senza_regola');
+    assert.equal(uSenzaRegola.recentRequests, 0);
+    assert.equal(uSenzaRegola.successRate, 0);
+    assert.match(mailsTo('u_senza_regola@test.local').at(-1).subject, /Regolamento Non Accettato/);
   });
 
   it('l\'admin non può assegnare manualmente un posto a chi non ha accettato il regolamento', async () => {

@@ -33,7 +33,7 @@ CREATE TABLE parking_requests (
   user_id                       TEXT NOT NULL REFERENCES users (id),
   requested_date                DATE NOT NULL,
   status                        TEXT NOT NULL
-    CHECK (status IN ('pending', 'assigned', 'not_assigned', 'cancelled_by_user')),
+    CHECK (status IN ('pending', 'assigned', 'not_assigned', 'cancelled_by_user', 'rules_not_accepted')),
   assigned_parking_space_id     TEXT,
   assigned_parking_space_number TEXT
 );

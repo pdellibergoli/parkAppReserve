@@ -267,6 +267,12 @@ export async function adminUpdateUserRequestStatus(ctx, { requestId, newStatus, 
       if (candidate) await assignParking(ctx, candidate, { id: spaceId, number: spaceNumber });
     }
   } else if (newStatus === 'assigned') {
+    const activeReg = await getActiveRegulation(ctx.db);
+    const { rows: userRows } = await ctx.db.query('SELECT accepted_rules_version FROM users WHERE id = $1', [userId]);
+    if (!userRows[0] || userRows[0].accepted_rules_version !== activeReg?.version) {
+      throw new AppError("L'utente non ha accettato il regolamento aziendale e non può ricevere un'assegnazione.");
+    }
+
     if (!preventAutoLogic) {
       const freeSpaces = await getAvailableSpacesForDate(ctx.db, day);
       if (freeSpaces.length === 0) {

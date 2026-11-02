@@ -32,7 +32,7 @@ export async function adminResetAssignmentsForDate(ctx, { date }) {
 
   const { rows } = await ctx.db.query(
     `SELECT request_id, user_id, status FROM parking_requests
-      WHERE requested_date = $1 AND status IN ('assigned', 'not_assigned')`,
+      WHERE requested_date = $1 AND status IN ('assigned', 'not_assigned', 'rules_not_accepted')`,
     [day]
   );
 

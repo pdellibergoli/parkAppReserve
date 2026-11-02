@@ -88,6 +88,7 @@ const MyRequestsPage = () => {
           case 'pending': return 'In attesa';
           case 'assigned': return 'Assegnato';
           case 'not_assigned': return 'Non assegnato';
+          case 'rules_not_accepted': return 'Regolamento non accettato';
           case 'cancelled_by_user': return 'Annullato dall\'utente';
           default: return capitalizeFirstLetter(status);
       }
@@ -143,7 +144,8 @@ const MyRequestsPage = () => {
               const isPending = status === 'pending' && !isPast;
               const isAssigned = status === 'assigned' && !isPast;
               const isNotAssignedFuture = status === 'not_assigned' && !isPast;
-              const canBeCancelledOrSelected = isPending || isAssigned || isNotAssignedFuture;
+              const isRulesNotAcceptedFuture = status === 'rules_not_accepted' && !isPast;
+              const canBeCancelledOrSelected = isPending || isAssigned || isNotAssignedFuture || isRulesNotAcceptedFuture;
 
               const statusText = getStatusText(status);
 

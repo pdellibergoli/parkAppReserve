@@ -40,6 +40,7 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
       case 'assigned': return { label: 'Assegnato', color: '#28a745' };
       case 'not_assigned': return { label: 'Non Assegnato', color: '#dc3545' };
       case 'pending': return { label: 'In attesa', color: '#6c757d' };
+      case 'rules_not_accepted': return { label: 'Regolamento non accettato', color: '#f2994a' };
       default: return { label: status, color: '#333' };
     }
   };

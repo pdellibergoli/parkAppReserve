@@ -229,6 +229,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
             case 'pending': return 'In attesa';
             case 'assigned': return 'Assegnato';
             case 'not_assigned': return 'Non assegnato';
+            case 'rules_not_accepted': return 'Regolamento non accettato';
             default: return status;
         }
     };
@@ -327,7 +328,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                             const status = request.status;
 
                             const canEdit = status === 'pending' && !isPastRequest;
-                            const canCancel = (status === 'pending' || status === 'not_assigned' || status === 'assigned') && !isPastRequest;
+                            const canCancel = (status === 'pending' || status === 'not_assigned' || status === 'assigned' || status === 'rules_not_accepted') && !isPastRequest;
                             const showEdit = (isMyRequest && canEdit) || (isAdminMode && canEdit);
                             const showCancel = (isMyRequest && canCancel) || (isAdminMode && canCancel);
                             
@@ -351,6 +352,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                                                       <option value="pending">In attesa</option>
                                                       <option value="assigned">Assegnato</option>
                                                       <option value="not_assigned">Non assegnato</option>
+                                                      <option value="rules_not_accepted">Regolamento non accettato</option>
                                                     </select>
                                                 ) : (
                                                     <strong>{getStatusText(status)}</strong>

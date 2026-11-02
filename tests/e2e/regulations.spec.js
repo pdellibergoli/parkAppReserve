@@ -82,7 +82,7 @@ test.describe('regolamento aziendale', () => {
     );
     await checkPool.end();
 
-    expect(rows[0].status).toBe('not_assigned');
+    expect(rows[0].status).toBe('rules_not_accepted');
     await resetServerTime(request);
   });
 });

@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 import { addDays, currentHour, formatDay, today, windowStartDay } from './dates.js';
-import { sendFailureEmail, sendSuccessEmail } from './emails.js';
+import { sendFailureEmail, sendRulesNotAcceptedEmail, sendSuccessEmail } from './emails.js';
 import { AppError } from './errors.js';
 import { getActiveRegulation } from './regulations.js';
 
@@ -184,6 +184,7 @@ export async function processRequestsForDate(ctx, day) {
 
   let assigned = 0;
   let failed = 0;
+  let unaccepted = 0;
   for (const [i, request] of ordered.entries()) {
     if (i < spaces.length) {
       await assignParking(ctx, request, spaces[i]);
@@ -196,12 +197,12 @@ export async function processRequestsForDate(ctx, day) {
   }
 
   for (const request of ineligible) {
-    await updateRequestStatus(ctx.db, request.request_id, 'not_assigned');
-    await sendFailureEmail(ctx, request.user_id, day);
-    failed++;
+    await updateRequestStatus(ctx.db, request.request_id, 'rules_not_accepted');
+    await sendRulesNotAcceptedEmail(ctx, request.user_id, day);
+    unaccepted++;
   }
 
-  console.log(`Assegnazione ${formatDay(day)}: ${assigned} assegnati, ${failed} non assegnati.`);
+  console.log(`Assegnazione ${formatDay(day)}: ${assigned} assegnati, ${failed} non assegnati, ${unaccepted} regolamento non accettato.`);
   return { assigned, failed };
 }
 
