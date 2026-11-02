@@ -6,6 +6,7 @@ import { formatDay, toDay } from './dates.js';
 import { sendAdminCancellationEmail, sendSuccessEmail } from './emails.js';
 import { AppError } from './errors.js';
 import { requestToApi } from './mappers.js';
+import { getActiveRegulation } from './regulations.js';
 
 export async function adminCancelAllRequestsForDate(ctx, { date }) {
   if (!date) throw new AppError('Data non fornita.');
@@ -31,7 +32,7 @@ export async function adminResetAssignmentsForDate(ctx, { date }) {
 
   const { rows } = await ctx.db.query(
     `SELECT request_id, user_id, status FROM parking_requests
-      WHERE requested_date = $1 AND status IN ('assigned', 'not_assigned')`,
+      WHERE requested_date = $1 AND status IN ('assigned', 'not_assigned', 'rules_not_accepted')`,
     [day]
   );
 
@@ -61,6 +62,12 @@ export async function adminManuallyAssignForDate(ctx, { date }) {
 export async function adminAssignParckingForDate(ctx, { date, userId, spaceId }) {
   if (!date || !userId || !spaceId) throw new AppError('Dati insufficienti (data, utente o posto mancanti).');
   const day = toDay(date);
+
+  const activeReg = await getActiveRegulation(ctx.db);
+  const { rows: userRows } = await ctx.db.query('SELECT accepted_rules_version FROM users WHERE id = $1', [userId]);
+  if (!userRows[0] || userRows[0].accepted_rules_version !== activeReg?.version) {
+    throw new AppError("L'utente non ha ancora accettato il regolamento aziendale e non può ricevere un'assegnazione.");
+  }
 
   const space = await getSpace(ctx.db, spaceId);
   if (!space) throw new AppError('Parcheggio non trovato.');

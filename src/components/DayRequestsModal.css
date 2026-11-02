@@ -148,6 +148,15 @@
   color: var(--error-text) !important;
 }
 
+.booking-card.status-rules_not_accepted {
+  background-color: var(--warning-bg) !important;
+  border-color: var(--warning-border) !important;
+}
+.booking-card.status-rules_not_accepted .user-name,
+.booking-card.status-rules_not_accepted .parking-spot {
+  color: var(--warning-text) !important;
+}
+
 .booking-card.status-cancelled_by_user {
   background-color: var(--error-bg) !important;
   border-color: var(--error-border) !important;

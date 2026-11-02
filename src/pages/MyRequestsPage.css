@@ -216,6 +216,17 @@
   color: var(--error-text) !important;
 }
 
+/* Stato: Regolamento non accettato (Sfondo Arancione/Giallo) */
+.booking-card.status-rules_not_accepted {
+  background-color: var(--warning-bg) !important;
+  border-color: var(--warning-border) !important;
+}
+.booking-card.status-rules_not_accepted .booking-date,
+.booking-card.status-rules_not_accepted .booking-space,
+.booking-card.status-rules_not_accepted .booking-space strong {
+  color: var(--warning-text) !important;
+}
+
 /* Stato: Annullato (Sfondo Rosso + "Card Barrata") */
 .booking-card.status-cancelled_by_user {
   background-color: var(--error-bg) !important;

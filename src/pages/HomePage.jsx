@@ -227,7 +227,7 @@ const HomePage = () => {
           <div className="rules-reminder-content">
             <FaExclamationTriangle className="rules-reminder-icon" />
             <span>
-              Non hai ancora accettato il regolamento aziendale per l'utilizzo dei parcheggi. Non potrai effettuare richieste finché non lo accetti.
+              Non hai ancora accettato il regolamento aziendale per l'utilizzo dei parcheggi. Non potrai ricevere assegnazioni né effettuare richieste finché non lo accetti.
             </span>
           </div>
           <button 
@@ -281,6 +281,7 @@ const HomePage = () => {
         <div className="legend-item"><FaCar className="my-request-icon status-assigned" /> <span>Assegnata</span></div>
         <div className="legend-item"><FaCar className="my-request-icon status-pending" /> <span>In Attesa</span></div>
         <div className="legend-item"><FaCar className="my-request-icon status-not_assigned" /> <span>Non Assegnata</span></div>
+        <div className="legend-item"><FaCar className="my-request-icon status-rules_not_accepted" /> <span>Regolamento Non Accettato</span></div>
       </div>
 
       <div className="floating-actions-container">

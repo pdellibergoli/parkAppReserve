@@ -774,5 +774,58 @@ describe('regolamento aziendale', () => {
     const active = await handleAction('getActiveRegulation');
     assert.equal(active.version, '2.0');
   });
+
+  it('un utente che non ha accettato il regolamento non riceve assegnazione automatica', async () => {
+    const active = await handleAction('getActiveRegulation');
+    // u_regola ha accettato il regolamento attivo
+    await addUser('u_regola', { acceptedRules: active.version });
+    // u_senza_regola non ha accettato
+    await addUser('u_senza_regola', { acceptedRules: null });
+    await addSpace('p1');
+
+    // Entrambi hanno una richiesta pending per domani
+    await addRequest('req_accettato', 'u_regola', TOMORROW);
+    await addRequest('req_non_accettato', 'u_senza_regola', TOMORROW);
+
+    // Eseguiamo il motore di assegnazione
+    const result = await processPendingRequests(TOMORROW);
+    assert.equal(result.assigned, 1);
+    assert.equal(result.failed, 0);
+
+    // Solo chi ha accettato ha ottenuto il posto
+    assert.equal((await statusOf('req_accettato')).status, 'assigned');
+    assert.equal((await statusOf('req_non_accettato')).status, 'rules_not_accepted');
+
+    // Verifica che rules_not_accepted non entri nelle statistiche di priorità (non deve aumentare richieste)
+    const usersWithPriority = await handleAction('getUsersWithPriority');
+    const uSenzaRegola = usersWithPriority.find((u) => u.id === 'u_senza_regola');
+    assert.equal(uSenzaRegola.recentRequests, 0);
+    assert.equal(uSenzaRegola.successRate, 0);
+    assert.match(mailsTo('u_senza_regola@test.local').at(-1).subject, /Regolamento Non Accettato/);
+  });
+
+  it('l\'admin non può assegnare manualmente un posto a chi non ha accettato il regolamento', async () => {
+    await addUser('u_no_reg', { acceptedRules: null });
+    await addSpace('p1');
+
+    await assert.rejects(
+      handleAction('adminAssignParckingForDate', { date: TOMORROW, userId: 'u_no_reg', spaceId: 'p1' }),
+      /non ha ancora accettato il regolamento aziendale/
+    );
+  });
+
+  it('non è possibile cedere un parcheggio a chi non ha accettato il regolamento', async () => {
+    await addUser('donor', { acceptedRules: '1.0' });
+    await addUser('recipient_no_rules', { acceptedRules: null });
+    await addSpace('p1');
+
+    await addRequest('req_donor', 'donor', TODAY, 'assigned', 'p1');
+    await addRequest('req_recipient', 'recipient_no_rules', TODAY, 'pending');
+
+    await assert.rejects(
+      handleAction('fulfillParkingRequest', { requestId: 'req_recipient', donorUserId: 'donor' }),
+      /non ha ancora accettato il regolamento aziendale/
+    );
+  });
 });
 

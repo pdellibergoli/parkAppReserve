@@ -25,6 +25,16 @@ export async function sendFailureEmail(ctx, userId, day) {
   });
 }
 
+export async function sendRulesNotAcceptedEmail(ctx, userId, day) {
+  const user = await findUser(ctx, userId);
+  if (!user) return;
+  ctx.outbox.push({
+    to: user.mail,
+    subject: 'Esito Richiesta Parcheggio - Regolamento Non Accettato',
+    text: `Ciao ${user.first_name},\n\nNon è stato possibile assegnarti un parcheggio per il giorno ${formatDay(day)} perché non hai ancora accettato l'ultima versione del regolamento aziendale.\n\nPuoi consultare e accettare il regolamento effettuando l'accesso all'applicazione.\n\nBuona giornata!`,
+  });
+}
+
 export async function sendRequestCreatedEmail(ctx, userId, days, actorId) {
   const user = await findUser(ctx, userId);
   const actor = await findUser(ctx, actorId);

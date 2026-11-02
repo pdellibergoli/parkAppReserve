@@ -208,6 +208,12 @@
   opacity: 1;
 }
 
+/* Arancione per 'regolamento non accettato' */
+.my-request-icon.status-rules_not_accepted {
+  color: #f2994a;
+  opacity: 1;
+}
+
 /* --- FINE NUOVE REGOLE COLORE ICONA --- */
 
 
