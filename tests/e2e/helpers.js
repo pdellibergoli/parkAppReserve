@@ -21,7 +21,7 @@ let pool;
 async function resetData() {
   pool ??= new pg.Pool({ connectionString: process.env.E2E_DATABASE_URL });
   await pool.query(`TRUNCATE users, parking_spaces, parking_requests, assignment_history,
-    temporary_availability, temporary_unavailability, communications RESTART IDENTITY CASCADE`);
+    temporary_availability, temporary_unavailability, communications, company_regulations RESTART IDENTITY CASCADE`);
   await seedDemoData(pool);
 }
 

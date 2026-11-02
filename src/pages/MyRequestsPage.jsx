@@ -6,7 +6,7 @@ import { callApi } from '../services/api';
 import { MY_REQUESTS_PAGE_SIZE, myRequestsQuery, prefetch } from '../services/queries';
 import { useQuery } from '../hooks/useQuery';
 import { format, isBefore, startOfToday } from 'date-fns';
-import { FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
+import { FaPencilAlt, FaTrashAlt, FaExclamationTriangle } from 'react-icons/fa';
 import './MyRequestsPage.css';
 
 const NO_REQUESTS = [];
@@ -17,8 +17,8 @@ const capitalizeFirstLetter = (string) => {
 }
 
 const MyRequestsPage = () => {
-  const { handleOpenAddModal, handleOpenEditModal } = useOutletContext();
-  const { user } = useAuth();
+  const { handleOpenAddModal, handleOpenEditModal, handleOpenRulesModal } = useOutletContext() || {};
+  const { user, hasAcceptedRules } = useAuth();
   const { setIsLoading } = useLoading();
 
   const [page, setPage] = useState(1);
@@ -100,6 +100,24 @@ const MyRequestsPage = () => {
 
   return (
     <>
+      {!hasAcceptedRules && (
+        <div className="rules-reminder-banner">
+          <div className="rules-reminder-content">
+            <FaExclamationTriangle className="rules-reminder-icon" />
+            <span>
+              Non hai ancora accettato il regolamento aziendale per l'utilizzo dei parcheggi. Non potrai effettuare richieste finché non lo accetti.
+            </span>
+          </div>
+          <button 
+            type="button" 
+            className="rules-reminder-btn" 
+            onClick={() => handleOpenRulesModal(false)}
+          >
+            Leggi e Accetta
+          </button>
+        </div>
+      )}
+
       <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Invia richiesta</button>
       <div className="my-bookings-container">
         <div className="page-header">

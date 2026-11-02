@@ -34,11 +34,11 @@ async function statusOf(requestId) {
   return rows[0];
 }
 
-async function addUser(id, { verified = true, password = 'pw' } = {}) {
+async function addUser(id, { verified = true, password = 'pw', acceptedRules = '1.0' } = {}) {
   await db().query(
-    `INSERT INTO users (id, first_name, last_name, mail, password, salt, is_verified)
-     VALUES ($1, $1, 'Test', $2, $3, 'salt', $4)`,
-    [id, `${id}@test.local`, hashPassword(password, 'salt'), verified]
+    `INSERT INTO users (id, first_name, last_name, mail, password, salt, is_verified, accepted_rules_version, rules_accepted_at)
+     VALUES ($1, $1, 'Test', $2, $3, 'salt', $4, $5, now())`,
+    [id, `${id}@test.local`, hashPassword(password, 'salt'), verified, acceptedRules]
   );
 }
 
@@ -722,3 +722,57 @@ describe('dati iniziali e API HTTP', () => {
     assert.equal((await call('Bearer segreto')).statusCode, 401);
   });
 });
+
+describe('regolamento aziendale', () => {
+  it('recupera il regolamento attivo iniziale v1.0', async () => {
+    const reg = await handleAction('getActiveRegulation');
+    assert.equal(reg.version, '1.0');
+    assert.equal(reg.isActive, true);
+    assert.match(reg.title, /Sede di Chiasso/);
+  });
+
+  it('un utente può accettare il regolamento', async () => {
+    await addUser('u_accept');
+    const result = await handleAction('acceptRules', { userId: 'u_accept', version: '1.0' });
+    assert.equal(result.acceptedVersion, '1.0');
+    assert.equal(result.user.acceptedRulesVersion, '1.0');
+    assert.ok(result.user.rulesAcceptedAt);
+  });
+
+  it('rifiuta la creazione di richieste se il regolamento non è stato accettato', async () => {
+    await addUser('u_no_rules', { acceptedRules: null });
+    await assert.rejects(
+      handleAction('createBatchRequests', { userId: 'u_no_rules', dates: [TOMORROW] }),
+      /regolamento aziendale/
+    );
+  });
+
+  it('solo gli amministratori possono modificare il regolamento', async () => {
+    await addUser('u_normal');
+    await assert.rejects(
+      handleAction('updateRegulation', {
+        actorId: 'u_normal',
+        version: '2.0',
+        title: 'Nuovo titolo',
+        content: 'Nuovo testo',
+      }),
+      /Solo gli amministratori/
+    );
+
+    await db().query(`UPDATE users SET is_admin = TRUE WHERE id = 'u_normal'`);
+    const updated = await handleAction('updateRegulation', {
+      actorId: 'u_normal',
+      version: '2.0',
+      title: 'Nuovo titolo',
+      content: 'Nuovo testo',
+      isActive: true,
+    });
+    assert.equal(updated.version, '2.0');
+    assert.equal(updated.title, 'Nuovo titolo');
+    assert.equal(updated.isActive, true);
+
+    const active = await handleAction('getActiveRegulation');
+    assert.equal(active.version, '2.0');
+  });
+});
+

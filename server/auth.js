@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { CONFIG, baseUrl } from './config.js';
 import { AppError } from './errors.js';
 import { userToApi } from './mappers.js';
+import { getActiveRegulation } from './regulations.js';
 
 // SHA-256(password + salt): stesso schema degli account esistenti, così restano validi.
 export function hashPassword(password, salt) {
@@ -27,7 +28,14 @@ export async function loginUser(ctx, { mail, password }) {
   }
 
   if (hashPassword(password, user.salt) !== user.password) throw new AppError('Email o password non corretta.');
-  return userToApi(user);
+  const userApi = userToApi(user);
+  const activeRegulation = await getActiveRegulation(ctx.db);
+  const hasAcceptedRules = Boolean(
+    activeRegulation?.version &&
+    userApi.acceptedRulesVersion &&
+    String(userApi.acceptedRulesVersion) === String(activeRegulation.version)
+  );
+  return { ...userApi, activeRegulation, hasAcceptedRules };
 }
 
 export async function signupUser(ctx, { firstName, lastName, mail, password }) {

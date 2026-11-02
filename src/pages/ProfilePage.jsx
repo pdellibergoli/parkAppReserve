@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { useTheme } from '../context/useTheme';
 import { callApi } from '../services/api';
@@ -27,7 +28,8 @@ const PRIMARY_COLOR_OPTIONS = [
 ];
 
 const ProfilePage = () => {
-  const { user, updateUserContext } = useAuth();
+  const { user, updateUserContext, hasAcceptedRules, activeRegulation } = useAuth();
+  const { handleOpenRulesModal } = useOutletContext() || {};
   const { theme, toggleTheme, primaryColor, setPrimaryColor } = useTheme();
 
   const [formData, setFormData] = useState({
@@ -298,6 +300,56 @@ const ProfilePage = () => {
         {passwordMessage && <p className="success-message" style={{marginTop: '1rem'}}>{passwordMessage}</p>}
         {passwordError && <p className="error-message" style={{marginTop: '1rem'}}>{passwordError}</p>}
         {/* --- Fine Modifica 5 --- */}
+      </div>
+
+      {/* Card Regolamento Aziendale */}
+      <div className="profile-card">
+        <h2>Regolamento Aziendale</h2>
+        <p style={{ color: 'var(--text-color-secondary)', fontSize: '0.95rem', margin: '0.5rem 0 1rem 0' }}>
+          Linee guida operative per l'utilizzo dei parcheggi aziendali presso la sede di Chiasso.
+        </p>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          padding: '1rem',
+          backgroundColor: hasAcceptedRules ? 'var(--success-bg)' : 'var(--warning-bg)',
+          border: `1px solid ${hasAcceptedRules ? 'var(--success-border)' : 'var(--warning-border)'}`,
+          color: hasAcceptedRules ? 'var(--success-text)' : 'var(--warning-text)',
+          borderRadius: '8px'
+        }}>
+          <div>
+            <strong>
+              Stato: {hasAcceptedRules ? 'Accettato ✅' : 'Non ancora accettato ⚠️'}
+              {activeRegulation?.version && ` (v${activeRegulation.version})`}
+            </strong>
+            {user?.rulesAcceptedAt && (
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
+                Versione v{user.acceptedRulesVersion || '1.0'} sottoscritta il {new Date(user.rulesAcceptedAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
+            {!hasAcceptedRules && (
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
+                {user?.acceptedRulesVersion
+                  ? `È stata rilasciata la versione v${activeRegulation?.version || '1.0'}. Devi accettarla per poter inviare richieste.`
+                  : "È necessario accettare il regolamento per poter inviare richieste di parcheggio."
+                }
+              </p>
+            )}
+          </div>
+          {handleOpenRulesModal && (
+            <button
+              type="button"
+              className="secondary-btn"
+              style={{ padding: '0.6rem 1.2rem', cursor: 'pointer', borderRadius: '6px' }}
+              onClick={() => handleOpenRulesModal(hasAcceptedRules)}
+            >
+              {hasAcceptedRules ? 'Visualizza Regolamento' : 'Leggi e Accetta'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* MODIFICA 6: Rimuovi i messaggi/errori da qui */}

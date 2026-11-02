@@ -10,6 +10,7 @@ import {
 } from './emails.js';
 import { AppError } from './errors.js';
 import { requestToApi } from './mappers.js';
+import { getActiveRegulation } from './regulations.js';
 
 export async function getRequestsForUser(ctx, { userId, fromDate }) {
   const { rows } = await ctx.db.query(
@@ -55,6 +56,18 @@ async function hasActiveRequest(db, userId, day, excludeRequestId = null) {
 
 export async function createBatchRequests(ctx, { userId, dates, actorId }) {
   if (!userId || !Array.isArray(dates) || dates.length === 0) throw new AppError('Dati mancanti.');
+
+  if (!actorId || actorId === userId) {
+    const { rows: userRows } = await ctx.db.query('SELECT accepted_rules_version FROM users WHERE id = $1', [userId]);
+    if (userRows.length > 0) {
+      const activeReg = await getActiveRegulation(ctx.db);
+      const userVersion = userRows[0]?.accepted_rules_version ? String(userRows[0].accepted_rules_version) : '';
+      const hasAccepted = userVersion && userVersion === String(activeReg?.version);
+      if (!hasAccepted) {
+        throw new AppError(`È necessario accettare l'ultima versione (${activeReg?.version || '1.0'}) del regolamento aziendale prima di poter inviare richieste.`);
+      }
+    }
+  }
 
   const currentDay = today();
   const created = [];

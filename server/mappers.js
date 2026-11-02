@@ -13,6 +13,8 @@ export const userToApi = (row) => ({
   isAdmin: row.is_admin,
   preferredTheme: row.preferred_theme ?? '',
   primaryColor: row.primary_color ?? '',
+  acceptedRulesVersion: row.accepted_rules_version ?? '',
+  rulesAcceptedAt: row.rules_accepted_at ? new Date(row.rules_accepted_at).toISOString() : null,
   createdAt: row.created_at,
 });
 

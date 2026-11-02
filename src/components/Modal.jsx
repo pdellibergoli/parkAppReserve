@@ -3,7 +3,7 @@
 import React from 'react';
 import './Modal.css';
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+const Modal = ({ isOpen, onClose, title, children, maxWidth, className = '' }) => {
   if (!isOpen) {
     return null;
   }
@@ -13,9 +13,11 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     e.stopPropagation();
   };
 
+  const contentStyle = maxWidth ? { maxWidth } : undefined;
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={handleContentClick}>
+    <div className={`modal-overlay ${className}`.trim()} onClick={onClose}>
+      <div className="modal-content" style={contentStyle} onClick={handleContentClick}>
         <div className="modal-header">
           <h2 className="modal-title">{title}</h2>
           <button className="modal-close-btn" onClick={onClose}>&times;</button>

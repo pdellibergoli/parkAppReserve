@@ -1,5 +1,6 @@
 import { hashPassword } from '../../server/auth.js';
 import { addDays, isWeekday, today } from '../../server/dates.js';
+import { INITIAL_REGULATION_CONTENT, INITIAL_REGULATION_TITLE, INITIAL_REGULATION_VERSION } from '../../server/regulations.js';
 
 export const DEMO_PASSWORD = 'Password123!';
 const SALT = 'dev-salt';
@@ -36,10 +37,17 @@ function previousWeekdays(count) {
 
 /** Carica i dati di esempio. Restituisce il prossimo giorno lavorativo, quello con le richieste in attesa. */
 export async function seedDemoData(db) {
+  await db.query(
+    `INSERT INTO company_regulations (version, title, content, is_active, updated_at)
+     VALUES ($1, $2, $3, TRUE, now())
+     ON CONFLICT (version) DO NOTHING`,
+    [INITIAL_REGULATION_VERSION, INITIAL_REGULATION_TITLE, INITIAL_REGULATION_CONTENT]
+  );
+
   for (const user of DEMO_USERS) {
     await db.query(
-      `INSERT INTO users (id, first_name, last_name, mail, password, salt, avatar_color, is_verified, is_admin)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8)`,
+      `INSERT INTO users (id, first_name, last_name, mail, password, salt, avatar_color, is_verified, is_admin, accepted_rules_version, rules_accepted_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8, '1.0', now())`,
       [user.id, user.firstName, user.lastName, user.mail, hashPassword(DEMO_PASSWORD, SALT), SALT, user.color, user.isAdmin]
     );
   }

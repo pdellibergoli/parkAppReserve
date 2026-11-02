@@ -22,7 +22,8 @@ const READ_ONLY_ACTIONS = new Set([
   'getTemporaryAvailabilities',
   'getTemporaryUnavailabilities',
   'getParkingStatusForDate',
-  'getActiveCommunication'
+  'getActiveCommunication',
+  'getActiveRegulation'
 ]);
 
 // Scritture che non toccano dati in cache
