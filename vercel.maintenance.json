@@ -1,0 +1,19 @@
+{
+  "redirects": [
+    {
+      "source": "/((?!api/|maintenance\\.html).*)",
+      "destination": "/maintenance.html",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/((?!api/|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "crons": [
+    { "path": "/api/cron/assign", "schedule": "0 17 * * *" },
+    { "path": "/api/cron/assign", "schedule": "0 18 * * *" }
+  ]
+}
