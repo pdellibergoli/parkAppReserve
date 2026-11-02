@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/useAuth';
+import { useNavigate, Link } from 'react-router-dom';
 import { callApi } from '../services/api';
+import { preloadHomePage } from '../utils/preload';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import logo from '../assets/logo.png'; // 1. IMPORTA IL LOGO
 
 const LoginPage = () => {
+  useEffect(() => {
+    preloadHomePage();
+  }, []);
+
   const [mail, setMail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,7 +21,6 @@ const LoginPage = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();

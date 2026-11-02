@@ -1,0 +1,30 @@
+# Ambiente di sviluppo locale: nessuno di questi servizi viene usato in produzione.
+name: parkappreserve
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: parkapp
+      POSTGRES_PASSWORD: parkapp_dev
+      POSTGRES_DB: parkapp_dev
+    ports:
+      # 5434 per non entrare in conflitto con altre istanze Postgres locali
+      - "5434:5432"
+    volumes:
+      - parkapp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parkapp -d parkapp_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  # Cattura tutte le email inviate in sviluppo: http://localhost:8025
+  mail:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  parkapp_pgdata:

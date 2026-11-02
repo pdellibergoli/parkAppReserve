@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Modal from './Modal';
-import { useAuth } from '../context/AuthContext';
-import { useLoading } from '../context/LoadingContext';
+import { useAuth } from '../context/useAuth';
+import { useLoading } from '../context/useLoading';
 import { callApi } from '../services/api';
 import { format, isBefore, startOfToday, isToday, isTomorrow } from 'date-fns';
 import { getTextColor } from '../utils/colors';
-import { getCachedPriorities, setCachedPriorities } from '../utils/priorityCache';
+import { prioritiesQuery } from '../services/queries';
+import { useQuery } from '../hooks/useQuery';
 import { FaPencilAlt, FaTrashAlt, FaLock, FaWrench } from 'react-icons/fa';
-import { clearPrioritiesCache } from '../utils/priorityCache';
 import './DayRequestsModal.css';
+
+const NO_USERS = [];
 
 const Avatar = ({ user }) => {
     const getInitials = () => {
@@ -78,15 +80,14 @@ const AdminActions = ({ selectedDate, onAdminAction, isLoading, hasPendingReques
     );
 };
 
-const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEdit, totalParkingSpaces, onCancel, onRefreshData, onOptimisticUpdate, onOptimisticDelete }) => {
+const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEdit, totalParkingSpaces, onRefreshData, onOptimisticUpdate, onOptimisticDelete }) => {
     const { user: loggedInUser } = useAuth();
     const { setIsLoading } = useLoading();
     
     const [isAdminMode, setIsAdminMode] = useState(false);
     const [adminLoading, setAdminLoading] = useState(false);
 
-    // STATO PER UTENTI ARRICCHITI CON PRIORITÀ CARICATA DA CACHE/API
-    const [usersWithPriority, setUsersWithPriority] = useState([]);
+    const { data: usersWithPriority = NO_USERS } = useQuery(prioritiesQuery());
 
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
 
@@ -95,33 +96,11 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
     const dateTitle = format(requestDateObj, 'dd/MM/yyyy');
     const isPastDate = isBefore(requestDateObj, today);
 
-    // 1. CARICAMENTO CON CACHE DI LOCALSTORAGE (10 MINUTI)
     useEffect(() => {
         if (!isOpen) {
             setIsAdminMode(false);
             setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null });
-            return;
         }
-
-        const loadPriorities = async () => {
-            // A. Tenta prima la lettura dalla Cache Locale
-            const cachedData = getCachedPriorities();
-            if (cachedData) {
-                setUsersWithPriority(cachedData);
-                return;
-            }
-
-            // B. Se assente o scaduta (>10 min), invoca il Backend
-            try {
-                const freshData = await callApi('getUsersWithPriority');
-                setUsersWithPriority(freshData);
-                setCachedPriorities(freshData); // Salva in cache
-            } catch (err) {
-                console.error("Errore recupero priorità:", err);
-            }
-        };
-
-        loadPriorities();
     }, [isOpen]);
 
     const filteredRequests = useMemo(() => {
@@ -208,7 +187,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                 actorId: loggedInUser.id,
                 preventAutoLogic: preventAutoLogic 
             });
-            clearPrioritiesCache();
 
         } catch (error) {
             alert("Errore durante l'aggiornamento: " + error.message);
@@ -236,7 +214,6 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
         
         try {
             const response = await callApi(apiAction, { date: format(date, 'yyyy-MM-dd') });
-            clearPrioritiesCache();
             alert(response.message);
             onRefreshData();
         } catch (err) {
@@ -305,7 +282,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                             
                             <button 
                                 className="cancel-btn block-btn" 
-                                style={{ marginTop: '1.2rem', width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', cursor: 'pointer' }} 
+                                style={{ marginTop: '1.2rem', width: '100%', padding: '10px', cursor: 'pointer' }}
                                 onClick={() => setConfirmModal({ isOpen: false, requestId: null, newStatus: null, currentStatus: null })}
                             >
                                 Annulla e mantieni stato precedente
@@ -339,7 +316,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                 
                 <div className="day-bookings-list">
                     {sortedRequests.length === 0 ? (
-                        <p style={{textAlign: 'center', color: '#666'}}>Nessuna richiesta attiva per questo giorno.</p>
+                        <p style={{textAlign: 'center', color: 'var(--text-color-secondary)'}}>Nessuna richiesta attiva per questo giorno.</p>
                     ) : (
                         sortedRequests.map(request => {
                             const activeUsersList = usersWithPriority.length > 0 ? usersWithPriority : users;

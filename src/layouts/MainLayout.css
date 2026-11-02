@@ -44,7 +44,7 @@
 }
 .main-nav a span { display: inline; white-space: nowrap; }
 .main-nav a:hover {
-  background-color: var(--primary-color-hover) !important;
+  background-color: var(--primary-color-hover);
   color: #ffffff;
 }
 .main-nav a.active {

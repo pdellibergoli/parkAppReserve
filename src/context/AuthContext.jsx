@@ -1,9 +1,12 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AuthContext } from './useAuth';
 import { callApi } from '../services/api';
-
-const AuthContext = createContext(null);
+import { clearDataStore } from '../services/dataStore';
 
 const SESSION_DURATION = 30 * 60 * 1000; 
+
+// Vecchia cache delle priorità: conteneva i dati di tutti gli utenti e restava dopo il logout
+localStorage.removeItem('user_priorities_cache');
 
 export const AuthProvider = ({ children }) => {
   // ... il resto del file rimane invariato ...
@@ -59,6 +62,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('parkingAppUser');
+    clearDataStore();
   };
   
   const updateUserContext = (newUserData) => {
@@ -92,9 +96,4 @@ export const AuthProvider = ({ children }) => {
       {!loading && children}
     </AuthContext.Provider>
   );
-};
-
-
-export const useAuth = () => {
-  return useContext(AuthContext);
 };

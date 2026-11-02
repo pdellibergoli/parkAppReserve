@@ -155,3 +155,21 @@
   background-color: rgba(230, 126, 34, 0.15) !important;
   color: #e67e22 !important;
 }
+
+@media (max-width: 600px) {
+  /* Senza questo la larghezza naturale del campo allarga tutta la pagina */
+  .space-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .space-item {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .space-actions {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}

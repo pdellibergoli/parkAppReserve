@@ -2,85 +2,115 @@
 
 /* Definisci le variabili CSS per entrambi i temi */
 :root {
-  --font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-family: 'Inter Variable', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-display: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
   --line-height: 1.5;
   --font-weight-normal: 400;
 
-  /* --- Tema Chiaro (Default) --- */
-  --bg-color: #ffffff;
-  --bg-rgb: 255, 255, 255;
-  --bg-color-secondary: #f9f9f9;
-  --bg-color-hover: #f0f0f0;
-  --text-color: #213547;
-  --text-color-secondary: #555;
-  --text-color-light: #666;
-  --cal-bg-off-range: #c8c8c8;
-  --cal-txt-off-range: #232323;
-  --border-color: #e0e0e0;
-  --border-color-input: #ccc;
-  --primary-color: #DE1F3C; 
+  color-scheme: light;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  /* --primary-color viene sovrascritto dalla preferenza dell'utente (ThemeContext) */
+  --primary-color: #DE1F3C;
   --primary-color-hover: #b71c34;
   --primary-text-color: #ffffff;
-  --text-input-color: #181818;
-  --secondary-color: #4a4a4a;
-  --secondary-color-hover: #5a5a5a;
-  --secondary-text-color: #ffffff;
-  --error-bg: #fce8e6;
-  --error-border: #f9bdbb;
-  --error-text: #d93025;
-  --success-bg: #d4edda;
-  --success-border: #c3e6cb;
-  --success-text: #155724;
-  --warning-bg: rgba(240, 173, 78, 0.1);
-  --warning-border: #f0ad4e;
-  --warning-text: #DE1F3C;
-  --link-color: var(--primary-color);
+  --gradient-primary: linear-gradient(120deg, var(--primary-color), color-mix(in oklab, var(--primary-color) 55%, #7c3aed));
+  --glow: 0 8px 26px color-mix(in srgb, var(--primary-color) 35%, transparent);
+
+  /* --- Tema Chiaro --- */
+  --bg-color: #f4f6fb;
+  --bg-rgb: 244, 246, 251;
+  --bg-color-secondary: #ffffff;
+  --bg-color-hover: #eef1f7;
+  --bg-modal: #ffffff;
+  --surface: rgba(255, 255, 255, 0.82);
+  --glass: rgba(255, 255, 255, 0.72);
+  --off-range-bg: rgba(15, 23, 42, 0.035);
+  --aurora-strength: 16%;
+  --grid-line: rgba(15, 23, 42, 0.045);
+  --text-color: #111827;
+  --text-color-secondary: #4b5563;
+  --text-color-light: #667085;
+  --cal-bg-off-range: #e5e7eb;
+  --cal-txt-off-range: #4b5563;
+  --border-color: rgba(15, 23, 42, 0.1);
+  --border-strong: rgba(15, 23, 42, 0.16);
+  --border-color-input: rgba(15, 23, 42, 0.2);
+  --accent-text: var(--primary-color);
+  --text-input-color: #111827;
+  --secondary-color: #eef1f7;
+  --secondary-color-hover: #e2e6ef;
+  --secondary-text-color: #111827;
+  --error-bg: #fef1f2;
+  --error-border: #fecdd3;
+  --error-text: #be123c;
+  --success-bg: #ecfdf5;
+  --success-border: #a7f3d0;
+  --success-text: #047857;
+  --warning-bg: #fffbeb;
+  --warning-border: #f59e0b;
+  --warning-text: #92400e;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+  --info-text: #1d4ed8;
+  --status-green: #059669;
+  --status-green-solid: #047857;
+  --link-color: var(--accent-text);
   --input-bg: #ffffff;
   --input-text: var(--text-color);
-  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  --modal-bg: rgba(255, 255, 255, 0.3);
+  --card-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+  --modal-bg: rgba(15, 23, 42, 0.35);
   --bg-mod-btn: #f0b666;
 }
 
 .dark-theme {
   /* --- Tema Scuro --- */
-  --bg-color: #1a1a1a;
-  --bg-rgb: 26, 26, 26;
-  --bg-color-secondary: #242424; 
-  --bg-color-hover: #333333;
-  --text-color: #e0e0e0;
-  --text-color-secondary: #b0b0b0;
-  --text-color-light: #888;
-  --cal-bg-off-range: #666;
-  --cal-txt-off-range: #ffffff;
-  --border-color: #444;
-  --border-color-input: #555;
-  --primary-text-color: #ffffff;
+  color-scheme: dark;
+  --bg-color: #070a12;
+  --bg-rgb: 7, 10, 18;
+  --bg-color-secondary: #10141f;
+  --bg-color-hover: #1a2030;
+  --bg-modal: #10141f;
+  --surface: rgba(18, 23, 35, 0.78);
+  --glass: rgba(16, 20, 31, 0.72);
+  --off-range-bg: rgba(0, 0, 0, 0.28);
+  --aurora-strength: 26%;
+  --grid-line: rgba(255, 255, 255, 0.035);
+  --text-color: #eef1f8;
+  --text-color-secondary: #a9b2c6;
+  --text-color-light: #8791a8;
+  --cal-bg-off-range: #0b0f18;
+  --cal-txt-off-range: #8791a8;
+  --border-color: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-color-input: rgba(255, 255, 255, 0.18);
+  --accent-text: color-mix(in oklab, var(--primary-color) 62%, #ffffff);
   --text-input-color: #ffffff;
-  --secondary-color: #6b7280; 
-  --secondary-color-hover: #4b5563;
-  --secondary-text-color: #ffffff;
-  --error-bg: #4b1b1b;
-  --error-border: #7f1d1d;
-  --error-text: #fecaca;
-  --success-bg: #163020;
-  --success-border: #155e34;
-  --success-text: #bbf7d0;
-  --warning-bg: rgba(234, 179, 8, 0.1); 
-  --warning-border: #ca8a04; 
-  --warning-text: #fef08a;
-  --link-color: var(--primary-color);
-  --input-bg: #333;
+  --secondary-color: #1a2030;
+  --secondary-color-hover: #252d42;
+  --secondary-text-color: #eef1f8;
+  --error-bg: rgba(244, 63, 94, 0.13);
+  --error-border: rgba(244, 63, 94, 0.38);
+  --error-text: #fda4af;
+  --success-bg: rgba(16, 185, 129, 0.13);
+  --success-border: rgba(16, 185, 129, 0.38);
+  --success-text: #6ee7b7;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.5);
+  --warning-text: #fcd34d;
+  --info-bg: rgba(56, 189, 248, 0.11);
+  --info-border: rgba(56, 189, 248, 0.35);
+  --info-text: #7dd3fc;
+  --status-green: #34d399;
+  --status-green-solid: #047857;
+  --link-color: var(--accent-text);
+  --input-bg: #0b0f18;
   --input-text: var(--text-color);
-  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  --modal-bg: rgba(0, 0, 0, 0.5); 
-
-  /* Colori specifici tema scuro per componenti (es. calendario) */
-  --rbc-today-bg: #333;
-  --rbc-off-range-bg: #222;
-  --rbc-header-bg: #444;
-  --rbc-header-text: var(--text-color);
-  --rbc-date-cell-color: var(--text-color-secondary);
+  --card-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+  --modal-bg: rgba(3, 5, 10, 0.62);
   --bg-mod-btn: #f0b666;
 }
 
@@ -191,7 +221,7 @@ button, .btn {
   color: var(--primary-text-color);
   font-size: 1rem;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background-color .2s;
   display: inline-flex;
@@ -204,7 +234,7 @@ button, .btn {
 
 button:hover, .btn:hover {
   background-color: var(--primary-color-hover);
-  color: var(--primary-text-color) !important;
+  color: var(--primary-text-color);
 }
 
 button:disabled, .btn:disabled {

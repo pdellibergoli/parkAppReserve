@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
-import { useLoading } from '../context/LoadingContext';
+import { useLoading } from '../context/useLoading';
 import { callApi } from '../services/api';
 import { 
   format, isBefore, startOfToday, getDay, parseISO, 
@@ -8,7 +8,6 @@ import {
   startOfWeek, addDays 
 } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { clearPrioritiesCache } from '../utils/priorityCache';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css'; 
 
@@ -19,7 +18,6 @@ const formatDateKey = (date) => format(date, 'yyyy-MM-dd');
 const AdminManuallyAssignModal = ({ 
   isOpen, 
   onClose, 
-  onRefreshData, 
   onOptimisticUpdate,
   usersList = [],      // Prop ricevuta senza chiamate di rete
   parkingSpaces = []   // Prop ricevuta senza chiamate di rete
@@ -75,7 +73,6 @@ const AdminManuallyAssignModal = ({
           userId: targetUserId,
           spaceId: targetSpaceId
         });
-        clearPrioritiesCache();
 
         // 1. Usa la richiesta restituita con l'ID reale dal Backend
         const realRequest = response?.request || response?.data?.request;

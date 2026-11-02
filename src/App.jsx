@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import { LoadingProvider } from './context/LoadingContext';
 import { ThemeProvider } from './context/ThemeContext';
 import LoadingOverlay from './components/LoadingOverlay';
@@ -8,12 +9,12 @@ import LoadingOverlay from './components/LoadingOverlay';
 // Layout
 import MainLayout from './layouts/MainLayout';
 
-// Pagine pubbliche: restano nel bundle principale perché servono subito
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import VerifyEmailPage from './pages/VerifyEmailPage';
-import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
+// Chi ha già una sessione attiva non le apre mai: non pesano sul suo primo caricamento
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
+const RequestPasswordResetPage = lazy(() => import('./pages/RequestPasswordResetPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
 // Pagine protette: caricate su richiesta (calendar, day-picker e grafici
 // finiscono in chunk separati e non rallentano il primo caricamento)

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { Link } from 'react-router-dom';
 import { FaRegEye, FaRegEyeSlash, FaRegCheckCircle, FaRegCircle } from 'react-icons/fa';
 import './SignupPage.css';

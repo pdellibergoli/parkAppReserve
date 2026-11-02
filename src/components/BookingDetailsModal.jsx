@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'; 
 import Modal from './Modal';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { format } from 'date-fns';
 import it from 'date-fns/locale/it';
 import { callApi } from '../services/api'; 
@@ -22,7 +22,7 @@ const Avatar = ({ user }) => {
   return <div className="detail-avatar" style={{ backgroundColor, color: textColor }}>{getInitials()}</div>;
 };
 
-const EditBookingModalContent = ({ bookingData, parkingSpaces, allBookings, users, onClose, onBookingUpdated }) => {
+const EditBookingModalContent = ({ bookingData, parkingSpaces, allBookings, onClose, onBookingUpdated }) => {
   const { user: loggedInUser } = useAuth();
 
   const originalDate = format(new Date(bookingData.date), 'yyyy-MM-dd');
@@ -209,7 +209,6 @@ const BookingDetailsModal = ({ isOpen, onClose, event, users, parkingSpaces, all
             bookingData={bookingData}
             parkingSpaces={parkingSpaces}
             allBookings={allBookings}
-            users={users}
             onClose={handleCancelEdit} // Al "Cancel" torniamo alla vista dettagli
             onBookingUpdated={() => { // Quando l'aggiornamento ha successo
                 onBookingUpdated(); 
