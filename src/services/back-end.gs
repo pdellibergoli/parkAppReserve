@@ -10,7 +10,8 @@ const CONFIG = {
     ASSIGNMENT_HISTORY: "AssignmentHistory",
     TEMPORARY_AVAILABILITY: "TemporaryAvailability",
     TEMPORARY_UNAVAILABILITY: "TemporaryUnavailability",
-    COMMUNICATIONS: "Communications"
+    COMMUNICATIONS: "Communications",
+    REGULATIONS: "Regulations"
   },
   BASE_URL: "https://park-app-reserve.vercel.app/",
   EMAIL: {
@@ -151,8 +152,9 @@ function getInitialData(payload) {
     return unavailDate >= startOfMonth && unavailDate <= endOfMonth;
   });
 
-  // 6. Comunicazioni attive
+  // 6. Comunicazioni attive e Regolamento
   const banners = getActiveCommunication();
+  const activeRegulation = getActiveRegulation();
 
   return {
     requests: monthlyRequests,
@@ -160,7 +162,8 @@ function getInitialData(payload) {
     banners: banners,
     parkingSpaces: parkingSpaces,
     temporaryAvailabilities: monthlyTempAvail,
-    temporaryUnavailabilities: monthlyTempUnavail
+    temporaryUnavailabilities: monthlyTempUnavail,
+    activeRegulation: activeRegulation
   };
 }
 
@@ -181,7 +184,8 @@ const READ_ONLY_ACTIONS = new Set([
   'getTemporaryAvailabilities',
   'getTemporaryUnavailabilities',
   'getParkingStatusForDate',
-  'getActiveCommunication'
+  'getActiveCommunication',
+  'getActiveRegulation'
 ]);
 
 function routeAction(action, payload) {
@@ -201,8 +205,11 @@ function routeAction(action, payload) {
     'getAssignmentHistory': () => getSheetAsJSON(CONFIG.SHEETS.ASSIGNMENT_HISTORY),
     'getUsersWithPriority': () => getUsersWithPriority(),
 
-    // Gestione utenti
+    // Gestione utenti e regolamento
     'updateUserProfile': () => updateUserProfile(payload),
+    'acceptRules': () => acceptRules(payload),
+    'getActiveRegulation': () => getActiveRegulation(),
+    'updateRegulation': () => updateRegulation(payload),
 
     // Gestione parcheggi
     'addParkingSpace': () => addParkingSpace(payload),
@@ -410,6 +417,23 @@ function getOrCreateSheet_(sheetName, defaultHeaders) {
   return sheet;
 }
 
+function ensureColumnHeader_(sheet, columnName) {
+  const lastCol = sheet.getLastColumn();
+  if (lastCol === 0) {
+    sheet.getRange(1, 1).setValue(columnName);
+    SpreadsheetApp.flush();
+    return 0;
+  }
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h).trim());
+  let colIndex = headers.indexOf(columnName);
+  if (colIndex === -1) {
+    sheet.getRange(1, lastCol + 1).setValue(columnName);
+    SpreadsheetApp.flush();
+    return lastCol;
+  }
+  return colIndex;
+}
+
 function findRowByColumn(sheetName, columnName, value) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (!sheet) return null;
@@ -550,6 +574,9 @@ function loginUser(payload) {
 
   delete user.password;
   delete user.salt;
+
+  const activeRegulation = getActiveRegulation();
+  user.activeRegulation = activeRegulation;
   return user;
 }
 
@@ -691,6 +718,165 @@ function updateUserProfile(payload) {
   }
 
   return updatedUser || {};
+}
+
+// =================================================================
+// GESTIONE REGOLAMENTO AZIENDALE
+// =================================================================
+
+const INITIAL_REGULATION_VERSION = "1.0";
+const INITIAL_REGULATION_TITLE = "Regolamento per l’Utilizzo dei Parcheggi Aziendali – Sede di Chiasso";
+const INITIAL_REGULATION_CONTENT = 
+`Per garantire una gestione trasparente, equa ed efficiente degli stalli auto disponibili presso la sede di Chiasso, tutti i collaboratori sono tenuti a rispettare le seguenti linee guida operative.
+
+1. Canale Unico di Prenotazione e Rispetto dell'Applicazione
+Prenotazione Esclusiva via App: L'assegnazione dei posti auto avviene unicamente tramite l'applicazione Park App Reserve. Non sono ammesse occupazioni arbitrarie o accordi verbali non registrati.
+
+Richieste alle Business Manager: Chi concorda eccezionalmente o richiede la disponibilità del parcheggio direttamente alle Business Manager/all'Amministrazione deve accertarsi che la prenotazione venga formalizzata e assegnata all'interno dell'app (tramite inserimento da parte dell'amministratore o registrazione della richiesta). Nessun posto può considerarsi garantito senza la corrispondente assegnazione a sistema.
+
+2. Criteri di Idoneità alla Richiesta
+Effettiva Presenza in Sede: La richiesta può essere inserita esclusivamente per i giorni in cui è prevista la reale presenza fisica presso gli uffici di Chiasso.
+
+Utilizzo Effettivo dell'Auto: La prenotazione è riservata a chi si reca in ufficio con la propria automobile. È severamente vietato inserire richieste se si viaggia in treno, con i mezzi pubblici, a piedi, in bici o in moto. L'inserimento fittizio di richieste altera l'algoritmo di priorità e falsa le statistiche a discapito dei colleghi.
+
+Cancellazione Tempestiva: Qualora la presenza in sede o l'uso dell'auto dovessero decadere (smart working, malattia, trasferta o cambio mezzo), la richiesta o l'assegnazione deve essere annullata tempestivamente all'interno dell'app per rimettere a disposizione il posto.
+
+3. Soste Brevi (2–3 Ore)
+Nessuna Registrazione Necessaria: Chi deve recarsi in sede per una sosta temporanea o di passaggio (massimo 2–3 ore nell'arco della giornata) non deve effettuare alcuna prenotazione sull'app.
+
+Condotta: In caso di sosta breve, è opportuno verificare che lo stallo utilizzato non sia già stato regolarmente assegnato per l'intera giornata a un collega o concordare temporaneamente l'appoggio per evitare blocchi.
+
+4. Urgenze e Casi Eccezionali
+Flessibilità e Buonsenso: In caso di reali urgenze, necessità impreviste o motivate esigenze personali/lavorative, i collaboratori sono invitati al dialogo e alla collaborazione reciproca.
+
+Accordo Diretto / Cessione: Chi si trova in difficoltà può contattare un collega assegnatario per concordare la cessione del posto (tramite l'apposita funzione di cessione in app) oppure rivolgersi all'amministrazione per valutare una gestione manuale della contingenza.
+
+La disponibilità dei parcheggi è una risorsa condivisa e limitata: la correttezza di ciascuno nell'utilizzo dell'app assicura il corretto funzionamento dell'algoritmo e garantisce parità di trattamento per tutto il team.`;
+
+function getActiveRegulation() {
+  const defaultHeaders = ['version', 'title', 'content', 'isActive', 'updatedAt'];
+  const sheet = getOrCreateSheet_(CONFIG.SHEETS.REGULATIONS, defaultHeaders);
+  const regulations = getSheetAsJSON(CONFIG.SHEETS.REGULATIONS);
+
+  if (!regulations || regulations.length === 0) {
+    const now = new Date().toISOString();
+    sheet.appendRow([INITIAL_REGULATION_VERSION, INITIAL_REGULATION_TITLE, INITIAL_REGULATION_CONTENT, true, now]);
+    SpreadsheetApp.flush();
+    clearAllSheetCaches_();
+    return {
+      version: INITIAL_REGULATION_VERSION,
+      title: INITIAL_REGULATION_TITLE,
+      content: INITIAL_REGULATION_CONTENT,
+      isActive: true,
+      updatedAt: now
+    };
+  }
+
+  // Prendi l'ultimo regolamento attivo (o l'ultimo inserito se nessuno ha isActive=true)
+  const activeRegs = regulations.filter(r => r.isActive === true || String(r.isActive).toLowerCase() === 'true');
+  const target = activeRegs.length > 0 ? activeRegs[activeRegs.length - 1] : regulations[regulations.length - 1];
+
+  return {
+    version: String(target.version || INITIAL_REGULATION_VERSION),
+    title: target.title || INITIAL_REGULATION_TITLE,
+    content: target.content || INITIAL_REGULATION_CONTENT,
+    isActive: target.isActive === true || String(target.isActive).toLowerCase() === 'true',
+    updatedAt: target.updatedAt || new Date().toISOString()
+  };
+}
+
+function updateRegulation(payload) {
+  const { actorId, version, title, content, isActive } = payload;
+  if (!actorId) throw new Error("Utente non autorizzato.");
+
+  const users = getSheetAsJSON(CONFIG.SHEETS.USERS);
+  const admin = users.find(u => u.id === actorId);
+  if (!admin || !admin.isAdmin) throw new Error("Solo gli amministratori possono modificare o pubblicare il regolamento.");
+
+  if (!version || !title || !content) {
+    throw new Error("Versione, titolo e contenuto del regolamento sono obbligatori.");
+  }
+
+  const defaultHeaders = ['version', 'title', 'content', 'isActive', 'updatedAt'];
+  const sheet = getOrCreateSheet_(CONFIG.SHEETS.REGULATIONS, defaultHeaders);
+  const now = new Date().toISOString();
+
+  const shouldBeActive = isActive !== false;
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const versionCol = headers.indexOf('version');
+  const isActiveCol = headers.indexOf('isActive');
+  
+  if (shouldBeActive && isActiveCol !== -1) {
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][versionCol]) !== String(version)) {
+        sheet.getRange(i + 1, isActiveCol + 1).setValue(false);
+      }
+    }
+  }
+
+  let existingRow = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][versionCol]) === String(version)) {
+      existingRow = i + 1;
+      break;
+    }
+  }
+
+  if (existingRow !== -1) {
+    updateCell(sheet, existingRow, 'title', title, headers);
+    updateCell(sheet, existingRow, 'content', content, headers);
+    updateCell(sheet, existingRow, 'isActive', shouldBeActive, headers);
+    updateCell(sheet, existingRow, 'updatedAt', now, headers);
+  } else {
+    sheet.appendRow([String(version), title, content, shouldBeActive, now]);
+  }
+
+  SpreadsheetApp.flush();
+  clearAllSheetCaches_();
+
+  return getActiveRegulation();
+}
+
+function acceptRules(payload) {
+  const { userId, version } = payload;
+  if (!userId) throw new Error("ID utente non fornito.");
+
+  const activeReg = getActiveRegulation();
+  const targetVersion = String(version || activeReg.version || INITIAL_REGULATION_VERSION);
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.USERS);
+  if (!sheet) throw new Error("Foglio Users non trovato.");
+
+  ensureColumnHeader_(sheet, 'hasAcceptedRules');
+  ensureColumnHeader_(sheet, 'acceptedRulesVersion');
+  ensureColumnHeader_(sheet, 'rulesAcceptedAt');
+
+  const result = findRowByColumn(CONFIG.SHEETS.USERS, 'id', userId);
+  if (!result) throw new Error("Utente non trovato.");
+
+  const now = new Date().toISOString();
+  updateCell(sheet, result.row, 'hasAcceptedRules', true, result.headers);
+  updateCell(sheet, result.row, 'acceptedRulesVersion', targetVersion, result.headers);
+  updateCell(sheet, result.row, 'rulesAcceptedAt', now, result.headers);
+
+  SpreadsheetApp.flush();
+  clearAllSheetCaches_();
+
+  const updatedUser = getSheetAsJSON(CONFIG.SHEETS.USERS).find(u => u.id === userId);
+  if (updatedUser) {
+    delete updatedUser.password;
+    delete updatedUser.salt;
+    delete updatedUser.verificationToken;
+    delete updatedUser.resetToken;
+    delete updatedUser.resetTokenExpiry;
+  }
+
+  return {
+    message: "Regolamento accettato con successo.",
+    user: updatedUser,
+    acceptedVersion: targetVersion
+  };
 }
 
 /**
@@ -874,6 +1060,18 @@ function getRequestsForUser(payload) {
 function createBatchRequests(payload) {
   const { userId, dates, actorId } = payload;
   if (!userId || !dates || !Array.isArray(dates) || dates.length === 0) throw new Error("Dati mancanti.");
+
+  // Se l'utente invia la richiesta per se stesso, verifica che abbia accettato l'ultima versione del regolamento aziendale
+  if (!actorId || actorId === userId) {
+    const activeReg = getActiveRegulation();
+    const users = getSheetAsJSON(CONFIG.SHEETS.USERS);
+    const currentUser = users.find(u => u.id === userId);
+    const userVersion = currentUser ? String(currentUser.acceptedRulesVersion || '') : '';
+    const hasAccepted = currentUser && userVersion && userVersion === String(activeReg.version);
+    if (!hasAccepted) {
+      throw new Error(`È necessario accettare l'ultima versione (${activeReg.version}) del regolamento aziendale prima di poter inviare richieste.`);
+    }
+  }
 
   const requestsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.REQUESTS);
   const allRequests = getSheetAsJSON(CONFIG.SHEETS.REQUESTS);

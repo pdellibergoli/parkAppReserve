@@ -32,7 +32,7 @@ const AddRequestModal = ({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [targetUserId, setTargetUserId] = useState('');
 
-  const { user } = useAuth();
+  const { user, hasAcceptedRules } = useAuth();
   const { setIsLoading } = useLoading();
   const today = startOfToday();
 
@@ -75,6 +75,11 @@ const AddRequestModal = ({
     const newDatesToSend = selectedDates
       .map(date => formatDateKey(date))
       .filter(dateKey => !existingRequestDates.has(dateKey));
+
+    if (targetUserId === user.id && !hasAcceptedRules) {
+        setError("Devi accettare il regolamento per l'utilizzo dei parcheggi prima di poter inviare richieste.");
+        return;
+    }
 
     if (newDatesToSend.length === 0) {
         setError("Nessuna nuova data valida selezionata.");

@@ -17,7 +17,8 @@ Park App Reserve è un'applicazione web full-stack progettata per la gestione e 
   * Gestione richieste del giorno dalla modale: cambio stato manuale, logica automatica o overbooking forzato, cancellazione massiva e reset assegnazioni.
   * Invio comunicazioni broadcast a tutti gli utenti (via email e/o tramite banner persistenti con intervallo di date in Homepage).
 * **Statistiche:** Storico delle assegnazioni e conteggi aggregati per utente con filtri temporali personalizzati e dettaglio prenotazioni.
-* **Profilo Utente:** Personalizzazione di avatar, colore primario dell'interfaccia e tema (chiaro/scuro).
+* **Regolamento Aziendale:** Visualizzazione del regolamento per la sede di Chiasso al login con accettazione obbligatoria per poter inserire richieste di parcheggio.
+* **Profilo Utente:** Personalizzazione di avatar, colore primario dell'interfaccia, tema (chiaro/scuro) e consultazione dello stato di accettazione del regolamento.
 
 ---
 
@@ -51,13 +52,14 @@ Crea un nuovo foglio Google e aggiungi le seguenti schede con i nomi esatti e le
 
 | Nome Scheda | Colonne Richieste (Riga 1) | Note |
 |---|---|---|
-| **`Users`** | `id`, `firstName`, `lastName`, `mail`, `password`, `salt`, `isVerified`, `verificationToken`, `resetToken`, `resetTokenExpiry`, `isAdmin`, `avatarColor`, `createdAt` | Contiene gli account utente. |
+| **`Users`** | `id`, `firstName`, `lastName`, `mail`, `password`, `salt`, `isVerified`, `verificationToken`, `resetToken`, `resetTokenExpiry`, `isAdmin`, `avatarColor`, `createdAt`, `acceptedRulesVersion`, `hasAcceptedRules`, `rulesAcceptedAt` | Contiene gli account utente e la versione del regolamento accettata. |
 | **`ParkingSpaces`** | `id`, `number`, `isFixed` | Elenco posti auto. `isFixed` è booleano (`TRUE`/`FALSE`). |
 | **`ParkingRequests`** | `requestId`, `userId`, `requestedDate`, `status`, `assignedParkingSpaceId`, `assignedParkingSpaceNumber` | Richieste inviate (`status`: `pending`, `assigned`, `not_assigned`, `cancelled_by_user`). |
 | **`AssignmentHistory`** | `userId`, `assignmentDate`, `parkingSpaceId` | Storico assegnazioni per il calcolo della priorità. |
 | **`TemporaryAvailability`** | `availabilityId`, `parkingSpaceId`, `availableDate` | Date in cui un posto **non fisso** è reso disponibile. |
 | **`TemporaryUnavailability`** | `unavailabilityId`, `parkingSpaceId`, `unavailableDate` | Date in cui un posto **fisso** è temporaneamente disabilitato (creata anche in automatico dallo script se assente). |
 | **`Communications`** | `id`, `message`, `isPersistent`, `startDate`, `endDate`, `createdAt` | Banner persistenti e comunicazioni admin. |
+| **`Regulations`** | `version`, `title`, `content`, `isActive`, `updatedAt` | Contiene il regolamento aziendale salvato su DB. Quando viene pubblicata una nuova versione (es. "2.0"), tutti gli utenti (nuovi e già registrati) dovranno accettarla prima di poter inviare richieste. Creata e inizializzata automaticamente se assente. |
 
 > [!NOTE]
 > La scheda `Bookings` presente in vecchie note era legacy: il sistema attuale utilizza esclusivamente `ParkingRequests`.

@@ -1,15 +1,16 @@
-import React, { useState, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getTextColor } from '../utils/colors';
 import './MainLayout.css';
-import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
+import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes, FaFileContract } from 'react-icons/fa';
 import logo from '../assets/logo.png';
 
 // Caricate solo quando servono: contengono react-day-picker, che altrimenti
 // finirebbe nel bundle iniziale
 const AddRequestModal = lazy(() => import('../components/AddRequestModal'));
 const EditRequestModal = lazy(() => import('../components/EditRequestModal'));
+const RulesModal = lazy(() => import('../components/RulesModal'));
 
 const UserAvatar = ({ user }) => {
     const getInitials = () => {
@@ -24,14 +25,39 @@ const UserAvatar = ({ user }) => {
 };
 
 const MainLayout = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, hasAcceptedRules, activeRegulation } = useAuth();
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
     const navigate = useNavigate();
     
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+    const [rulesReadOnly, setRulesReadOnly] = useState(false);
     const [requestToEdit, setRequestToEdit] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    const activeVersion = activeRegulation?.version || '1.0';
+
+    // Al login mostra automaticamente il regolamento se l'utente non ha ancora accettato l'ultima versione attiva
+    useEffect(() => {
+        if (user && !hasAcceptedRules) {
+            const dismissed = sessionStorage.getItem(`parkingAppRulesDismissed_${activeVersion}`);
+            if (!dismissed) {
+                setRulesReadOnly(false);
+                setIsRulesModalOpen(true);
+            }
+        }
+    }, [user, hasAcceptedRules, activeVersion]);
+
+    const handleOpenRulesModal = useCallback((readOnly = false) => {
+        setRulesReadOnly(readOnly);
+        setIsRulesModalOpen(true);
+    }, []);
+
+    const handleCloseRulesModal = useCallback(() => {
+        sessionStorage.setItem(`parkingAppRulesDismissed_${activeVersion}`, 'true');
+        setIsRulesModalOpen(false);
+    }, [activeVersion]);
 
     // CACHE GLOBALE DEI MESI (In memoria tra i cambi di pagina)
     const globalMonthCacheRef = useRef({});
@@ -69,7 +95,14 @@ const MainLayout = () => {
         setIsEditModalOpen(true);
     };
 
-    const handleOpenAddModal = () => setIsAddModalOpen(true);
+    const handleOpenAddModal = useCallback(() => {
+        if (!hasAcceptedRules) {
+            setRulesReadOnly(false);
+            setIsRulesModalOpen(true);
+            return;
+        }
+        setIsAddModalOpen(true);
+    }, [hasAcceptedRules]);
     
     const [isUserMenuOpen, setUserMenuOpen] = useState(false);
     const menuTimerRef = useRef(null);
@@ -104,6 +137,18 @@ const MainLayout = () => {
                                 <p className="user-email">{user.mail}</p>
                             </div>
                             <hr />
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    setUserMenuOpen(false);
+                                    handleOpenRulesModal(hasAcceptedRules);
+                                }} 
+                                className="dropdown-item"
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                            >
+                                <FaFileContract />
+                                <span>Regolamento</span>
+                            </button>
                             <Link to="/profile" className="dropdown-item">Profilo</Link>
                             <button onClick={handleLogout} className="dropdown-item logout-btn">Logout</button>
                         </div>
@@ -127,6 +172,8 @@ const MainLayout = () => {
                 <Outlet context={{ 
                     globalMonthCacheRef,
                     globalStatsCacheRef,
+                    hasAcceptedRules,
+                    handleOpenRulesModal,
                     handleOpenAddModal, 
                     handleOpenEditModal, 
                     forceDataRefresh, 
@@ -140,6 +187,19 @@ const MainLayout = () => {
             </main>
 
             {/* Montate solo quando aperte: ne ritardano il caricamento */}
+            {isRulesModalOpen && (
+                <Suspense fallback={null}>
+                    <RulesModal
+                        isOpen={isRulesModalOpen}
+                        onClose={handleCloseRulesModal}
+                        onAcceptSuccess={() => {
+                            sessionStorage.removeItem('parkingAppRulesDismissed');
+                        }}
+                        isReadOnly={rulesReadOnly}
+                    />
+                </Suspense>
+            )}
+
             {isAddModalOpen && (
                 <Suspense fallback={null}>
                     <AddRequestModal

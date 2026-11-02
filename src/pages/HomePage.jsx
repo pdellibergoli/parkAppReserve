@@ -14,7 +14,7 @@ import SendCommunicationModal from '../components/SendCommunicationModal';
 import { fetchData as apiFetchData, postData, callApi } from '../services/api';
 import { useLoading } from '../context/LoadingContext';
 import { useAuth } from '../context/AuthContext';
-import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus } from 'react-icons/fa';
+import { FaCar, FaBullhorn, FaInfoCircle, FaTimes, FaUserShield, FaPlus, FaExclamationTriangle } from 'react-icons/fa';
 
 // Modali caricate solo quando aperte
 const DayRequestsModal = React.lazy(() => import('../components/DayRequestsModal'));
@@ -85,7 +85,9 @@ const HomePage = () => {
     handleOpenEditModal, 
     refreshKey, 
     forceDataRefresh,
-    registerOptimisticHandlers 
+    registerOptimisticHandlers,
+    hasAcceptedRules,
+    handleOpenRulesModal
   } = context;
 
   const { setIsLoading } = useLoading();
@@ -346,6 +348,24 @@ const HomePage = () => {
 
   return (
     <>
+      {!hasAcceptedRules && (
+        <div className="rules-reminder-banner">
+          <div className="rules-reminder-content">
+            <FaExclamationTriangle className="rules-reminder-icon" />
+            <span>
+              Non hai ancora accettato il regolamento aziendale per l'utilizzo dei parcheggi. Non potrai effettuare richieste finché non lo accetti.
+            </span>
+          </div>
+          <button 
+            type="button" 
+            className="rules-reminder-btn" 
+            onClick={() => handleOpenRulesModal(false)}
+          >
+            Leggi e Accetta
+          </button>
+        </div>
+      )}
+
       {activeBanners.length > 0 && (
         <div className="banners-wrapper">
           {activeBanners.map(banner => (

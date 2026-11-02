@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLoading } from '../context/LoadingContext';
 import { callApi } from '../services/api';
 import { format, isBefore, startOfToday } from 'date-fns';
-import { FaPencilAlt, FaTrashAlt } from 'react-icons/fa';
+import { FaPencilAlt, FaTrashAlt, FaExclamationTriangle } from 'react-icons/fa';
 import './MyRequestsPage.css';
 
 const capitalizeFirstLetter = (string) => {
@@ -13,7 +13,14 @@ const capitalizeFirstLetter = (string) => {
 }
 
 const MyRequestsPage = () => {
-  const { handleOpenAddModal, handleOpenEditModal, refreshKey, forceDataRefresh } = useOutletContext();
+  const { 
+    handleOpenAddModal, 
+    handleOpenEditModal, 
+    refreshKey, 
+    forceDataRefresh,
+    hasAcceptedRules,
+    handleOpenRulesModal
+  } = useOutletContext();
   const { user } = useAuth();
   const { setIsLoading, isLoading } = useLoading();
 
@@ -29,7 +36,7 @@ const MyRequestsPage = () => {
             requests.sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate));
             setMyRequests(requests);
             setSelectedRequests([]);
-        } catch (err) {
+        } catch {
             setError('Impossibile caricare le tue richieste.');
         } finally {
             setIsLoading(false);
@@ -80,6 +87,24 @@ const MyRequestsPage = () => {
 
   return (
     <>
+      {!hasAcceptedRules && (
+        <div className="rules-reminder-banner">
+          <div className="rules-reminder-content">
+            <FaExclamationTriangle className="rules-reminder-icon" />
+            <span>
+              Non hai ancora accettato il regolamento aziendale per l'utilizzo dei parcheggi. Non potrai effettuare richieste finché non lo accetti.
+            </span>
+          </div>
+          <button 
+            type="button" 
+            className="rules-reminder-btn" 
+            onClick={() => handleOpenRulesModal(false)}
+          >
+            Leggi e Accetta
+          </button>
+        </div>
+      )}
+
       <button className="add-booking-btn" onClick={handleOpenAddModal}>+ Invia richiesta</button>
       <div className="my-bookings-container">
         <div className="page-header">
