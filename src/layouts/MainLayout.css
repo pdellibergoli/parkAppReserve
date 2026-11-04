@@ -57,8 +57,27 @@
   position: relative;
   display: flex;
   align-items: center; 
-  gap: 0.75rem; 
+}
+
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  margin: 0;
   cursor: pointer;
+  color: inherit;
+  font: inherit;
+  border-radius: 999px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.user-menu-trigger:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 .avatar {
@@ -73,14 +92,20 @@
   font-size: 1rem;
   color: white;
   cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.user-menu-trigger:active .avatar {
+  transform: scale(0.95);
 }
 
 .dropdown {
-  /* Invece di 'display: none', usiamo opacità e visibilità per una transizione fluida */
   opacity: 0;
   visibility: hidden;
   position: absolute;
-  top: 100%;
+  top: calc(100% + 0.35rem);
   right: 0;
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -89,17 +114,19 @@
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   width: max-content;
   min-width: 220px;
-  z-index: 100;
+  z-index: 1200;
   padding: 10px 0 0.5rem 0;
   overflow: hidden;
-  /* Aggiungiamo una transizione */
-  transition: opacity 0.5s ease, visibility 0.5s ease;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.18s ease, visibility 0.18s ease, transform 0.18s ease;
 }
 .dropdown.show {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
 }
-.user-menu:hover .dropdown { display: block; }
 
 .dropdown-item {
   padding: 0.8rem 1.2rem;
@@ -182,6 +209,18 @@
   
   .user-display-name {
     display: none;
+  }
+
+  .user-menu-trigger {
+    padding: 0;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .dropdown {
+    right: 0;
+    max-width: calc(100vw - 1.5rem);
   }
 
   .logo {

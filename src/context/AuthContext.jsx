@@ -3,8 +3,6 @@ import { AuthContext } from './useAuth';
 import { callApi } from '../services/api';
 import { clearDataStore } from '../services/dataStore';
 
-const SESSION_DURATION = 30 * 60 * 1000; 
-
 // Vecchia cache delle priorità: conteneva i dati di tutti gli utenti e restava dopo il logout
 localStorage.removeItem('user_priorities_cache');
 
@@ -39,15 +37,15 @@ export const AuthProvider = ({ children }) => {
       const storedSession = localStorage.getItem('parkingAppUser');
       if (storedSession) {
         const sessionData = JSON.parse(storedSession);
-        const now = new Date().getTime();
-
-        if (now - sessionData.timestamp > SESSION_DURATION) {
-          localStorage.removeItem('parkingAppUser');
-          console.log("Sessione di test scaduta, utente disconnesso.");
+        const userData = sessionData.user || sessionData;
+        if (userData && userData.id) {
+          setUser(userData);
         } else {
-          setUser(sessionData.user);
+          localStorage.removeItem('parkingAppUser');
         }
       }
+    } catch {
+      localStorage.removeItem('parkingAppUser');
     } finally {
       setLoading(false);
     }
