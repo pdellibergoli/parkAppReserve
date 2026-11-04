@@ -6,7 +6,7 @@ import { preloadAppPages } from '../utils/preload';
 import { useQuery } from '../hooks/useQuery';
 import { applyRequestUpdate, cachedMonthRequests, monthQuery, prefetch, referenceQuery } from '../services/queries';
 import './MainLayout.css';
-import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes, FaFileContract } from 'react-icons/fa';
+import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
 import logo from '../assets/logo.png';
 
 // Caricate solo quando servono: contengono react-day-picker, che altrimenti
@@ -233,10 +233,8 @@ const MainLayout = () => {
                                     handleOpenRulesModal(hasAcceptedRules);
                                 }} 
                                 className="dropdown-item"
-                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                             >
-                                <FaFileContract />
-                                <span>Regolamento</span>
+                                Regolamento
                             </button>
                             <Link 
                                 to="/profile" 
