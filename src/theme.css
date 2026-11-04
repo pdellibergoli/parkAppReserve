@@ -298,6 +298,7 @@ html body {
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
+    z-index: 1200;
     transition: opacity 0.18s ease, visibility 0.18s ease;
   }
 

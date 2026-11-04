@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
-import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { getTextColor } from '../utils/colors';
 import { preloadAppPages } from '../utils/preload';
@@ -24,7 +24,7 @@ const UserAvatar = ({ user }) => {
     const textColor = getTextColor(backgroundColor);
     
     const avatarStyle = { backgroundColor, color: textColor };
-    return <div className="avatar" style={avatarStyle}>{getInitials()}</div>;
+    return <span className="avatar" style={avatarStyle}>{getInitials()}</span>;
 };
 
 const MainLayout = () => {
@@ -96,11 +96,90 @@ const MainLayout = () => {
         setRequestToEdit(null);
     };
     
+    const location = useLocation();
     const [isUserMenuOpen, setUserMenuOpen] = useState(false);
+    const menuRef = useRef(null);
     const menuTimerRef = useRef(null);
-    const handleMenuEnter = () => { clearTimeout(menuTimerRef.current); setUserMenuOpen(true); };
-    const handleMenuLeave = () => { menuTimerRef.current = setTimeout(() => { setUserMenuOpen(false); }, 300); };
-    const handleLogout = () => { logout(); navigate('/login'); };
+
+    // Chiude automaticamente i menu al cambio pagina
+    useEffect(() => {
+        setUserMenuOpen(false);
+        setMobileMenuOpen(false);
+    }, [location.pathname]);
+
+    // Chiusura al tocco/click all'esterno o premendo Escape
+    useEffect(() => {
+        if (!isUserMenuOpen) return;
+
+        const handleOutsideClick = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setUserMenuOpen(false);
+            }
+        };
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setUserMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('pointerdown', handleOutsideClick);
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('pointerdown', handleOutsideClick);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isUserMenuOpen]);
+
+    const lastEnterTimeRef = useRef(0);
+
+    const handleMenuEnter = (e) => {
+        // Solo per dispositivi con reale supporto hover (desktop con mouse/trackpad)
+        if (typeof window !== 'undefined' && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            return;
+        }
+        const pointerType = e?.pointerType || e?.nativeEvent?.pointerType;
+        if (pointerType === 'touch' || pointerType === 'pen') return;
+
+        lastEnterTimeRef.current = Date.now();
+        clearTimeout(menuTimerRef.current);
+        setUserMenuOpen(true);
+    };
+
+    const handleMenuLeave = (e) => {
+        if (typeof window !== 'undefined' && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            return;
+        }
+        const pointerType = e?.pointerType || e?.nativeEvent?.pointerType;
+        if (pointerType === 'touch' || pointerType === 'pen') return;
+
+        clearTimeout(menuTimerRef.current);
+        menuTimerRef.current = setTimeout(() => {
+            setUserMenuOpen(false);
+        }, 200);
+    };
+
+    const handleToggleMenu = (e) => {
+        e.stopPropagation();
+        clearTimeout(menuTimerRef.current);
+
+        // Se è appena entrato con il mouse (hover desktop che ha già aperto il menu),
+        // il click non deve richiuderlo immediatamente
+        const justEntered = Date.now() - lastEnterTimeRef.current < 350;
+        if (justEntered && isUserMenuOpen) {
+            return;
+        }
+
+        setUserMenuOpen((prev) => !prev);
+        setMobileMenuOpen(false);
+    };
+
+    const handleLogout = () => {
+        setUserMenuOpen(false);
+        logout();
+        navigate('/login');
+    };
 
     return (
         <div className="main-layout">
@@ -118,10 +197,30 @@ const MainLayout = () => {
                     >
                         Buy me a coffee! ☕
                     </a>
-                    <div className="user-menu" onMouseEnter={handleMenuEnter} onMouseLeave={handleMenuLeave}>
-                        <span className="user-display-name">{user.firstName} {user.lastName}</span>
-                        <UserAvatar user={user} />
-                        <div className={`dropdown ${isUserMenuOpen ? 'show' : ''}`}>
+                    <div 
+                        className="user-menu" 
+                        ref={menuRef}
+                        onPointerEnter={handleMenuEnter}
+                        onPointerLeave={handleMenuLeave}
+                        onMouseEnter={handleMenuEnter}
+                        onMouseLeave={handleMenuLeave}
+                    >
+                        <button
+                            type="button"
+                            className="user-menu-trigger"
+                            onClick={handleToggleMenu}
+                            aria-expanded={isUserMenuOpen}
+                            aria-haspopup="true"
+                            aria-label="Menu profilo utente"
+                        >
+                            <span className="user-display-name">{user.firstName} {user.lastName}</span>
+                            <UserAvatar user={user} />
+                        </button>
+                        <div 
+                            className={`dropdown ${isUserMenuOpen ? 'show' : ''}`}
+                            role="menu"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className="user-details">
                                 <p>{user.firstName} {user.lastName}</p>
                                 <p className="user-email">{user.mail}</p>
@@ -139,11 +238,24 @@ const MainLayout = () => {
                                 <FaFileContract />
                                 <span>Regolamento</span>
                             </button>
-                            <Link to="/profile" className="dropdown-item">Profilo</Link>
+                            <Link 
+                                to="/profile" 
+                                className="dropdown-item"
+                                onClick={() => setUserMenuOpen(false)}
+                            >
+                                Profilo
+                            </Link>
                             <button onClick={handleLogout} className="dropdown-item logout-btn">Logout</button>
                         </div>
                     </div>
-                    <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}>
+                    <button 
+                        className="mobile-menu-toggle" 
+                        onClick={() => {
+                            setMobileMenuOpen(!isMobileMenuOpen);
+                            setUserMenuOpen(false);
+                        }}
+                        aria-label="Menu navigazione"
+                    >
                         {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
                     </button>
                 </div>

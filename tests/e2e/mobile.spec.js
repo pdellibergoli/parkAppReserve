@@ -92,3 +92,36 @@ test('la paginazione è utilizzabile dal telefono', async ({ page }) => {
   await next.click();
   await expect(page.locator('.pagination')).toContainText('Pagina 2 di 2');
 });
+
+test('da mobile il menu profilo si apre al tocco, si chiude al tocco successivo o toccando fuori', async ({ page }) => {
+  await login(page, USER);
+
+  const trigger = page.locator('.user-menu-trigger');
+  const dropdown = page.locator('.user-menu .dropdown');
+
+  // All'inizio il dropdown non è visibile
+  await expect(dropdown).not.toBeVisible();
+
+  // 1. Tocco per aprire
+  await trigger.click();
+  await expect(dropdown).toBeVisible();
+  await expect(dropdown.locator('text=Profilo')).toBeVisible();
+
+  // 2. Tocco sullo stesso bottone per chiudere (toggle)
+  await trigger.click();
+  await expect(dropdown).not.toBeVisible();
+
+  // 3. Riapertura e chiusura toccando all'esterno
+  await trigger.click();
+  await expect(dropdown).toBeVisible();
+  await page.locator('.logo').click();
+  await expect(dropdown).not.toBeVisible();
+
+  // 4. Navigazione a Profilo: cliccando sulla voce si chiude il menu e naviga
+  await trigger.click();
+  await expect(dropdown).toBeVisible();
+  await dropdown.locator('a:has-text("Profilo")').click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(dropdown).not.toBeVisible();
+});
+
