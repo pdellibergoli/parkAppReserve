@@ -3,7 +3,7 @@ import Modal from './Modal';
 import { useAuth } from '../context/useAuth';
 import { useLoading } from '../context/useLoading';
 import { callApi } from '../services/api';
-import { format, isBefore, startOfToday, isToday, isTomorrow } from 'date-fns';
+import { format, isBefore, startOfToday, isTomorrow } from 'date-fns';
 import { getTextColor } from '../utils/colors';
 import { prioritiesQuery } from '../services/queries';
 import { useQuery } from '../hooks/useQuery';
@@ -24,11 +24,9 @@ const Avatar = ({ user }) => {
 };
 
 const AdminActions = ({ selectedDate, onAdminAction, isLoading, hasPendingRequests }) => {
-    const now = new Date();
-    const isTodaySelected = isToday(selectedDate);
-    const isTomorrowSelected = isTomorrow(selectedDate);
-    
-    const showAssignButton = (isTomorrowSelected || (isTodaySelected && now.getHours() < 9)) && hasPendingRequests;
+    const today = startOfToday();
+    const isPastDate = selectedDate ? isBefore(selectedDate, today) : false;
+    const showAssignButton = !isPastDate;
 
     const handleAction = async (actionType) => {
         let confirmMessage = "";
@@ -71,7 +69,8 @@ const AdminActions = ({ selectedDate, onAdminAction, isLoading, hasPendingReques
                 <button 
                     className="admin-action-btn assign"
                     onClick={() => handleAction('assign_requests')}
-                    disabled={isLoading}
+                    disabled={isLoading || !hasPendingRequests}
+                    title={!hasPendingRequests ? "Nessuna richiesta in attesa da assegnare" : "Assegna Richieste"}
                 >
                     {isLoading ? <div className="spinner-small"></div> : 'Assegna Richieste'}
                 </button>

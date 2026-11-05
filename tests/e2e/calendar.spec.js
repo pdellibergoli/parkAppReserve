@@ -51,16 +51,28 @@ test('assegnazione: va a chi ha avuto meno posti, e chi rinuncia lascia il posto
   expect(subject).toBe('Conferma Assegnazione Parcheggio');
 });
 
-test('admin: reset delle assegnazioni del giorno', async ({ page, request }) => {
+test('admin: reset delle assegnazioni del giorno e avvio assegnazione manuale', async ({ page, request }) => {
   await rpc(request, 'adminManuallyAssignForDate', { date: NEXT_DAY });
 
   await login(page, ADMIN);
   const modal = await openDay(page, NEXT_DAY);
   await modal.locator('.admin-panel-toggle').click();
-  await modal.locator('.admin-action-btn.reset').click();
 
+  // Con tutte le richieste già processate, il pulsante è visibile ma disabilitato
+  await expect(modal.locator('.admin-action-btn.assign')).toBeVisible();
+  await expect(modal.locator('.admin-action-btn.assign')).toBeDisabled();
+
+  // Reset delle assegnazioni
+  await modal.locator('.admin-action-btn.reset').click();
   await expect(modal.locator('.booking-card.status-assigned')).toHaveCount(0);
   await expect(modal.locator('.booking-card.status-pending')).toHaveCount(5);
+
+  // Con richieste in attesa, il pulsante è abilitato e permette l'assegnazione manuale
+  await expect(modal.locator('.admin-action-btn.assign')).toBeEnabled();
+  await modal.locator('.admin-action-btn.assign').click();
+
+  await expect(modal.locator('.booking-card.status-assigned')).toHaveCount(3);
+  await expect(modal.locator('.booking-card.status-not_assigned')).toHaveCount(2);
 });
 
 test('admin: assegnazione manuale di un posto a un utente', async ({ page, request }) => {
