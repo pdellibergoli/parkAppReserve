@@ -66,6 +66,7 @@ const POOL_ACTIONS = {
   getParkingStatusForDate: parking.getParkingStatusForDate,
   getActiveCommunication: (ctx) => communications.getActiveCommunication(ctx.db),
   getActiveRegulation: (ctx) => regulations.getActiveRegulation(ctx.db),
+  getTokenConfig: admin.getTokenConfig,
   // Invia molte email e scrive una sola riga: non deve bloccare le altre scritture durante l'invio
   sendAdminCommunication: communications.sendAdminCommunication,
 };
@@ -80,6 +81,8 @@ const TRANSACTION_ACTIONS = {
   updateUserProfile: users.updateUserProfile,
   acceptRules: regulations.acceptRules,
   updateRegulation: regulations.updateRegulation,
+
+  setTokenStartDate: admin.setTokenStartDate,
 
   addParkingSpace: parking.addParkingSpace,
   deleteParkingSpace: parking.deleteParkingSpace,

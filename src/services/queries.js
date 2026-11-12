@@ -22,7 +22,19 @@ export const monthQuery = (date) => query(
   DAILY_DATA_TTL
 );
 
-export const prioritiesQuery = () => query('priorities', 'getUsersWithPriority', {}, DAILY_DATA_TTL);
+export const prioritiesQuery = (referenceDay) => query(
+  referenceDay ? `priorities:${referenceDay}` : 'priorities',
+  'getUsersWithPriority',
+  referenceDay ? { referenceDay } : {},
+  DAILY_DATA_TTL
+);
+
+export const tokenConfigQuery = (referenceDay) => query(
+  referenceDay ? `tokenConfig:${referenceDay}` : 'tokenConfig',
+  'getTokenConfig',
+  referenceDay ? { referenceDay } : {},
+  DAILY_DATA_TTL
+);
 
 export const MY_REQUESTS_PAGE_SIZE = 20;
 

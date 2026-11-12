@@ -22,6 +22,17 @@ const { hashPassword } = await import('../server/auth.js');
 const { dayToIso, toDay, windowStartDay } = await import('../server/dates.js');
 const { default: cronHandler } = await import('../api/cron/assign.js');
 const { default: rpcHandler } = await import('../api/rpc.js');
+const {
+  getEasterSunday,
+  getTicinoHolidays,
+  isTicinoHoliday,
+  isWorkingDay,
+  getQuarterBounds,
+  countWorkingDays,
+} = await import('../server/holidays.js');
+const {
+  getUserConsecutiveAssignedDays,
+} = await import('../server/tokens.js');
 
 let sent = [];
 let failDelivery = false;
@@ -34,11 +45,16 @@ async function statusOf(requestId) {
   return rows[0];
 }
 
-async function addUser(id, { verified = true, password = 'pw', acceptedRules = '1.0' } = {}) {
+async function addUser(id, { verified = true, password = 'pw', acceptedRules } = {}) {
+  let rulesVersion = acceptedRules;
+  if (rulesVersion === undefined) {
+    const { rows } = await db().query('SELECT version FROM company_regulations WHERE is_active = true LIMIT 1');
+    rulesVersion = rows[0]?.version || '1.0';
+  }
   await db().query(
     `INSERT INTO users (id, first_name, last_name, mail, password, salt, is_verified, accepted_rules_version, rules_accepted_at)
      VALUES ($1, $1, 'Test', $2, $3, 'salt', $4, $5, now())`,
-    [id, `${id}@test.local`, hashPassword(password, 'salt'), verified, acceptedRules]
+    [id, `${id}@test.local`, hashPassword(password, 'salt'), verified, rulesVersion]
   );
 }
 
@@ -205,23 +221,24 @@ describe('priorità e assegnazione', () => {
     assert.match(mailsTo('fortunato@test.local').at(-1).subject, /Esito Richiesta/);
   });
 
-  it('il conteggio ignora ciò che è fuori finestra e le richieste annullate', async () => {
+  it('il conteggio ignora ciò che è fuori trimestre e le richieste annullate', async () => {
     await addUser('u1');
     await addRequest('dentro1', 'u1', '2026-03-02', 'assigned', 'p1');
     await addHistory('u1', '2026-03-02');
     await addRequest('dentro2', 'u1', '2026-03-03', 'not_assigned');
     await addRequest('annullata', 'u1', '2026-03-04', 'cancelled_by_user');
-    await addRequest('fuori', 'u1', '2026-01-27', 'assigned', 'p1');
-    await addHistory('u1', '2026-01-27');
-    await addRequest('bordo', 'u1', '2026-01-28', 'not_assigned');
+    await addRequest('fuori', 'u1', '2025-12-15', 'assigned', 'p1');
+    await addHistory('u1', '2025-12-15');
+    await addRequest('bordo_fuori', 'u1', '2025-12-16', 'not_assigned');
     await addRequest('futura', 'u1', TOMORROW);
 
     const [user] = await handleAction('getUsersWithPriority');
 
     assert.equal(user.recentAssignments, 1);
     assert.equal(user.recentRequests, 3);
-    assert.equal(user.successRate, 1 / 3);
-    assert.equal(user.windowDays, 30);
+    assert.equal(user.usedTokens, 1);
+    assert.equal(user.totalRequests, 3);
+    assert.equal(user.remainingTokens, user.totalTokens - 1);
   });
 
   it('a parità di priorità l\'ordine è casuale', async () => {
@@ -828,4 +845,145 @@ describe('regolamento aziendale', () => {
     );
   });
 });
+
+describe('sistema a gettoni e festività ticinesi', () => {
+  it('calcola correttamente la Pasqua e le 15 festività ticinesi', () => {
+    // Nel 2026: Pasqua è il 5 aprile
+    assert.equal(getEasterSunday(2026), '2026-04-05');
+    const holidays2026 = getTicinoHolidays(2026);
+    // 15 festività
+    assert.equal(Object.keys(holidays2026).length, 15);
+    // Festività fisse
+    assert.equal(holidays2026['2026-01-01'], 'Capodanno');
+    assert.equal(holidays2026['2026-01-06'], 'Epifania');
+    assert.equal(holidays2026['2026-03-19'], 'San Giuseppe');
+    assert.equal(holidays2026['2026-05-01'], 'Festa del Lavoro');
+    assert.equal(holidays2026['2026-06-29'], 'Santi Pietro e Paolo');
+    assert.equal(holidays2026['2026-08-01'], 'Festa Nazionale Svizzera');
+    assert.equal(holidays2026['2026-08-15'], 'Assunzione');
+    assert.equal(holidays2026['2026-11-01'], 'Ognissanti');
+    assert.equal(holidays2026['2026-12-08'], 'Immacolata Concezione');
+    assert.equal(holidays2026['2026-12-25'], 'Natale');
+    assert.equal(holidays2026['2026-12-26'], 'Santo Stefano');
+    // Festività mobili 2026
+    assert.equal(holidays2026['2026-04-06'], 'Lunedì di Pasqua');
+    assert.equal(holidays2026['2026-05-14'], 'Ascensione');
+    assert.equal(holidays2026['2026-05-25'], 'Lunedì di Pentecoste');
+    assert.equal(holidays2026['2026-06-04'], 'Corpus Domini');
+  });
+
+  it('riconosce i giorni lavorativi e non lavorativi (weekend e festività)', () => {
+    // Sabato e domenica non lavorativi
+    assert.equal(isWorkingDay('2026-03-14'), false);
+    assert.equal(isWorkingDay('2026-03-15'), false);
+    // San Giuseppe (giovedì 19 marzo 2026) -> festivo in Ticino
+    assert.equal(isTicinoHoliday('2026-03-19'), true);
+    assert.equal(isWorkingDay('2026-03-19'), false);
+    // Giorno feriale normale (venerdì 20 marzo 2026)
+    assert.equal(isWorkingDay('2026-03-20'), true);
+  });
+
+  it('calcola i limiti del trimestre e i giorni lavorativi', () => {
+    const q1 = getQuarterBounds('2026-02-15');
+    assert.equal(q1.quarter, 1);
+    assert.equal(q1.startDay, '2026-01-01');
+    assert.equal(q1.endDay, '2026-03-31');
+
+    const q2 = getQuarterBounds('2026-05-10');
+    assert.equal(q2.quarter, 2);
+    assert.equal(q2.startDay, '2026-04-01');
+    assert.equal(q2.endDay, '2026-06-30');
+
+    // Gennaio 2026: 31 giorni, 9 di weekend (4 sab, 5 dom), 2 festivi infrasettimanali (1 e 6 gen) = 20 giorni
+    const daysInJan = countWorkingDays('2026-01-01', '2026-01-31');
+    assert.equal(daysInJan, 20);
+  });
+
+  it('gestisce la configurazione della data di partenza gettoni e i relativi permessi admin', async () => {
+    await addUser('admin_tok', { password: 'pw' });
+    await db().query("UPDATE users SET is_admin = true WHERE id = 'admin_tok'");
+    await addUser('user_tok', { password: 'pw' });
+
+    // Legge configurazione
+    const config = await handleAction('getTokenConfig');
+    assert.ok(config.startDate);
+
+    // Utente non admin non può cambiare la data di partenza
+    await assert.rejects(
+      handleAction('setTokenStartDate', { startDate: '2026-02-01', actorId: 'user_tok' }),
+      /Azione riservata agli amministratori/
+    );
+
+    // Admin può impostare una nuova data valida
+    await handleAction('setTokenStartDate', { startDate: '2026-02-01', actorId: 'admin_tok' });
+    const updated = await handleAction('getTokenConfig');
+    assert.equal(updated.startDate, '2026-02-01');
+
+    // Data invalida viene respinta
+    await assert.rejects(
+      handleAction('setTokenStartDate', { startDate: 'non-a-date', actorId: 'admin_tok' }),
+      /Data non valida/
+    );
+
+    // Ripristina la data iniziale
+    await handleAction('setTokenStartDate', { startDate: '2026-01-01', actorId: 'admin_tok' });
+  });
+
+  it('assegna la priorità a chi ha più gettoni rimanenti', async () => {
+    await addUser('tok_ricco');
+    await addUser('tok_povero');
+    await addSpace('p_tok');
+
+    // tok_povero ha già consumato 2 gettoni
+    await addHistory('tok_povero', '2026-03-02', 'p_tok');
+    await addRequest('tp_1', 'tok_povero', '2026-03-02', 'assigned', 'p_tok');
+    await addHistory('tok_povero', '2026-03-03', 'p_tok');
+    await addRequest('tp_2', 'tok_povero', '2026-03-03', 'assigned', 'p_tok');
+
+    // Entrambi richiedono per TOMORROW
+    await addRequest('req_ricco', 'tok_ricco', TOMORROW, 'pending');
+    await addRequest('req_povero', 'tok_povero', TOMORROW, 'pending');
+
+    await processPendingRequests();
+
+    assert.equal((await statusOf('req_ricco')).status, 'assigned');
+    assert.equal((await statusOf('req_povero')).status, 'not_assigned');
+  });
+
+  it('regola dei 3 parcheggi consecutivi: penalizza se posti < richieste, assegna se posti >= richieste', async () => {
+    await addUser('u_streak');
+    await addUser('u_fresh');
+    await addSpace('space_1');
+
+    // 3 giorni lavorativi consecutivi precedenti a TOMORROW (2026-03-12, giovedì): 09/03, 10/03, 11/03
+    for (const d of ['2026-03-09', '2026-03-10', '2026-03-11']) {
+      await addHistory('u_streak', d, 'space_1');
+      await addRequest(`req_streak_${d}`, 'u_streak', d, 'assigned', 'space_1');
+    }
+
+    const consecutive = await getUserConsecutiveAssignedDays(db(), 'u_streak', TOMORROW);
+    assert.equal(consecutive, 3);
+
+    // Caso A: 1 posto disponibile, 2 richieste (posti < richieste) -> vince u_fresh
+    await addRequest('r_streak', 'u_streak', TOMORROW, 'pending');
+    await addRequest('r_fresh', 'u_fresh', TOMORROW, 'pending');
+
+    await processPendingRequests();
+
+    assert.equal((await statusOf('r_fresh')).status, 'assigned');
+    assert.equal((await statusOf('r_streak')).status, 'not_assigned');
+
+    // Caso B: 2 posti disponibili, 2 richieste (posti >= richieste) -> streak non blocca l'assegnazione
+    await addSpace('space_2');
+    await db().query(
+      "UPDATE parking_requests SET status = 'pending', assigned_parking_space_id = NULL, assigned_parking_space_number = NULL WHERE request_id IN ('r_streak', 'r_fresh')"
+    );
+
+    await processPendingRequests();
+
+    assert.equal((await statusOf('r_streak')).status, 'assigned');
+    assert.equal((await statusOf('r_fresh')).status, 'assigned');
+  });
+});
+
 
