@@ -984,6 +984,25 @@ describe('sistema a gettoni e festività ticinesi', () => {
     assert.equal((await statusOf('r_streak')).status, 'assigned');
     assert.equal((await statusOf('r_fresh')).status, 'assigned');
   });
+
+  it('conta 3 assegnazioni personali consecutive anche a distanza di giorni o settimane', async () => {
+    await addUser('u_mondays');
+    await addSpace('space_m');
+
+    // 3 lunedì di fila (02/03, 09/03, 16/03)
+    for (const d of ['2026-03-02', '2026-03-09', '2026-03-16']) {
+      await addRequest(`req_${d}`, 'u_mondays', d, 'assigned', 'space_m');
+    }
+
+    // Per il 4° lunedì (23/03), la serie di assegnazioni consecutive è 3
+    const streak = await getUserConsecutiveAssignedDays(db(), 'u_mondays', '2026-03-23');
+    assert.equal(streak, 3);
+
+    // Se l'ultima richiesta è stata 'not_assigned', la serie si azzera
+    await addRequest('req_rejected', 'u_mondays', '2026-03-23', 'not_assigned');
+    const streakAfterRejection = await getUserConsecutiveAssignedDays(db(), 'u_mondays', '2026-03-30');
+    assert.equal(streakAfterRejection, 0);
+  });
 });
 
 

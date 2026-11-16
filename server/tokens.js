@@ -1,6 +1,6 @@
 import { toDay, today } from './dates.js';
 import { AppError } from './errors.js';
-import { countWorkingDays, getPreviousWorkingDays, getQuarterBounds } from './holidays.js';
+import { countWorkingDays, getQuarterBounds } from './holidays.js';
 
 export const DEFAULT_TOKEN_START_DATE = '2026-01-01';
 
@@ -105,25 +105,28 @@ export async function computeUserTokenStats(db, referenceDay = today()) {
 }
 
 /**
- * Calcola quanti giorni lavorativi consecutivi (immediatamente precedenti a targetDay)
- * l'utente ha avuto un parcheggio assegnato.
+ * Calcola quante richieste personali consecutive precedenti a targetDay
+ * l'utente ha ottenuto con stato 'assigned' (senza un 'not_assigned' in mezzo).
  */
 export async function getUserConsecutiveAssignedDays(db, userId, targetDay) {
   const day = toDay(targetDay);
-  const prevDays = getPreviousWorkingDays(day, 3);
-  if (prevDays.length === 0) return 0;
+  const bounds = getQuarterBounds(day);
 
   const { rows } = await db.query(
-    `SELECT requested_date FROM parking_requests
-      WHERE user_id = $1 AND status = 'assigned' AND requested_date = ANY($2::date[])`,
-    [userId, prevDays]
+    `SELECT status, requested_date
+       FROM parking_requests
+      WHERE user_id = $1
+        AND requested_date < $2
+        AND requested_date >= $3
+        AND status IN ('assigned', 'not_assigned')
+      ORDER BY requested_date DESC, request_id DESC
+      LIMIT 10`,
+    [userId, day, bounds.start]
   );
 
-  const assignedDates = new Set(rows.map((r) => r.requested_date));
-
   let consecutive = 0;
-  for (const prevDay of prevDays) {
-    if (assignedDates.has(prevDay)) {
+  for (const row of rows) {
+    if (row.status === 'assigned') {
       consecutive++;
     } else {
       break;
