@@ -1,39 +1,11 @@
 import { CONFIG } from './config.js';
-import { addDays, currentHour, formatDay, today, windowStartDay } from './dates.js';
+import { addDays, currentHour, formatDay, today } from './dates.js';
 import { sendFailureEmail, sendRulesNotAcceptedEmail, sendSuccessEmail } from './emails.js';
 import { AppError } from './errors.js';
 import { getActiveRegulation } from './regulations.js';
+import { computeUserTokenStats, getUserConsecutiveAssignedDays } from './tokens.js';
 
-/**
- * Statistiche di priorità per utente, nella finestra degli ultimi N giorni lavorativi.
- *  - Richieste conteggiate: 'assigned', 'not_assigned', 'pending'
- *  - Assegnazioni conteggiate: righe di assignment_history nella stessa finestra
- *  - successRate = assegnazioni / richieste (0 se non ci sono richieste)
- */
-export async function computePriorityStats(db) {
-  const { rows } = await db.query(
-    `SELECT u.id,
-            (SELECT count(*)::int FROM assignment_history h
-              WHERE h.user_id = u.id AND h.assignment_date BETWEEN $1 AND $2) AS assignments,
-            (SELECT count(*)::int FROM parking_requests r
-              WHERE r.user_id = u.id AND r.requested_date BETWEEN $1 AND $2
-                AND r.status IN ('assigned', 'not_assigned', 'pending')) AS requests
-       FROM users u`,
-    [windowStartDay(), today()]
-  );
-
-  const stats = new Map();
-  for (const { id, assignments, requests } of rows) {
-    stats.set(id, {
-      successRate: requests > 0 ? assignments / requests : 0,
-      recentAssignments: assignments,
-      recentRequests: requests,
-    });
-  }
-  return stats;
-}
-
-function shuffle(items) {
+export function shuffle(items) {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -42,11 +14,55 @@ function shuffle(items) {
   return result;
 }
 
-/** successRate più basso = priorità più alta; a parità, ordine casuale. */
-export async function sortByPriority(db, requests) {
-  const stats = await computePriorityStats(db);
-  const rate = (req) => stats.get(req.user_id)?.successRate ?? 0;
-  return shuffle(requests).sort((a, b) => rate(a) - rate(b));
+/**
+ * Statistiche di priorità per utente nel trimestre corrente (retrocompatibilità).
+ */
+export async function computePriorityStats(db, referenceDay = today()) {
+  const { stats } = await computeUserTokenStats(db, referenceDay);
+  return stats;
+}
+
+/**
+ * Assegnazione in base ai gettoni e al limite dei 3 giorni consecutivi:
+ * 1. Ottiene il parcheggio chi ha più gettoni.
+ * 2. Se ci sono più persone con lo stesso numero di gettoni si va in modo random.
+ * 3. Un utente non può ottenere più di 3 parcheggi consecutivi a meno che ci siano
+ *    più parcheggi vuoti rispetto alle prenotazioni (non vogliamo lasciare parcheggi inutilizzati).
+ */
+export async function sortByPriority(db, requests, day = today(), availableSpacesCount = null) {
+  if (requests.length <= 1) return requests;
+
+  const { stats } = await computeUserTokenStats(db, day);
+
+  const enriched = await Promise.all(
+    requests.map(async (req) => {
+      const remainingTokens = stats.get(req.user_id)?.remainingTokens ?? 0;
+      const consecutiveDays = await getUserConsecutiveAssignedDays(db, req.user_id, day);
+      return {
+        ...req,
+        _remainingTokens: remainingTokens,
+        _consecutiveDays: consecutiveDays,
+        _hasStreak: consecutiveDays >= 3,
+      };
+    })
+  );
+
+  const spacesCount = availableSpacesCount !== null
+    ? availableSpacesCount
+    : (await getAvailableSpacesForDate(db, day)).length;
+
+  const sortGroup = (list) => shuffle(list).sort((a, b) => b._remainingTokens - a._remainingTokens);
+
+  // Se ci sono abbastanza posti per tutte le richieste, non si applica la penalità di serie consecutiva
+  if (spacesCount >= enriched.length) {
+    return sortGroup(enriched);
+  }
+
+  // Altrimenti chi ha meno di 3 giorni consecutivi ha la precedenza
+  const regular = enriched.filter((r) => !r._hasStreak);
+  const streak = enriched.filter((r) => r._hasStreak);
+
+  return [...sortGroup(regular), ...sortGroup(streak)];
 }
 
 export async function getSpace(db, spaceId) {
@@ -158,7 +174,7 @@ export async function findBestCandidate(db, day, excludeUserId = null) {
     [day, excludeUserId, activeReg?.version]
   );
   if (rows.length === 0) return null;
-  return (await sortByPriority(db, rows))[0];
+  return (await sortByPriority(db, rows, day, 1))[0];
 }
 
 /** Motore di assegnazione: richieste pending del giorno, in ordine di priorità. */
@@ -180,7 +196,7 @@ export async function processRequestsForDate(ctx, day) {
   const ineligible = pending.filter((r) => r.accepted_rules_version !== activeReg?.version);
 
   const spaces = await getAvailableSpacesForDate(ctx.db, day);
-  const ordered = await sortByPriority(ctx.db, eligible);
+  const ordered = await sortByPriority(ctx.db, eligible, day, spaces.length);
 
   let assigned = 0;
   let failed = 0;

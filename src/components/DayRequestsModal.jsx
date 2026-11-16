@@ -7,6 +7,7 @@ import { format, isBefore, startOfToday, isTomorrow } from 'date-fns';
 import { getTextColor } from '../utils/colors';
 import { prioritiesQuery } from '../services/queries';
 import { useQuery } from '../hooks/useQuery';
+import { TokenIcon } from './TokenIcon';
 import { FaPencilAlt, FaTrashAlt, FaLock, FaWrench } from 'react-icons/fa';
 import './DayRequestsModal.css';
 
@@ -121,9 +122,9 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
             
             const userA = activeUsersList.find(u => u.id === a.userId);
             const userB = activeUsersList.find(u => u.id === b.userId);
-            const rateA = userA?.successRate ?? 1;
-            const rateB = userB?.successRate ?? 1;
-            return rateA - rateB; 
+            const tokensA = userA?.remainingTokens ?? 0;
+            const tokensB = userB?.remainingTokens ?? 0;
+            return tokensB - tokensA; 
         });
     }, [filteredRequests, users, usersWithPriority]);
 
@@ -331,15 +332,21 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                             const showEdit = (isMyRequest && canEdit) || (isAdminMode && canEdit);
                             const showCancel = (isMyRequest && canCancel) || (isAdminMode && canCancel);
                             
-                            const showProbability = isTomorrow(requestDate) && status === 'pending' && requestUser?.successRate !== undefined;
-                            const probabilityPercent = requestUser?.successRate !== undefined ? ((1 - requestUser.successRate) * 100).toFixed(0) : 0;
+                            const showProbability = isTomorrow(requestDate) && status === 'pending' && (requestUser?.remainingTokens !== undefined || requestUser?.successRate !== undefined);
 
                             return (
                                 <div key={request.requestId} className={`booking-card status-${status}`}>
                                     <div className="card-main-info">
                                         {requestUser && <Avatar user={requestUser} />}
                                         <div className="card-details">
-                                            <span className="user-name">{requestUser ? `${requestUser.firstName} ${requestUser.lastName}` : 'Utente non trovato'}</span>
+                                            <span className="user-name">
+                                                {requestUser ? `${requestUser.firstName} ${requestUser.lastName}` : 'Utente non trovato'}
+                                                {requestUser?.remainingTokens !== undefined && (
+                                                    <span className="user-card-tokens" style={{ marginLeft: '8px', fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                                                        (<TokenIcon size={14} /> {requestUser.remainingTokens} gettoni)
+                                                    </span>
+                                                )}
+                                            </span>
                                             <div className="parking-spot">
                                                 <span>Stato: </span>
                                                 {isAdminMode ? (
@@ -360,7 +367,7 @@ const DayRequestsModal = ({ isOpen, onClose, requests, users, selectedDate, onEd
                                             </div>
                                             {showProbability && (
                                                 <span className="probability-text">
-                                                    Probabilità di assegnazione: <strong>{probabilityPercent}%</strong>
+                                                    Gettoni disponibili: <strong>{requestUser?.remainingTokens ?? 0}</strong> {requestUser?.totalTokens ? `/ ${requestUser.totalTokens}` : ''}
                                                 </span>
                                             )}
                                         </div>

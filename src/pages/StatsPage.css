@@ -205,16 +205,359 @@ h2 {
   border-radius: 8px;
   margin-bottom: 1.5rem;
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
   font-size: 0.9rem;
   line-height: 1.5;
 }
 
-.priority-info-banner svg {
-  font-size: 1.2rem;
-  margin-top: 2px;
+.token-banner {
+  background-color: var(--bg-color-hover);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  border-radius: 12px;
+}
+
+.token-banner-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
+}
+
+.token-banner-icon {
+  font-size: 2rem;
+  color: #f59e0b;
   flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.token-banner-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.token-banner-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.token-banner-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-color);
+}
+
+.quarter-nav-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.quarter-nav-btn {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quarter-nav-btn:hover {
+  background-color: var(--bg-color-hover);
+  border-color: var(--primary-color);
+}
+
+.quarter-nav-today {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.quarter-date-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+}
+
+.quarter-date-input {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: 0.85rem;
+}
+
+.token-banner-desc {
+  margin: 0 0 0.4rem 0;
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  line-height: 1.45;
+}
+
+.token-banner-dates {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-color);
+}
+
+.token-banner-actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.admin-token-config-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 38px;
+}
+
+.admin-token-config-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .token-banner {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+  
+  .token-banner-main {
+    gap: 0.75rem;
+  }
+  
+  .token-banner-icon {
+    font-size: 1.6rem;
+  }
+  
+  .token-banner-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .quarter-nav-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .quarter-date-selector {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .token-banner-actions {
+    width: 100%;
+    padding-top: 0.75rem;
+  }
+
+  .admin-token-config-btn {
+    width: 100%;
+    min-height: 44px;
+    font-size: 0.92rem;
+  }
+}
+
+.user-tokens-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.user-rank-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background-color: var(--bg-color-hover);
+  color: var(--text-color-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* --- NUOVA SEZIONE PROBABILITÀ NELLA CARD --- */
+.card-probability-card {
+  margin: 0.65rem 0 0.5rem 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background-color: var(--bg-color-hover);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.prob-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.prob-label-text {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.prob-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.prob-pill strong {
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.prob-pill-divider {
+  opacity: 0.45;
+  font-size: 0.65rem;
+}
+
+.prob-bar-track {
+  width: 100%;
+  height: 5px;
+  background-color: rgba(140, 140, 140, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.prob-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+/* Livelli specifici */
+.prob-very-high .prob-pill {
+  background-color: rgba(16, 185, 129, 0.14);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.prob-very-high .prob-bar-fill {
+  background: linear-gradient(90deg, #34d399, #10b981);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.prob-high .prob-pill {
+  background-color: rgba(5, 150, 105, 0.14);
+  color: #059669;
+  border: 1px solid rgba(5, 150, 105, 0.35);
+}
+.prob-high .prob-bar-fill {
+  background: linear-gradient(90deg, #10b981, #059669);
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.35);
+}
+
+.prob-medium .prob-pill {
+  background-color: rgba(217, 119, 6, 0.14);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+}
+.prob-medium .prob-bar-fill {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+  box-shadow: 0 0 6px rgba(217, 119, 6, 0.35);
+}
+
+.prob-low .prob-pill {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.prob-low .prob-bar-fill {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.35);
+}
+
+/* Modale data di partenza */
+.token-config-form {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.token-config-field-group {
+  margin-bottom: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.token-config-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.token-config-date-input {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: 1rem;
+  color-scheme: light dark;
+}
+
+.token-config-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
 }
 
 /* --- DETTAGLI PRIORITÀ NELLA CARD --- */
@@ -240,7 +583,6 @@ h2 {
     color: var(--text-color);
 }
 
-/* Modifica leggermente total-bookings se non serve più lì */
 .total-bookings {
-    display: none; /* Nascondiamolo dall'header se ridondante o spostiamolo */
+    display: none;
 }

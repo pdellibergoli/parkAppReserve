@@ -7,6 +7,7 @@ import { sendAdminCancellationEmail, sendSuccessEmail } from './emails.js';
 import { AppError } from './errors.js';
 import { requestToApi } from './mappers.js';
 import { getActiveRegulation } from './regulations.js';
+import { getTokenPeriodInfo, setTokenSystemStartDate } from './tokens.js';
 
 export async function adminCancelAllRequestsForDate(ctx, { date }) {
   if (!date) throw new AppError('Data non fornita.');
@@ -109,3 +110,26 @@ export async function adminAssignParckingForDate(ctx, { date, userId, spaceId })
     }),
   };
 }
+
+export async function getTokenConfig(ctx, payload = {}) {
+  const referenceDay = payload?.referenceDay || payload?.targetDate || payload?.date;
+  return getTokenPeriodInfo(ctx.db, referenceDay);
+}
+
+export async function setTokenStartDate(ctx, { startDate, actorId, userId }) {
+  const adminId = actorId || userId;
+  if (adminId) {
+    const { rows } = await ctx.db.query('SELECT is_admin FROM users WHERE id = $1', [adminId]);
+    if (!rows[0]?.is_admin) throw new AppError('Azione riservata agli amministratori.');
+  } else if (!ctx.user?.is_admin) {
+    throw new AppError('Azione riservata agli amministratori.');
+  }
+
+  const newDate = await setTokenSystemStartDate(ctx.db, startDate);
+  const info = await getTokenPeriodInfo(ctx.db, newDate);
+  return {
+    message: `Data di partenza del sistema a gettoni aggiornata al ${formatDay(newDate)}.`,
+    config: info,
+  };
+}
+

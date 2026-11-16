@@ -4,9 +4,10 @@ import { useAuth } from '../context/useAuth';
 import { getTextColor } from '../utils/colors';
 import { preloadAppPages } from '../utils/preload';
 import { useQuery } from '../hooks/useQuery';
-import { applyRequestUpdate, cachedMonthRequests, monthQuery, prefetch, referenceQuery } from '../services/queries';
+import { applyRequestUpdate, cachedMonthRequests, monthQuery, prefetch, referenceQuery, prioritiesQuery } from '../services/queries';
 import './MainLayout.css';
 import { FaCalendarAlt, FaListUl, FaParking, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
+import { TokenIcon } from '../components/TokenIcon';
 import logo from '../assets/logo.png';
 
 // Caricate solo quando servono: contengono react-day-picker, che altrimenti
@@ -39,6 +40,11 @@ const MainLayout = () => {
     const [requestToEdit, setRequestToEdit] = useState(null);
 
     const { data: reference } = useQuery(referenceQuery());
+    const { data: usersWithPriority } = useQuery(prioritiesQuery());
+
+    const currentUserStats = useMemo(() => {
+        return usersWithPriority?.find(u => u.id === user?.id);
+    }, [usersWithPriority, user?.id]);
 
     // I dati partono insieme al codice delle pagine, senza aspettarlo
     const isAdmin = user?.isAdmin === true;
@@ -213,6 +219,11 @@ const MainLayout = () => {
                             aria-haspopup="true"
                             aria-label="Menu profilo utente"
                         >
+                            {currentUserStats?.remainingTokens !== undefined && (
+                                <span className="header-tokens-badge" title="I tuoi gettoni rimanenti per questo trimestre">
+                                    <TokenIcon size={14} /> {currentUserStats.remainingTokens}
+                                </span>
+                            )}
                             <span className="user-display-name">{user.firstName} {user.lastName}</span>
                             <UserAvatar user={user} />
                         </button>
@@ -224,6 +235,11 @@ const MainLayout = () => {
                             <div className="user-details">
                                 <p>{user.firstName} {user.lastName}</p>
                                 <p className="user-email">{user.mail}</p>
+                                {currentUserStats?.remainingTokens !== undefined && (
+                                    <p className="user-tokens-detail">
+                                        <TokenIcon size={17} /> Gettoni: <strong>{currentUserStats.remainingTokens}</strong> <small>/ {currentUserStats.totalTokens || 0}</small>
+                                    </p>
+                                )}
                             </div>
                             <hr />
                             <button 

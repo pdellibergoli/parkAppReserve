@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { computePriorityStats } from './assignment.js';
 import { hashPassword } from './auth.js';
 import { CONFIG } from './config.js';
 import { AppError } from './errors.js';
 import { userToApi } from './mappers.js';
+import { computeUserTokenStats } from './tokens.js';
 
 export async function getAllUsers(db) {
   const { rows } = await db.query('SELECT * FROM users ORDER BY id');
@@ -46,12 +46,28 @@ export async function updateUserProfile(ctx, payload) {
   return userToApi(rows[0]);
 }
 
-export async function getUsersWithPriority(ctx) {
+export async function getUsersWithPriority(ctx, payload = {}) {
+  const referenceDay = payload?.referenceDay || payload?.targetDate || payload?.date;
   const users = await getAllUsers(ctx.db);
-  const stats = await computePriorityStats(ctx.db);
-  return users.map((user) => ({
-    ...user,
-    ...stats.get(user.id),
-    windowDays: CONFIG.LOOK_BACK_DAYS,
-  }));
+  const { stats, period } = await computeUserTokenStats(ctx.db, referenceDay);
+  return users.map((user) => {
+    const userStats = stats.get(user.id) || {
+      totalTokens: period.totalWorkingDays,
+      usedTokens: 0,
+      remainingTokens: period.totalWorkingDays,
+      totalRequests: 0,
+      totalAssignments: 0,
+      assignmentPercentage: 0,
+    };
+    return {
+      ...user,
+      ...userStats,
+      // Campi di compatibilità per interfaccia e test
+      recentAssignments: userStats.usedTokens,
+      recentRequests: userStats.totalRequests,
+      successRate: userStats.totalRequests > 0 ? (userStats.usedTokens / userStats.totalRequests) : 0,
+      windowDays: period.totalWorkingDays,
+      periodInfo: period,
+    };
+  });
 }

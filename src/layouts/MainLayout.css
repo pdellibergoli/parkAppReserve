@@ -80,6 +80,30 @@
   outline-offset: 2px;
 }
 
+.header-tokens-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  background-color: rgba(222, 31, 60, 0.1);
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: 1px solid rgba(222, 31, 60, 0.25);
+  margin-right: 0.25rem;
+}
+
+.user-tokens-detail {
+  font-size: 0.85rem;
+  color: var(--text-color);
+  margin-top: 0.35rem !important;
+  font-weight: 500;
+}
+.user-tokens-detail strong {
+  color: var(--primary-color);
+}
+
 .avatar {
   width: 40px;
   height: 40px;
@@ -211,11 +235,28 @@
     display: none;
   }
 
+  .header-right {
+    gap: 0.25rem;
+  }
+
+  .header-tokens-badge {
+    padding: 0.1rem 0.25rem;
+    font-size: 0.72rem;
+    margin-right: 0;
+    gap: 0.1rem;
+  }
+
+  .header-tokens-badge .token-icon {
+    width: 13px;
+    height: 13px;
+  }
+
   .user-menu-trigger {
     padding: 0;
     min-width: 44px;
     min-height: 44px;
     justify-content: center;
+    gap: 0.25rem;
   }
 
   .dropdown {
