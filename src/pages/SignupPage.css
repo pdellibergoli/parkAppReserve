@@ -172,3 +172,55 @@
   .success-title {
     color: #10b981;
   }
+
+  .input-group input.input-error {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+
+  .email-checking-hint {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary);
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  .email-warning-box {
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .email-warning-text {
+    font-size: 0.82rem;
+    color: #b45309;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .email-warning-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+  }
+
+  .email-warning-link {
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: underline;
+  }
+
+  .email-warning-link:hover {
+    filter: brightness(0.9);
+  }
+
+  .email-warning-divider {
+    color: #d97706;
+    opacity: 0.6;
+  }

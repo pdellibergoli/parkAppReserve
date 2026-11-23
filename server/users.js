@@ -18,14 +18,18 @@ export async function updateUserProfile(ctx, payload) {
   if (existing.length === 0) throw new AppError("Utente non trovato per l'aggiornamento.");
 
   if (mail !== undefined) {
-    const { rows: taken } = await ctx.db.query('SELECT id FROM users WHERE mail = $1 AND id <> $2', [mail, id]);
+    const cleanMail = mail.trim().toLowerCase();
+    const { rows: taken } = await ctx.db.query(
+      'SELECT id FROM users WHERE LOWER(mail) = LOWER($1) AND id <> $2',
+      [cleanMail, id]
+    );
     if (taken.length > 0) throw new AppError('Un utente con questa email esiste già.');
   }
 
   const fields = {
     first_name: firstName,
     last_name: lastName,
-    mail,
+    mail: mail !== undefined ? mail.trim().toLowerCase() : undefined,
     avatar_color: avatarColor,
     preferred_theme: preferredTheme,
     primary_color: primaryColor,

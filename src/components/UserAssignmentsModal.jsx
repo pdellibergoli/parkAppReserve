@@ -1,8 +1,18 @@
 import React, { useMemo } from 'react';
+import { FaTrashAlt } from 'react-icons/fa';
 import Modal from './Modal';
 import './UserAssignmentsModal.css';
 
-const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap, windowDays = 30 }) => {
+const UserAssignmentsModal = ({
+  isOpen,
+  onClose,
+  user,
+  userAssignments,
+  spaceMap,
+  windowDays = 30,
+  canDeleteUser = false,
+  onDeleteUser,
+}) => {
   const { startDate, today, filteredRequests } = useMemo(() => {
     const dToday = new Date();
     dToday.setHours(23, 59, 59, 999);
@@ -96,6 +106,19 @@ const UserAssignmentsModal = ({ isOpen, onClose, user, userAssignments, spaceMap
               );
             })}
           </ul>
+        )}
+
+        {canDeleteUser && (
+          <div className="modal-delete-user-row">
+            <button
+              type="button"
+              className="modal-delete-user-btn"
+              onClick={onDeleteUser}
+              title="Elimina questo utente dall'applicazione"
+            >
+              <FaTrashAlt style={{ marginRight: '6px' }} /> Elimina questo utente
+            </button>
+          </div>
         )}
       </div>
     </Modal>

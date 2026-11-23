@@ -9,6 +9,25 @@ export function hashPassword(password, salt) {
   return createHash('sha256').update(password + salt).digest('hex');
 }
 
+export async function findUserByMail(db, mail) {
+  if (!mail || typeof mail !== 'string') return null;
+  const cleanMail = mail.trim();
+  if (!cleanMail) return null;
+  const { rows } = await db.query('SELECT * FROM users WHERE LOWER(mail) = LOWER($1)', [cleanMail]);
+  return rows[0] || null;
+}
+
+export async function checkEmailExists(ctx, { mail }) {
+  if (!mail || typeof mail !== 'string' || !mail.trim()) {
+    return { exists: false, isVerified: false };
+  }
+  const user = await findUserByMail(ctx.db, mail);
+  return {
+    exists: Boolean(user),
+    isVerified: Boolean(user?.is_verified),
+  };
+}
+
 async function findUserBy(db, column, value) {
   const { rows } = await db.query(`SELECT * FROM users WHERE ${column} = $1`, [value]);
   return rows[0];
@@ -17,7 +36,7 @@ async function findUserBy(db, column, value) {
 export async function loginUser(ctx, { mail, password }) {
   if (!mail || !password) throw new AppError('Email e password sono obbligatorie.');
 
-  const user = await findUserBy(ctx.db, 'mail', mail);
+  const user = await findUserByMail(ctx.db, mail);
   if (!user) throw new AppError('Email o password non corretta.');
 
   if (!user.is_verified) {
@@ -40,32 +59,36 @@ export async function loginUser(ctx, { mail, password }) {
 
 export async function signupUser(ctx, { firstName, lastName, mail, password }) {
   if (!firstName || !mail || !password) throw new AppError('Nome, email e password sono obbligatori.');
-  if (await findUserBy(ctx.db, 'mail', mail)) throw new AppError('Un utente con questa email esiste già.');
+  const cleanMail = mail.trim().toLowerCase();
+  const existingUser = await findUserByMail(ctx.db, cleanMail);
+  if (existingUser) throw new AppError('Un utente con questa email esiste già.');
 
   const salt = randomUUID();
   const id = `user_${Date.now()}`;
   const verificationToken = randomUUID();
+  const cleanFirst = firstName.trim();
+  const cleanLast = lastName ? lastName.trim() : null;
 
   await ctx.db.query(
     `INSERT INTO users (id, first_name, last_name, mail, password, salt, verification_token)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [id, firstName, lastName, mail, hashPassword(password, salt), salt, verificationToken]
+    [id, cleanFirst, cleanLast, cleanMail, hashPassword(password, salt), salt, verificationToken]
   );
 
   ctx.outbox.push({
-    to: mail,
+    to: cleanMail,
     critical: true,
     subject: "Conferma la tua registrazione all'App Parcheggi",
-    text: `Ciao ${firstName},\n\nGrazie per esserti registrato! Per favore, clicca sul link seguente per confermare il tuo indirizzo email:\n\n${baseUrl()}verify-email?token=${verificationToken}`,
+    text: `Ciao ${cleanFirst},\n\nGrazie per esserti registrato! Per favore, clicca sul link seguente per confermare il tuo indirizzo email:\n\n${baseUrl()}verify-email?token=${verificationToken}`,
   });
 
-  return { id, firstName, lastName, mail };
+  return { id, firstName: cleanFirst, lastName: cleanLast, mail: cleanMail };
 }
 
 export async function resendVerificationEmail(ctx, { mail }) {
   if (!mail) throw new AppError('Email non fornita.');
 
-  const user = await findUserBy(ctx.db, 'mail', mail);
+  const user = await findUserByMail(ctx.db, mail);
   if (!user) throw new AppError('Nessun utente trovato con questa email.');
   if (user.is_verified) throw new AppError('Questo account è già stato verificato.');
 
@@ -73,7 +96,7 @@ export async function resendVerificationEmail(ctx, { mail }) {
   await ctx.db.query('UPDATE users SET verification_token = $2 WHERE id = $1', [user.id, token]);
 
   ctx.outbox.push({
-    to: mail,
+    to: user.mail,
     critical: true,
     subject: 'Nuova richiesta di conferma email - App Parcheggi',
     text: `Ciao ${user.first_name},\n\nClicca sul nuovo link per confermare il tuo indirizzo email:\n\n${baseUrl()}verify-email?token=${token}`,
@@ -97,7 +120,7 @@ export async function verifyEmailToken(ctx, { token }) {
 export async function requestPasswordReset(ctx, { mail }) {
   if (!mail) throw new AppError('Email non fornita.');
 
-  const user = await findUserBy(ctx.db, 'mail', mail);
+  const user = await findUserByMail(ctx.db, mail);
   if (!user) throw new AppError('Nessun utente trovato con questa email.');
 
   const token = randomUUID();

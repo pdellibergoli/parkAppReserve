@@ -2,11 +2,12 @@ import { randomUUID } from 'node:crypto';
 import {
   addToHistory, clearHistoryForDate, getSpace, processRequestsForDate, removeFromHistory, updateRequestStatus,
 } from './assignment.js';
-import { formatDay, toDay } from './dates.js';
+import { formatDay, toDay, today } from './dates.js';
 import { sendAdminCancellationEmail, sendSuccessEmail } from './emails.js';
 import { AppError } from './errors.js';
 import { requestToApi } from './mappers.js';
 import { getActiveRegulation } from './regulations.js';
+import { cancelAssignmentAndReassign } from './requests.js';
 
 export async function adminCancelAllRequestsForDate(ctx, { date }) {
   if (!date) throw new AppError('Data non fornita.');
@@ -109,3 +110,54 @@ export async function adminAssignParckingForDate(ctx, { date, userId, spaceId })
     }),
   };
 }
+
+export async function deleteUser(ctx, { userId, actorId }) {
+  if (!userId) throw new AppError('ID utente non fornito.');
+
+  const adminId = actorId || ctx.user?.id;
+  if (!adminId) throw new AppError('Azione riservata agli amministratori.');
+
+  const { rows: adminRows } = await ctx.db.query('SELECT is_admin FROM users WHERE id = $1', [adminId]);
+  if (!adminRows[0]?.is_admin) throw new AppError('Azione riservata agli amministratori.');
+
+  if (userId === adminId) {
+    throw new AppError('Non puoi eliminare il tuo stesso account.');
+  }
+
+  const { rows: targetRows } = await ctx.db.query(
+    'SELECT id, first_name, last_name, mail FROM users WHERE id = $1',
+    [userId]
+  );
+  if (targetRows.length === 0) throw new AppError('Utente non trovato.');
+  const targetUser = targetRows[0];
+
+  // 1. Riassegna o cancella eventuali posti già assegnati per date future (>= oggi)
+  const { rows: futureAssigned } = await ctx.db.query(
+    `SELECT request_id FROM parking_requests WHERE user_id = $1 AND requested_date >= $2 AND status = 'assigned'`,
+    [userId, today()]
+  );
+  for (const { request_id: reqId } of futureAssigned) {
+    try {
+      await cancelAssignmentAndReassign(ctx, { requestId: reqId });
+    } catch {
+      // Ignora errori minori se l'assegnazione è già stata modificata
+    }
+  }
+
+  // 2. Elimina lo storico delle assegnazioni dell'utente
+  await ctx.db.query('DELETE FROM assignment_history WHERE user_id = $1', [userId]);
+
+  // 3. Elimina tutte le richieste di parcheggio dell'utente
+  await ctx.db.query('DELETE FROM parking_requests WHERE user_id = $1', [userId]);
+
+  // 4. Elimina definitivamente l'utente
+  await ctx.db.query('DELETE FROM users WHERE id = $1', [userId]);
+
+  const fullName = `${targetUser.first_name} ${targetUser.last_name || ''}`.trim();
+  return {
+    message: `Utente ${fullName} (${targetUser.mail}) eliminato con successo.`,
+    deletedUserId: userId,
+  };
+}
+
+export { deleteUser as adminDeleteUser };

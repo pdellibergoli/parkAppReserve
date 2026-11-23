@@ -3,9 +3,12 @@ import { format } from 'date-fns';
 import { getTextColor } from '../utils/colors';
 import { fetchQuery, prioritiesQuery, referenceQuery, userHistoryQuery } from '../services/queries';
 import { useQuery } from '../hooks/useQuery';
-import UserAssignmentsModal from '../components/UserAssignmentsModal';
+import { useAuth } from '../context/useAuth';
 import { useLoading } from '../context/useLoading';
-import { FaInfoCircle } from 'react-icons/fa';
+import { callApi } from '../services/api';
+import UserAssignmentsModal from '../components/UserAssignmentsModal';
+import Modal from '../components/Modal';
+import { FaInfoCircle, FaTrashAlt } from 'react-icons/fa';
 import './StatsPage.css';
 
 const EMPTY_LIST = [];
@@ -21,6 +24,7 @@ const UserAvatar = ({ user }) => {
 };
 
 const StatsPage = () => {
+  const { user: loggedInUser } = useAuth();
   const { setIsLoading } = useLoading();
 
   const priorities = useQuery(prioritiesQuery());
@@ -34,6 +38,33 @@ const StatsPage = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const [assignmentsForModal, setAssignmentsForModal] = useState([]);
+
+  // Modale admin cancellazione utente
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(false);
+
+  const handlePromptDeleteUser = (user) => {
+    setUserToDelete(user);
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeletingUser(true);
+    try {
+      const res = await callApi('deleteUser', {
+        userId: userToDelete.id,
+        actorId: loggedInUser?.id,
+      });
+      alert(res.message || 'Utente eliminato con successo.');
+      setUserToDelete(null);
+      setIsDetailsModalOpen(false);
+      window.location.reload();
+    } catch (err) {
+      alert(`Errore durante l'eliminazione dell'utente: ${err.message}`);
+    } finally {
+      setDeletingUser(false);
+    }
+  };
 
   const spaceMap = useMemo(() => new Map(spaces.map(s => [s.id, s.number])), [spaces]);
 
@@ -115,6 +146,20 @@ const StatsPage = () => {
                     <span className="user-name">{userData.fullName}</span>
                     <span className="user-priority-rate">Priorità: <strong>{((1 - userData.successRate) * 100).toFixed(0)}%</strong></span>
                   </div>
+                  {loggedInUser?.isAdmin && userData.user.id !== loggedInUser.id && (
+                    <button
+                      type="button"
+                      className="admin-delete-user-btn"
+                      title={`Elimina utente ${userData.fullName}`}
+                      aria-label={`Elimina utente ${userData.fullName}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePromptDeleteUser(userData.user);
+                      }}
+                    >
+                      <FaTrashAlt />
+                    </button>
+                  )}
                 </div>
                 <div className="card-priority-details">
                     <div className="priority-row">
@@ -141,7 +186,47 @@ const StatsPage = () => {
         userAssignments={assignmentsForModal}
         spaceMap={spaceMap}
         windowDays={priorityWindowDays}
+        canDeleteUser={loggedInUser?.isAdmin && selectedUserForModal?.id !== loggedInUser?.id}
+        onDeleteUser={() => {
+          setIsDetailsModalOpen(false);
+          handlePromptDeleteUser(selectedUserForModal);
+        }}
       />
+
+      {userToDelete && (
+        <Modal
+          isOpen={Boolean(userToDelete)}
+          onClose={() => !deletingUser && setUserToDelete(null)}
+          title="Elimina Utente"
+        >
+          <div className="delete-user-modal-content">
+            <p>
+              Sei sicuro di voler eliminare l&apos;utente <strong>{userToDelete.firstName} {userToDelete.lastName || ''}</strong> ({userToDelete.mail})?
+            </p>
+            <div className="delete-user-warning">
+              ⚠️ <strong>Attenzione:</strong> Questa operazione è definitiva e irreversibile. L&apos;account verrà rimosso dall&apos;applicazione, tutte le sue richieste future verranno cancellate e gli eventuali posti già assegnati verranno riallocati ad altri colleghi.
+            </div>
+            <div className="modal-actions-row">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setUserToDelete(null)}
+                disabled={deletingUser}
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                className="danger-btn"
+                onClick={handleConfirmDeleteUser}
+                disabled={deletingUser}
+              >
+                {deletingUser ? <div className="spinner-small"></div> : 'Elimina definitivamente'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   );
 };
