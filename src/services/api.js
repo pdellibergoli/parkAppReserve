@@ -23,7 +23,8 @@ const READ_ONLY_ACTIONS = new Set([
   'getTemporaryUnavailabilities',
   'getParkingStatusForDate',
   'getActiveCommunication',
-  'getActiveRegulation'
+  'getActiveRegulation',
+  'checkEmailExists'
 ]);
 
 // Scritture che non toccano dati in cache
@@ -48,7 +49,7 @@ function invalidateAfterWrite(action) {
 
   if (REFERENCE_ONLY_ACTIONS.has(action)) invalidateData((key) => key === 'reference');
   else if (action === 'updateUserProfile') invalidateData((key) => key === 'reference' || key === 'priorities');
-  else if (SPACE_ACTIONS.has(action)) invalidateData();
+  else if (SPACE_ACTIONS.has(action) || action === 'deleteUser' || action === 'adminDeleteUser') invalidateData();
   else invalidateData((key) => key !== 'reference');
 }
 

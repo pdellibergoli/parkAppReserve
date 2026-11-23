@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/useAuth';
 import { Link } from 'react-router-dom';
 import { FaRegEye, FaRegEyeSlash, FaRegCheckCircle, FaRegCircle } from 'react-icons/fa';
+import { callApi } from '../services/api';
 import './SignupPage.css';
 
 const SignupPage = () => {
@@ -14,10 +15,46 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const [emailError, setEmailError] = useState('');
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { signup } = useAuth();
+
+  const performEmailCheck = useCallback(async (emailToCheck) => {
+    const cleanMail = (emailToCheck || '').trim().toLowerCase();
+    if (!cleanMail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanMail)) {
+      setEmailError('');
+      return;
+    }
+    setIsCheckingEmail(true);
+    try {
+      const res = await callApi('checkEmailExists', { mail: cleanMail });
+      if (res?.exists) {
+        setEmailError('Questa email risulta già registrata.');
+      } else {
+        setEmailError('');
+      }
+    } catch {
+      // Ignora errori di rete temporanei
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const clean = mail.trim();
+    if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+      setEmailError('');
+      return;
+    }
+    const timer = setTimeout(() => {
+      performEmailCheck(clean);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [mail, performEmailCheck]);
 
   // Logica di validazione real-time
   const checks = {
@@ -34,6 +71,11 @@ const SignupPage = () => {
     e.preventDefault();
     setError('');
     
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Le password non corrispondono.");
       return;
@@ -46,10 +88,13 @@ const SignupPage = () => {
 
     setLoading(true);
     try {
-      await signup(firstName, lastName, mail, password);
+      await signup(firstName.trim(), lastName.trim(), mail.trim().toLowerCase(), password);
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'Errore durante la registrazione. Riprova.');
+      if (err.message && err.message.toLowerCase().includes('esiste già')) {
+        setEmailError('Questa email risulta già registrata.');
+      }
     } finally {
       setLoading(false);
     }
@@ -88,7 +133,28 @@ const SignupPage = () => {
 
           <div className="input-group">
             <label>Email</label>
-            <input type="email" value={mail} onChange={(e) => setMail(e.target.value)} required />
+            <input 
+              type="email" 
+              value={mail} 
+              onChange={(e) => {
+                setMail(e.target.value);
+                if (emailError) setEmailError('');
+              }} 
+              onBlur={() => performEmailCheck(mail)}
+              className={emailError ? 'input-error' : ''}
+              required 
+            />
+            {isCheckingEmail && <span className="email-checking-hint">Verifica disponibilità email in corso...</span>}
+            {emailError && (
+              <div className="email-warning-box">
+                <span className="email-warning-text">⚠️ {emailError}</span>
+                <div className="email-warning-links">
+                  <Link to="/login" className="email-warning-link">Accedi</Link>
+                  <span className="email-warning-divider">•</span>
+                  <Link to="/forgot-password" className="email-warning-link">Recupera Password</Link>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="input-group">
@@ -146,7 +212,7 @@ const SignupPage = () => {
 
           {error && <div className="error-alert">{error}</div>}
 
-          <button type="submit" className="btn-primary" disabled={loading || !isPasswordValid}>
+          <button type="submit" className="btn-primary" disabled={loading || isCheckingEmail || Boolean(emailError) || !isPasswordValid}>
             {loading ? <span className="loader"></span> : 'Registrati'}
           </button>
         </form>

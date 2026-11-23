@@ -34,11 +34,11 @@ async function statusOf(requestId) {
   return rows[0];
 }
 
-async function addUser(id, { verified = true, password = 'pw', acceptedRules = '1.0' } = {}) {
+async function addUser(id, { verified = true, password = 'pw', acceptedRules = '1.0', isAdmin = false } = {}) {
   await db().query(
-    `INSERT INTO users (id, first_name, last_name, mail, password, salt, is_verified, accepted_rules_version, rules_accepted_at)
-     VALUES ($1, $1, 'Test', $2, $3, 'salt', $4, $5, now())`,
-    [id, `${id}@test.local`, hashPassword(password, 'salt'), verified, acceptedRules]
+    `INSERT INTO users (id, first_name, last_name, mail, password, salt, is_verified, accepted_rules_version, rules_accepted_at, is_admin)
+     VALUES ($1, $1, 'Test', $2, $3, 'salt', $4, $5, now(), $6)`,
+    [id, `${id}@test.local`, hashPassword(password, 'salt'), verified, acceptedRules, isAdmin]
   );
 }
 
@@ -177,6 +177,23 @@ describe('autenticazione', () => {
     failDelivery = false;
     await handleAction('resendVerificationEmail', { mail: 'b@test.local' });
     assert.equal(sent.length, 1);
+  });
+
+  it('verifica esistenza email e case-insensitivity in fase di registrazione', async () => {
+    assert.deepEqual(await handleAction('checkEmailExists', { mail: '' }), { exists: false, isVerified: false });
+    assert.deepEqual(await handleAction('checkEmailExists', { mail: 'inesistente@test.local' }), { exists: false, isVerified: false });
+
+    await addUser('ada', { verified: true });
+    assert.deepEqual(await handleAction('checkEmailExists', { mail: 'ada@test.local' }), { exists: true, isVerified: true });
+    // Case-insensitive check
+    assert.deepEqual(await handleAction('checkEmailExists', { mail: 'ADA@TEST.LOCAL' }), { exists: true, isVerified: true });
+    assert.deepEqual(await handleAction('checkEmailExists', { mail: '  Ada@Test.Local  ' }), { exists: true, isVerified: true });
+
+    // Tentativo di signup con casing diverso deve fallire
+    await assert.rejects(
+      handleAction('signup', { firstName: 'Ada', lastName: 'L', mail: 'ADA@TEST.LOCAL', password: 'password1' }),
+      /esiste già/
+    );
   });
 });
 
@@ -563,6 +580,62 @@ describe('azioni admin', () => {
     const created = await handleAction('adminAssignParckingForDate', { date: '2026-03-13', userId: 'u1', spaceId: 'p1' });
     assert.match(created.request.requestId, /^req_/);
     assert.equal(await historyCount('u1'), 2);
+  });
+
+  it('eliminazione utente: verifiche permessi, pulizia storico/richieste e riassegnazione posti futuri', async () => {
+    await addUser('admin_user', { isAdmin: true });
+    await addUser('collega_uscente');
+    await addUser('collega_in_attesa');
+    await addSpace('p1');
+
+    // Assegna p1 a collega_uscente per domani (futuro)
+    await addRequest('req_futura', 'collega_uscente', TOMORROW, 'assigned', 'p1');
+    await addHistory('collega_uscente', TOMORROW, 'p1');
+
+    // Richiesta in attesa per collega_in_attesa per domani
+    await addRequest('req_attesa', 'collega_in_attesa', TOMORROW, 'pending');
+
+    // Richiesta passata per collega_uscente
+    await addRequest('req_passata', 'collega_uscente', '2026-03-02', 'assigned', 'p1');
+    await addHistory('collega_uscente', '2026-03-02', 'p1');
+
+    // 1. Chiamata senza admin fallisce
+    await assert.rejects(
+      handleAction('deleteUser', { userId: 'collega_uscente', actorId: 'collega_in_attesa' }),
+      /Azione riservata agli amministratori/
+    );
+
+    // 2. Admin non può eliminare sé stesso
+    await assert.rejects(
+      handleAction('deleteUser', { userId: 'admin_user', actorId: 'admin_user' }),
+      /Non puoi eliminare il tuo stesso account/
+    );
+
+    // 3. Utente non esistente
+    await assert.rejects(
+      handleAction('deleteUser', { userId: 'inesistente', actorId: 'admin_user' }),
+      /Utente non trovato/
+    );
+
+    // 4. Eliminazione regolare eseguita dall'admin
+    const res = await handleAction('deleteUser', { userId: 'collega_uscente', actorId: 'admin_user' });
+    assert.match(res.message, /eliminato con successo/);
+    assert.equal(res.deletedUserId, 'collega_uscente');
+
+    // L'utente non esiste più in users
+    const { rows: userRows } = await db().query('SELECT * FROM users WHERE id = $1', ['collega_uscente']);
+    assert.equal(userRows.length, 0);
+
+    // Le richieste e lo storico dell'utente uscente sono state eliminate
+    const { rows: reqRows } = await db().query('SELECT * FROM parking_requests WHERE user_id = $1', ['collega_uscente']);
+    assert.equal(reqRows.length, 0);
+    const { rows: histRows } = await db().query('SELECT * FROM assignment_history WHERE user_id = $1', ['collega_uscente']);
+    assert.equal(histRows.length, 0);
+
+    // Il posto p1 per domani è stato riassegnato al collega in attesa!
+    const reallocatedReq = await statusOf('req_attesa');
+    assert.equal(reallocatedReq.status, 'assigned');
+    assert.equal(reallocatedReq.assigned_parking_space_id, 'p1');
   });
 });
 

@@ -66,6 +66,7 @@ const POOL_ACTIONS = {
   getParkingStatusForDate: parking.getParkingStatusForDate,
   getActiveCommunication: (ctx) => communications.getActiveCommunication(ctx.db),
   getActiveRegulation: (ctx) => regulations.getActiveRegulation(ctx.db),
+  checkEmailExists: auth.checkEmailExists,
   // Invia molte email e scrive una sola riga: non deve bloccare le altre scritture durante l'invio
   sendAdminCommunication: communications.sendAdminCommunication,
 };
@@ -102,6 +103,8 @@ const TRANSACTION_ACTIONS = {
   adminResetAssignmentsForDate: admin.adminResetAssignmentsForDate,
   adminManuallyAssignForDate: admin.adminManuallyAssignForDate,
   adminAssignParckingForDate: admin.adminAssignParckingForDate,
+  deleteUser: admin.deleteUser,
+  adminDeleteUser: admin.deleteUser,
 
   deleteCommunication: communications.deleteCommunication,
 };
